@@ -8,13 +8,23 @@ import { ImportReviewDialog } from "@/components/import-review";
 import { InventoryImportDialog } from "@/components/inventory-import";
 import { InventoryCatalog } from "@/components/inventory-catalog";
 import { InventoryMutationDialog, type InventoryItem } from "@/components/inventory-mutation";
+import { OperationsManagement } from "@/components/operations-management";
 import {
   ConversionsWorkspace,
   ModelsWorkspace,
   OrdersWorkspace,
   ReportsWorkspace,
 } from "@/components/planning-workspaces";
+import { inventoryCatalog } from "@/data/inventory-demo";
+import { initialInventoryTransactions } from "@/data/operations-demo";
 import type { UserRole } from "@/domain/access-control";
+import { calculateInventoryMutation } from "@/domain/inventory";
+import {
+  defaultOperationsPolicy,
+  type InventoryMutationRequest,
+  type InventoryTransactionEntry,
+  type OperationsPolicy,
+} from "@/domain/operations";
 
 type IconName =
   | "home"
@@ -31,7 +41,7 @@ type IconName =
   | "alert"
   | "arrow";
 
-type ViewName = "overview" | "inventory" | "conversions" | "orders" | "models" | "reports";
+type ViewName = "overview" | "inventory" | "conversions" | "orders" | "models" | "operations" | "reports";
 
 function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
   const paths: Record<IconName, React.ReactNode> = {
@@ -62,6 +72,7 @@ const navItems: { id: ViewName; label: string; icon: IconName }[] = [
   { id: "conversions", label: "Conversies", icon: "convert" },
   { id: "orders", label: "Bestellingen", icon: "orders" },
   { id: "models", label: "Modellen", icon: "models" },
+  { id: "operations", label: "Beheer & analyse", icon: "settings" },
   { id: "reports", label: "Rapportages", icon: "reports" },
 ];
 
@@ -71,6 +82,7 @@ const viewHeadings: Record<ViewName, { title: string; subtitle: string }> = {
   conversions: { title: "Conversies", subtitle: "Beheer de methode en voortgang per laptoporder." },
   orders: { title: "Bestellingen", subtitle: "Zet automatisch voorraadadvies om in een gecontroleerd concept." },
   models: { title: "Modellen", subtitle: "Beheer compatibiliteit zonder dubbele handmatige invoer." },
+  operations: { title: "Beheer & analyse", subtitle: "Configureer uitvoering en analyseer iedere voorraadbeweging." },
   reports: { title: "Rapportages", subtitle: "Volg verbruik, dekking, trends en komende behoefte." },
 };
 
@@ -99,6 +111,8 @@ export function Dashboard() {
   const [reviewBatchId, setReviewBatchId] = useState<string | null>(null);
   const [stockItems, setStockItems] = useState(initialLowStock);
   const [catalogQuantities, setCatalogQuantities] = useState<Record<string, number>>({});
+  const [transactions, setTransactions] = useState<InventoryTransactionEntry[]>(initialInventoryTransactions);
+  const [operationsPolicy, setOperationsPolicy] = useState<OperationsPolicy>(defaultOperationsPolicy);
   const [mutation, setMutation] = useState<{
     mode: "issue" | "receipt";
     item: InventoryItem;
@@ -110,13 +124,66 @@ export function Dashboard() {
     [query, stockItems],
   );
   const defaultItem = stockItems.find((item) => item.stock > 0) ?? stockItems[0];
+  const todayIssued = transactions
+    .filter((entry) => entry.occurredAt.startsWith("2026-07-27") && entry.quantityDelta < 0)
+    .reduce((sum, entry) => sum + Math.abs(entry.quantityDelta), 0);
 
   function saveMutation(newQuantity: number, quantityDelta: number) {
     if (!mutation) return;
     if (mutation.onConfirm) mutation.onConfirm(newQuantity);
     else setStockItems((items) => items.map((item) => item.sku === mutation.item.sku ? { ...item, stock: newQuantity } : item));
+    setTransactions((current) => [
+      ...current,
+      {
+        id: crypto.randomUUID(),
+        occurredAt: new Date().toISOString(),
+        sku: mutation.item.sku,
+        model: mutation.item.model,
+        layout: mutation.item.layout,
+        type: quantityDelta > 0 ? "receipt" : "issue",
+        quantityDelta,
+        reasonCode: quantityDelta > 0 ? "supplier_delivery" : "manual_issue",
+        actor: "Tim Beek",
+        reference: "Managementboeking",
+      },
+    ]);
     setLastAction(`${mutation.item.sku}: ${quantityDelta > 0 ? "+" : ""}${quantityDelta} geboekt · nieuwe voorraad ${newQuantity}`);
     setMutation(null);
+  }
+
+  function recordEmployeeInventoryMutation(request: InventoryMutationRequest) {
+    const item = inventoryCatalog.find((candidate) => candidate.sku === request.sku);
+    if (!item) throw new Error(`Onbekend sticker-SKU: ${request.sku}.`);
+    const currentQuantity = catalogQuantities[item.sku] ?? item.stock;
+    const result = calculateInventoryMutation({
+      sku: request.sku,
+      currentQuantity,
+      type: request.type,
+      quantity: request.quantity,
+      reasonCode: request.reasonCode,
+      notes: request.notes,
+      idempotencyKey: `employee-${crypto.randomUUID()}`,
+    });
+    setCatalogQuantities((current) => ({ ...current, [item.sku]: result.newQuantity }));
+    setStockItems((items) => items.map((stockItem) => stockItem.sku === item.sku ? { ...stockItem, stock: result.newQuantity } : stockItem));
+    setTransactions((current) => [
+      ...current,
+      {
+        id: crypto.randomUUID(),
+        occurredAt: new Date().toISOString(),
+        sku: item.sku,
+        model: item.model,
+        layout: item.layout,
+        type: request.type,
+        quantityDelta: result.quantityDelta,
+        reasonCode: request.reasonCode,
+        notes: request.notes,
+        actor: request.actor,
+        reference: request.reference,
+      },
+    ]);
+    setLastAction(`${item.sku}: ${result.quantityDelta > 0 ? "+" : ""}${result.quantityDelta} door ${request.actor} · voorraad ${result.newQuantity}`);
+    return result;
   }
 
   function switchRole(nextRole: UserRole) {
@@ -184,7 +251,14 @@ export function Dashboard() {
           </div>
         </header>
 
-        {role === "employee" && <EmployeeWorkspace />}
+        {role === "employee" && (
+          <EmployeeWorkspace
+            catalog={inventoryCatalog}
+            quantities={catalogQuantities}
+            policy={operationsPolicy}
+            onInventoryMutation={recordEmployeeInventoryMutation}
+          />
+        )}
 
         {role === "management" && activeView === "overview" && (
           <>
@@ -221,11 +295,11 @@ export function Dashboard() {
             <div className="stat-glyph"><Icon name="alert" size={27} /></div>
           </article>
           <article className="stat-card">
-            <div><span>Vandaag verbruikt</span><strong>—</strong><small>Start met transactieregistratie</small></div>
+            <div><span>Vandaag verbruikt</span><strong>{todayIssued}</strong><small>automatisch en handmatig afgeboekt</small></div>
             <div className="stat-glyph chart"><Icon name="reports" size={27} /></div>
           </article>
           <article className="stat-card">
-            <div><span>Open conversies</span><strong>0</strong><small>Geen wachtrij geregistreerd</small></div>
+            <div><span>Open conversies</span><strong>3</strong><small>1 wacht op kwaliteitscontrole</small></div>
             <div className="stat-glyph convert"><Icon name="convert" size={27} /></div>
           </article>
         </section>
@@ -258,11 +332,11 @@ export function Dashboard() {
           <section className="panel methods-panel">
             <div className="panel-heading">
               <div><h2>Conversiemethoden</h2><p>Huidige voorkeursvolgorde</p></div>
-              <button className="more-button" onClick={() => setMenuOpen(!menuOpen)} aria-expanded={menuOpen}>•••</button>
+              <button className="more-button" onClick={() => { setMenuOpen(!menuOpen); setActiveView("operations"); }} aria-expanded={menuOpen}>•••</button>
             </div>
             <div className="method-list">
               {methods.map((method) => (
-                <button className="method" key={method.id}>
+                <button className="method" key={method.id} onClick={() => setActiveView("operations")}>
                   <span className={`method-number ${method.tone}`}>{method.id}</span>
                   <span><strong>{method.name}</strong><small>{method.detail}</small></span>
                   <span className={`method-status ${method.tone}`}>{method.status}</span>
@@ -276,8 +350,8 @@ export function Dashboard() {
           </section>
         </div>
         <section className="roadmap-panel">
-          <div className="roadmap-heading"><div><span className="workspace-kicker">PRODUCTIEROADMAP</span><h2>KeyFlow is 60% compleet</h2><p>Voortgang naar de volledige live productieversie.</p></div><strong>60%</strong></div>
-          <div className="roadmap-track"><span style={{ width: "60%" }} /></div>
+          <div className="roadmap-heading"><div><span className="workspace-kicker">PRODUCTIEROADMAP</span><h2>KeyFlow is 68% compleet</h2><p>Voortgang naar de volledige live productieversie.</p></div><strong>68%</strong></div>
+          <div className="roadmap-track"><span style={{ width: "68%" }} /></div>
           <div className="roadmap-steps">
             <span className="done">Basis & UX</span><span className="done">Excel-import</span><span className="done">Voorraad & planning</span><span className="current">Rollen & uitvoering</span><span>Database live</span><span>SSO & integraties</span><span>Productieacceptatie</span>
           </div>
@@ -308,11 +382,22 @@ export function Dashboard() {
         {role === "management" && activeView === "conversions" && <ConversionsWorkspace onNew={() => setAdvisorOpen(true)} />}
         {role === "management" && activeView === "orders" && <OrdersWorkspace />}
         {role === "management" && activeView === "models" && <ModelsWorkspace />}
+        {role === "management" && activeView === "operations" && (
+          <OperationsManagement
+            quantities={catalogQuantities}
+            transactions={transactions}
+            policy={operationsPolicy}
+            onPolicyChange={(nextPolicy) => {
+              setOperationsPolicy(nextPolicy);
+              setLastAction(`Conversiebeleid bijgewerkt · grens €${nextPolicy.thresholdEur}`);
+            }}
+          />
+        )}
         {role === "management" && activeView === "reports" && <ReportsWorkspace />}
 
         <footer className="app-footer">
           <span><i /> Systeem gereed</span>
-          <span>{lastAction || `Productieroadmap 60% · ${role === "management" ? "managementweergave" : "werknemersuitvoering"}`}</span>
+          <span>{lastAction || `Productieroadmap 68% · ${role === "management" ? "managementweergave" : "werknemersuitvoering"}`}</span>
         </footer>
         <ConversionAdvisor open={advisorOpen} onClose={() => setAdvisorOpen(false)} />
         <AccessManagementDialog open={accessOpen} onClose={() => setAccessOpen(false)} />

@@ -160,6 +160,7 @@ export const conversionJobs = pgTable("conversion_jobs", {
   saleValueEur: numeric("sale_value_eur", { precision: 10, scale: 2 }).notNull(),
   advisedMethodCode: text("advised_method_code").notNull().references(() => conversionMethods.code),
   chosenMethodCode: text("chosen_method_code").references(() => conversionMethods.code),
+  selectedStickerSkuId: uuid("selected_sticker_sku_id").references(() => stickerSkus.id),
   policyId: uuid("policy_id").notNull().references(() => conversionPolicies.id),
   overrideReason: text("override_reason"),
   status: conversionJobStatus("status").notNull().default("draft"),
@@ -167,6 +168,19 @@ export const conversionJobs = pgTable("conversion_jobs", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   startedAt: timestamp("started_at", { withTimezone: true }),
   completedAt: timestamp("completed_at", { withTimezone: true }),
+});
+
+export const operationsSettings = pgTable("operations_settings", {
+  settingKey: text("setting_key").primaryKey(),
+  thresholdEur: numeric("threshold_eur", { precision: 10, scale: 2 }).notNull(),
+  workload: text("workload").notNull(),
+  methodEnabled: jsonb("method_enabled").notNull(),
+  employeePermissions: jsonb("employee_permissions").notNull(),
+  abcAThreshold: integer("abc_a_threshold").notNull(),
+  abcBThreshold: integer("abc_b_threshold").notNull(),
+  version: integer("version").notNull().default(1),
+  updatedBy: uuid("updated_by").notNull().references(() => users.id),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 export const qualityChecks = pgTable("quality_checks", {
