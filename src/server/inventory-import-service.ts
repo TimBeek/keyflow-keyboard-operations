@@ -16,6 +16,10 @@ import {
   type ResolutionAction,
 } from "@/import/inventory-resolution";
 import { database } from "@/server/database";
+import {
+  AuthorizationError,
+  requirePermission,
+} from "@/server/authorization-service";
 
 const importMetadataSchema = z.object({
   fileName: z.string().trim().min(1).max(255),
@@ -39,6 +43,7 @@ export type ImportInventoryWorkbookInput = z.input<typeof importMetadataSchema> 
 
 export async function importInventoryWorkbook(rawInput: ImportInventoryWorkbookInput) {
   const input = importMetadataSchema.parse(rawInput);
+  await requirePermission(input.actorId, "imports.manage");
   const sourceSha256 = createHash("sha256").update(rawInput.contents).digest("hex");
   const sheets = (await readXlsxFile(rawInput.contents)) as WorkbookSheet[];
   const analysis = analyzeInventoryWorkbook(sheets);
@@ -144,8 +149,9 @@ export async function importInventoryWorkbook(rawInput: ImportInventoryWorkbookI
   });
 }
 
-export async function getInventoryImportReview(rawBatchId: string) {
+export async function getInventoryImportReview(rawBatchId: string, actorId: string) {
   const batchId = importIdSchema.parse(rawBatchId);
+  await requirePermission(actorId, "imports.manage");
   const sql = database();
   const [batch] = await sql<ImportReviewBatch[]>`
     select
@@ -203,6 +209,7 @@ export async function getInventoryImportReview(rawBatchId: string) {
 
 export async function resolveInventoryImportIssue(rawInput: z.input<typeof resolveImportIssueSchema>) {
   const input = resolveImportIssueSchema.parse(rawInput);
+  await requirePermission(input.actorId, "imports.manage");
   const sql = database();
 
   return sql.begin(async (transaction) => {
@@ -408,6 +415,9 @@ export function inventoryImportErrorResponse(error: unknown) {
   if (error instanceof InventoryImportPersistenceError) {
     const status = error.code === "IMPORT_LOCKED" ? 409 : 404;
     return { status, body: { error: error.code, message: error.message } };
+  }
+  if (error instanceof AuthorizationError) {
+    return { status: 403, body: { error: error.code, message: error.message } };
   }
   throw error;
 }

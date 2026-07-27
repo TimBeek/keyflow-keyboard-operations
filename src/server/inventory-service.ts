@@ -6,6 +6,10 @@ import {
   InventoryRuleError,
 } from "@/domain/inventory";
 import { database } from "@/server/database";
+import {
+  AuthorizationError,
+  requirePermission,
+} from "@/server/authorization-service";
 
 export const recordMutationSchema = z.object({
   sku: z.string().min(1).max(64),
@@ -22,6 +26,7 @@ export type RecordMutationInput = z.input<typeof recordMutationSchema>;
 
 export async function recordInventoryMutation(rawInput: RecordMutationInput) {
   const input = recordMutationSchema.parse(rawInput);
+  await requirePermission(input.actorId, "inventory.mutate");
   const sql = database();
 
   return sql.begin(async (transaction) => {
@@ -160,6 +165,9 @@ export function inventoryErrorResponse(error: unknown) {
   }
   if (error instanceof InventoryPersistenceError) {
     return { status: 404, body: { error: error.code, message: error.message } };
+  }
+  if (error instanceof AuthorizationError) {
+    return { status: 403, body: { error: error.code, message: error.message } };
   }
   throw error;
 }
