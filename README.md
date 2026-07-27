@@ -30,13 +30,16 @@ De eerste applicatiebasis bevat:
 - exact oud Noviply-SKU-advies met zichtbare E1/E2-variant en automatische afboeking;
 - werknemersboekingen voor leveranciersontvangsten en niet-passende stickers;
 - scanner-first orderinvoer met automatische doorgang na Enter of Tab;
+- automatische orderlookup die bij bekende barcodes model, waardeklasse en layouts invult en geblokkeerde orders tegenhoudt;
 - korte modelnummerinvoer (`5420`) met automatische resolutie of een beperkte keuzelijst;
 - vaste verkoopwaardeklassen in plaats van handmatige bedragen;
 - een managementwerkruimte voor transacties, ABC-classificatie en configureerbaar conversiebeleid;
+- versiegebonden en gevalideerde lokale pilotopslag die boekingen en beleid na een herstart van de browser herstelt;
+- JSON-back-up, gecontroleerd herstel en een tweestapsreset voor management;
 - een productiebuild zonder lint- of TypeScriptfouten;
 - een containerdefinitie en GitHub Actions voor CI en image-publicatie.
 
-De mutaties zijn in deze ontwikkelversie alleen actief binnen de geopende browsersessie. Duurzame opslag en gebruikersauthenticatie worden aangesloten zodra de PostgreSQL- en hostingomgeving beschikbaar zijn.
+De pilotmutaties blijven nu bewaard in de browser van het gebruikte apparaat. Dit voorkomt gegevensverlies bij verversen of herstarten en management kan een gevalideerde JSON-back-up downloaden en herstellen. Deze lokale opslag is nog geen centrale, gelijktijdige multi-userdatabase; daarvoor wordt de aanwezige PostgreSQL-laag aangesloten.
 
 De server-side transactielaag is al aanwezig en wordt actief zodra `DATABASE_URL` is ingesteld en de migratie is uitgevoerd.
 
@@ -105,6 +108,7 @@ De huidige bron levert 148 regels en 3.218 stuks op. De validator vindt 3 harde 
 
 - `docs/PRODUCT_ROADMAP.md` — gewogen voortgang naar de volledige productieversie;
 - `docs/EMPLOYEE_WORKFLOW.md` — scanner-, modelnummer- en waardeklasseflow voor werknemers;
+- `docs/PILOT_PERSISTENCE_AND_ORDER_LOOKUP.md` — orderlookup, lokale pilotopslag, back-up en productiegrenzen;
 - `docs/AI_MODEL_GROUP_DATA_REQUIREMENTS.md` — vereiste bron- en validatiedata voor veilige AI-modelgroepvoorstellen;
 - `ONDERZOEKSRAPPORT_FASE_1.pdf` — goedgekeurde onderzoeksbasis;
 - `docs/DEPLOYMENT.md` — voorgestelde GitHub- en productie-uitrol;

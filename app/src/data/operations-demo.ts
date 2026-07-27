@@ -1,5 +1,5 @@
-import { inventoryCatalog } from "@/data/inventory-demo";
-import type { InventoryTransactionEntry } from "@/domain/operations";
+import { inventoryCatalog } from "./inventory-demo";
+import type { InventoryTransactionEntry } from "../domain/operations";
 
 export const initialInventoryTransactions: InventoryTransactionEntry[] = inventoryCatalog.flatMap(
   (item, index) => {
