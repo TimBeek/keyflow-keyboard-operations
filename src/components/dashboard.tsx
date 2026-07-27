@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ConversionAdvisor } from "@/components/conversion-advisor";
 import { AccessManagementDialog } from "@/components/access-management";
 import { EmployeeWorkspace } from "@/components/employee-workspace";
@@ -17,6 +17,7 @@ import {
 } from "@/components/planning-workspaces";
 import { inventoryCatalog } from "@/data/inventory-demo";
 import { initialInventoryTransactions } from "@/data/operations-demo";
+import { demoWorkOrders } from "@/data/orders-demo";
 import type { UserRole } from "@/domain/access-control";
 import { calculateInventoryMutation } from "@/domain/inventory";
 import {
@@ -25,6 +26,14 @@ import {
   type InventoryTransactionEntry,
   type OperationsPolicy,
 } from "@/domain/operations";
+import {
+  clearOperationsState,
+  createOperationsSnapshot,
+  parseOperationsSnapshot,
+  readOperationsState,
+  serializeOperationsSnapshot,
+  writeOperationsState,
+} from "@/domain/operations-persistence";
 
 type IconName =
   | "home"
@@ -113,6 +122,9 @@ export function Dashboard() {
   const [catalogQuantities, setCatalogQuantities] = useState<Record<string, number>>({});
   const [transactions, setTransactions] = useState<InventoryTransactionEntry[]>(initialInventoryTransactions);
   const [operationsPolicy, setOperationsPolicy] = useState<OperationsPolicy>(defaultOperationsPolicy);
+  const [persistenceReady, setPersistenceReady] = useState(false);
+  const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [persistenceMessage, setPersistenceMessage] = useState("Lokale pilotopslag laden…");
   const [mutation, setMutation] = useState<{
     mode: "issue" | "receipt";
     item: InventoryItem;
@@ -127,6 +139,48 @@ export function Dashboard() {
   const todayIssued = transactions
     .filter((entry) => entry.occurredAt.startsWith("2026-07-27") && entry.quantityDelta < 0)
     .reduce((sum, entry) => sum + Math.abs(entry.quantityDelta), 0);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      const restored = readOperationsState(window.localStorage);
+      if (restored.success && restored.state) {
+        setCatalogQuantities(restored.state.catalogQuantities);
+        setTransactions(restored.state.transactions);
+        setOperationsPolicy(restored.state.operationsPolicy);
+        setStockItems((items) => items.map((item) => ({
+          ...item,
+          stock: restored.state?.catalogQuantities[item.sku] ?? item.stock,
+        })));
+        setLastSavedAt(restored.state.savedAt);
+        setPersistenceMessage("Pilotgegevens van dit apparaat hersteld.");
+      } else if (!restored.success) {
+        setPersistenceMessage(`${restored.error} De veilige beginstand is geladen.`);
+      } else {
+        setPersistenceMessage("Nieuwe lokale pilotopslag gestart.");
+      }
+      setPersistenceReady(true);
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, []);
+
+  useEffect(() => {
+    if (!persistenceReady) return;
+    const timeoutId = window.setTimeout(() => {
+      try {
+        const snapshot = createOperationsSnapshot({
+          catalogQuantities,
+          transactions,
+          operationsPolicy,
+        });
+        writeOperationsState(window.localStorage, snapshot);
+        setLastSavedAt(snapshot.savedAt);
+        setPersistenceMessage("Wijzigingen automatisch bewaard op dit apparaat.");
+      } catch {
+        setPersistenceMessage("Lokale opslag is niet gelukt. Download een back-up via Beheer & analyse.");
+      }
+    }, 250);
+    return () => window.clearTimeout(timeoutId);
+  }, [catalogQuantities, operationsPolicy, persistenceReady, transactions]);
 
   function saveMutation(newQuantity: number, quantityDelta: number) {
     if (!mutation) return;
@@ -193,6 +247,47 @@ export function Dashboard() {
     setMutation(null);
   }
 
+  function exportPilotBackup() {
+    const snapshot = createOperationsSnapshot({
+      catalogQuantities,
+      transactions,
+      operationsPolicy,
+    });
+    const blob = new Blob([serializeOperationsSnapshot(snapshot)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `keyflow-backup-${snapshot.savedAt.slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setLastAction("Lokale KeyFlow-back-up gedownload.");
+  }
+
+  async function restorePilotBackup(file: File) {
+    const restored = parseOperationsSnapshot(await file.text());
+    if (!restored.success) return { success: false, message: restored.error };
+    setCatalogQuantities(restored.state.catalogQuantities);
+    setTransactions(restored.state.transactions);
+    setOperationsPolicy(restored.state.operationsPolicy);
+    setStockItems((items) => items.map((item) => ({
+      ...item,
+      stock: restored.state.catalogQuantities[item.sku] ?? item.stock,
+    })));
+    setLastSavedAt(restored.state.savedAt);
+    setLastAction(`Back-up van ${formatPersistenceTime(restored.state.savedAt)} hersteld.`);
+    return { success: true, message: "Back-up gecontroleerd en hersteld." };
+  }
+
+  function resetPilotData() {
+    clearOperationsState(window.localStorage);
+    setCatalogQuantities({});
+    setTransactions(initialInventoryTransactions);
+    setOperationsPolicy(defaultOperationsPolicy);
+    setStockItems(initialLowStock);
+    setLastSavedAt(null);
+    setLastAction("Lokale pilotgegevens teruggezet naar de veilige beginstand.");
+  }
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -254,6 +349,7 @@ export function Dashboard() {
         {role === "employee" && (
           <EmployeeWorkspace
             catalog={inventoryCatalog}
+            orders={demoWorkOrders}
             quantities={catalogQuantities}
             policy={operationsPolicy}
             onInventoryMutation={recordEmployeeInventoryMutation}
@@ -350,8 +446,8 @@ export function Dashboard() {
           </section>
         </div>
         <section className="roadmap-panel">
-          <div className="roadmap-heading"><div><span className="workspace-kicker">PRODUCTIEROADMAP</span><h2>KeyFlow is 73% compleet</h2><p>Voortgang naar de volledige live productieversie.</p></div><strong>73%</strong></div>
-          <div className="roadmap-track"><span style={{ width: "73%" }} /></div>
+          <div className="roadmap-heading"><div><span className="workspace-kicker">PRODUCTIEROADMAP</span><h2>KeyFlow is 79% compleet</h2><p>Voortgang naar de volledige live productieversie.</p></div><strong>79%</strong></div>
+          <div className="roadmap-track"><span style={{ width: "79%" }} /></div>
           <div className="roadmap-steps">
             <span className="done">Basis & UX</span><span className="done">Excel-import</span><span className="done">Voorraad & planning</span><span className="current">Rollen & uitvoering</span><span>Database live</span><span>SSO & integraties</span><span>Productieacceptatie</span>
           </div>
@@ -391,13 +487,21 @@ export function Dashboard() {
               setOperationsPolicy(nextPolicy);
               setLastAction(`Conversiebeleid bijgewerkt · grens €${nextPolicy.thresholdEur}`);
             }}
+            persistence={{
+              ready: persistenceReady,
+              lastSavedAt,
+              message: persistenceMessage,
+            }}
+            onExportBackup={exportPilotBackup}
+            onRestoreBackup={restorePilotBackup}
+            onResetPilotData={resetPilotData}
           />
         )}
         {role === "management" && activeView === "reports" && <ReportsWorkspace />}
 
         <footer className="app-footer">
-          <span><i /> Systeem gereed</span>
-          <span>{lastAction || `Productieroadmap 73% · ${role === "management" ? "managementweergave" : "werknemersuitvoering"}`}</span>
+          <span><i /> {persistenceReady ? `Lokaal bewaard${lastSavedAt ? ` · ${formatPersistenceTime(lastSavedAt)}` : ""}` : "Opslag laden…"}</span>
+          <span>{lastAction || `Productieroadmap 79% · ${role === "management" ? "managementweergave" : "werknemersuitvoering"}`}</span>
         </footer>
         <ConversionAdvisor open={advisorOpen} onClose={() => setAdvisorOpen(false)} />
         <AccessManagementDialog open={accessOpen} onClose={() => setAccessOpen(false)} />
@@ -425,4 +529,13 @@ export function Dashboard() {
 
 function calculateCatalogThreshold(averageWeeklyDemand: number, leadTimeDays: number, safetyStockWeeks: number) {
   return Math.ceil(averageWeeklyDemand * (leadTimeDays / 7 + safetyStockWeeks));
+}
+
+function formatPersistenceTime(value: string) {
+  return new Intl.DateTimeFormat("nl-NL", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { inventoryCatalog } from "@/data/inventory-demo";
 import {
   calculateAbcAnalysis,
@@ -14,6 +14,14 @@ type Props = {
   transactions: InventoryTransactionEntry[];
   policy: OperationsPolicy;
   onPolicyChange: (policy: OperationsPolicy) => void;
+  persistence: {
+    ready: boolean;
+    lastSavedAt: string | null;
+    message: string;
+  };
+  onExportBackup: () => void;
+  onRestoreBackup: (file: File) => Promise<{ success: boolean; message: string }>;
+  onResetPilotData: () => void;
 };
 
 type Tab = "abc" | "ledger" | "policy";
@@ -30,10 +38,17 @@ export function OperationsManagement({
   transactions,
   policy,
   onPolicyChange,
+  persistence,
+  onExportBackup,
+  onRestoreBackup,
+  onResetPilotData,
 }: Props) {
+  const backupInputRef = useRef<HTMLInputElement>(null);
   const [tab, setTab] = useState<Tab>("abc");
   const [draft, setDraft] = useState(policy);
   const [saved, setSaved] = useState("");
+  const [backupMessage, setBackupMessage] = useState("");
+  const [resetArmed, setResetArmed] = useState(false);
 
   const analysis = useMemo(
     () => calculateAbcAnalysis(inventoryCatalog, transactions, policy),
@@ -207,6 +222,45 @@ export function OperationsManagement({
                 <li>Foto&apos;s en toetsenbordafmetingen verzamelen</li>
                 <li>Mislukte pastesten structureel registreren</li>
               </ul>
+            </section>
+            <section className="data-continuity">
+              <div>
+                <span className="workspace-kicker">PILOTOPSLAG & HERSTEL</span>
+                <h3>Automatisch bewaard op dit apparaat</h3>
+                <p>{persistence.message}</p>
+              </div>
+              <dl>
+                <div><dt>Opslagmodus</dt><dd>Lokale pilot</dd></div>
+                <div><dt>Laatste opslag</dt><dd>{persistence.lastSavedAt ? formatDate(persistence.lastSavedAt) : persistence.ready ? "Nog geen wijziging" : "Laden…"}</dd></div>
+                <div><dt>Teamsynchronisatie</dt><dd className="pending">Wacht op PostgreSQL</dd></div>
+              </dl>
+              <div className="continuity-actions">
+                <button className="secondary-button" onClick={onExportBackup}>Back-up downloaden</button>
+                <button className="secondary-button" onClick={() => backupInputRef.current?.click()}>Back-up herstellen</button>
+                <input
+                  ref={backupInputRef}
+                  type="file"
+                  accept="application/json,.json"
+                  className="sr-only"
+                  onChange={async (event) => {
+                    const file = event.target.files?.[0];
+                    if (!file) return;
+                    const result = await onRestoreBackup(file);
+                    setBackupMessage(result.message);
+                    event.target.value = "";
+                  }}
+                />
+                {!resetArmed ? (
+                  <button className="danger-ghost-button" onClick={() => setResetArmed(true)}>Pilotdata resetten</button>
+                ) : (
+                  <div className="reset-confirmation">
+                    <span>Beginstand herstellen?</span>
+                    <button onClick={() => { onResetPilotData(); setResetArmed(false); setBackupMessage("Pilotdata teruggezet naar de beginstand."); }}>Ja, reset</button>
+                    <button onClick={() => setResetArmed(false)}>Annuleren</button>
+                  </div>
+                )}
+                {backupMessage && <small>{backupMessage}</small>}
+              </div>
             </section>
           </div>
         )}

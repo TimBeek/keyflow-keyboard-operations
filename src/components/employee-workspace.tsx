@@ -3,6 +3,10 @@
 import { useMemo, useRef, useState } from "react";
 import type { InventoryCatalogItem } from "@/data/inventory-demo";
 import {
+  lookupWorkOrder,
+  type WorkOrderSnapshot,
+} from "@/domain/order-lookup";
+import {
   methodLabel,
   recommendConversion,
   type ConversionMethodId,
@@ -38,6 +42,7 @@ type StockMode = "receipt" | "mismatch";
 
 type Props = {
   catalog: InventoryCatalogItem[];
+  orders: WorkOrderSnapshot[];
   quantities: Record<string, number>;
   policy: OperationsPolicy;
   onInventoryMutation: (request: InventoryMutationRequest) => InventoryMutationOutcome;
@@ -45,14 +50,17 @@ type Props = {
 
 export function EmployeeWorkspace({
   catalog,
+  orders,
   quantities,
   policy,
   onInventoryMutation,
 }: Props) {
   const orderInputRef = useRef<HTMLInputElement>(null);
   const modelInputRef = useRef<HTMLInputElement>(null);
+  const continueButtonRef = useRef<HTMLButtonElement>(null);
   const [orderReference, setOrderReference] = useState("");
   const [orderConfirmed, setOrderConfirmed] = useState(false);
+  const [orderFeedback, setOrderFeedback] = useState<{ tone: "success" | "warning" | "error"; message: string } | null>(null);
   const [modelQuery, setModelQuery] = useState("5420");
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [saleBandId, setSaleBandId] = useState<SaleValueBandId>("200_299");
@@ -119,6 +127,7 @@ export function EmployeeWorkspace({
     setStep("input");
     setOrderReference("");
     setOrderConfirmed(false);
+    setOrderFeedback(null);
     setModelQuery("");
     setSelectedModel(null);
     setChecks([]);
@@ -127,14 +136,47 @@ export function EmployeeWorkspace({
   }
 
   function confirmOrder() {
-    const reference = orderReference.trim().toUpperCase();
-    if (!reference) return;
-    setOrderReference(reference);
+    const result = lookupWorkOrder(orderReference, orders);
+    if (result.status === "invalid") {
+      setOrderConfirmed(false);
+      setOrderFeedback({ tone: "error", message: "Scan of vul eerst een geldig ordernummer in." });
+      return;
+    }
+    if (result.status === "found") {
+      loadWorkOrder(result.order);
+      return;
+    }
+    setOrderReference(orderReference.trim().toUpperCase());
     setOrderConfirmed(true);
+    setOrderFeedback({
+      tone: "warning",
+      message: "Order niet gevonden in de gekoppelde pilotbron. Vul model, waardeklasse en layouts handmatig in.",
+    });
     requestAnimationFrame(() => {
       modelInputRef.current?.focus();
       modelInputRef.current?.select();
     });
+  }
+
+  function loadWorkOrder(order: WorkOrderSnapshot) {
+    setOrderReference(order.reference);
+    setModelQuery(order.model);
+    setSelectedModel(order.model);
+    setSaleBandId(order.saleValueBandId);
+    setCurrentLayout(order.currentLayout);
+    setTargetLayout(order.targetLayout);
+    setStep("input");
+    if (order.status === "hold") {
+      setOrderConfirmed(false);
+      setOrderFeedback({ tone: "error", message: order.note || "Deze order staat geblokkeerd. Vraag een teamleider." });
+      return;
+    }
+    setOrderConfirmed(true);
+    setOrderFeedback({
+      tone: "success",
+      message: `${order.model}, ${getSaleValueBand(order.saleValueBandId).shortLabel} en ${order.targetLayout} automatisch geladen.`,
+    });
+    requestAnimationFrame(() => continueButtonRef.current?.focus());
   }
 
   function changeModelQuery(value: string) {
@@ -252,19 +294,21 @@ export function EmployeeWorkspace({
                       onChange={(event) => {
                         setOrderReference(event.target.value);
                         setOrderConfirmed(false);
+                        setOrderFeedback(null);
                       }}
                       onKeyDown={(event) => {
                         if (event.key === "Enter" || event.key === "Tab") confirmOrder();
                       }}
                       onBlur={() => {
-                        if (orderReference.trim()) setOrderConfirmed(true);
+                        if (orderReference.trim() && !orderConfirmed) confirmOrder();
                       }}
                       placeholder="Scan de barcode…"
                       autoFocus
                     />
-                    <button type="button" disabled={!orderReference.trim()} onClick={confirmOrder}>{orderConfirmed ? "✓ Gescand" : "Bevestig"}</button>
+                    <button type="button" disabled={!orderReference.trim()} onClick={confirmOrder}>{orderFeedback?.tone === "success" ? "✓ Geladen" : orderConfirmed ? "✓ Bevestigd" : "Opzoeken"}</button>
                   </div>
                   <small>De scanner geeft automatisch Enter; daarna springt KeyFlow naar het modelnummer.</small>
+                  {orderFeedback && <div className={`order-lookup-feedback ${orderFeedback.tone}`}>{orderFeedback.message}</div>}
                 </label>
                 <label className="wide model-entry-field">
                   <span>2. Typ alleen het modelnummer</span>
@@ -296,7 +340,7 @@ export function EmployeeWorkspace({
               </div>
               {valueBandClassification === "overlap" && <div className="value-band-warning">De managementgrens van €{policy.thresholdEur} valt midden in {saleBand.label}. Laat management de grens op een klassengrens zetten of controleer het exacte bedrag.</div>}
               <LiveAdvice recommendation={recommendation} match={noviplyMatch} />
-              <button className="employee-primary employee-continue" disabled={!orderConfirmed || !model || recommendation.primary === "none" || valueBandClassification === "overlap"} onClick={() => setStep("advice")}>Open advies voor {model || "gekozen model"} →</button>
+              <button ref={continueButtonRef} className="employee-primary employee-continue" disabled={!orderConfirmed || !model || recommendation.primary === "none" || valueBandClassification === "overlap"} onClick={() => setStep("advice")}>Open advies voor {model || "gekozen model"} →</button>
             </div>
           )}
 
@@ -369,22 +413,12 @@ export function EmployeeWorkspace({
           </section>
           <section className="panel employee-queue">
             <div><span className="workspace-kicker">MIJN WACHTRIJ</span><b>3 open</b></div>
-            {[
-              ["ORD-1859", "Dell Latitude 5420", "QWERTY US"],
-              ["ORD-1861", "HP EliteBook 850 G7", "QWERTY US"],
-              ["ORD-1864", "HP ZBook 15 G3", "QWERTZ DE"],
-            ].map(([order, laptop, layout]) => (
+            {orders.filter((order) => order.status === "ready").slice(0, 3).map((order) => (
               <button
-                key={order}
-                onClick={() => {
-                  setOrderReference(order);
-                  setOrderConfirmed(true);
-                  setModelQuery(laptop);
-                  setSelectedModel(laptop);
-                  setStep("input");
-                }}
+                key={order.reference}
+                onClick={() => loadWorkOrder(order)}
               >
-                <span><strong>{order}</strong><small>{laptop}</small></span><b>{layout}</b>
+                <span><strong>{order.aliases[0] || order.reference}</strong><small>{order.model}</small></span><b>{order.targetLayout}</b>
               </button>
             ))}
           </section>
