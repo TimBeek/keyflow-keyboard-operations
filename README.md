@@ -18,6 +18,7 @@ De eerste applicatiebasis bevat:
 - een health endpoint dat veilig meldt of de databaseomgeving is geconfigureerd;
 - een Excel-analysecommando dat importfouten, waarschuwingen en mogelijke dubbelen rapporteert;
 - een gecontroleerde Excel-upload naar importstaging, met bestandsduplicaatcontrole en herleidbare bevindingen per bronrij;
+- een importbeoordeling met filters, verplichte afhandelnotitie en auditregistratie;
 - een productiebuild zonder lint- of TypeScriptfouten;
 - een containerdefinitie en GitHub Actions voor CI en image-publicatie.
 
@@ -61,6 +62,8 @@ De database-API's zijn daarna beschikbaar via:
 
 - `POST /api/inventory/mutations` voor een idempotente voorraadmutatie;
 - `POST /api/imports/inventory` voor een gecontroleerde `.xlsx`-upload;
+- `GET /api/imports/inventory/{batchId}` voor alle herleidbare bevindingen van een import;
+- `PATCH /api/imports/inventory/{batchId}/issues/{issueId}` voor auditbare afhandeling;
 - `GET /api/health` voor de databaseconfiguratiestatus.
 
 De import-upload gebruikt `multipart/form-data` met:

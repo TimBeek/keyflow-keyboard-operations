@@ -16,9 +16,10 @@ type ImportResult = {
 type Props = {
   open: boolean;
   onClose: () => void;
+  onReview: (batchId: string) => void;
 };
 
-export function InventoryImportDialog({ open, onClose }: Props) {
+export function InventoryImportDialog({ open, onClose, onReview }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [result, setResult] = useState<ImportResult | null>(null);
@@ -37,6 +38,12 @@ export function InventoryImportDialog({ open, onClose }: Props) {
   function close() {
     reset();
     onClose();
+  }
+
+  function review(batchId: string) {
+    reset();
+    onClose();
+    onReview(batchId);
   }
 
   async function upload() {
@@ -102,6 +109,9 @@ export function InventoryImportDialog({ open, onClose }: Props) {
               <span>2. SKU’s, aantallen, layouts en compatibiliteit worden gecontroleerd.</span>
               <span>3. Fouten en mogelijke dubbelen gaan eerst naar beoordeling.</span>
             </div>
+            <button className="demo-review-link" onClick={() => review("demo")}>
+              Bekijk eerst de 43 bevindingen uit het huidige bronbestand
+            </button>
             {error && <div className="form-error">{error}</div>}
           </div>
         ) : (
@@ -130,7 +140,11 @@ export function InventoryImportDialog({ open, onClose }: Props) {
           {result ? (
             <>
               <button className="secondary-button" onClick={reset}>Ander bestand</button>
-              <button className="primary-button" onClick={close}>Sluiten</button>
+              {result.status === "needs_review" ? (
+                <button className="primary-button" onClick={() => review(result.batchId)}>Bevindingen bekijken</button>
+              ) : (
+                <button className="primary-button" onClick={close}>Sluiten</button>
+              )}
             </>
           ) : (
             <>

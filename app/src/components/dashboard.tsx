@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ConversionAdvisor } from "@/components/conversion-advisor";
+import { ImportReviewDialog } from "@/components/import-review";
 import { InventoryImportDialog } from "@/components/inventory-import";
 import { InventoryMutationDialog, type InventoryItem } from "@/components/inventory-mutation";
 
@@ -71,6 +72,7 @@ export function Dashboard() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [advisorOpen, setAdvisorOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [reviewBatchId, setReviewBatchId] = useState<string | null>(null);
   const [stockItems, setStockItems] = useState(initialLowStock);
   const [mutation, setMutation] = useState<{ mode: "issue" | "receipt"; item: InventoryItem } | null>(null);
   const [lastAction, setLastAction] = useState("");
@@ -222,7 +224,14 @@ export function Dashboard() {
           <span>{lastAction || "Prototype met geverifieerde Excel-momentopname"}</span>
         </footer>
         <ConversionAdvisor open={advisorOpen} onClose={() => setAdvisorOpen(false)} />
-        <InventoryImportDialog open={importOpen} onClose={() => setImportOpen(false)} />
+        <InventoryImportDialog
+          open={importOpen}
+          onClose={() => setImportOpen(false)}
+          onReview={setReviewBatchId}
+        />
+        {reviewBatchId && (
+          <ImportReviewDialog batchId={reviewBatchId} onClose={() => setReviewBatchId(null)} />
+        )}
         {mutation && (
           <InventoryMutationDialog
             open
