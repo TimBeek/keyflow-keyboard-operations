@@ -17,6 +17,7 @@ describe("operationele pilotopslag", () => {
       catalogQuantities: { NB10172E1NL: 24 },
       transactions: initialInventoryTransactions.slice(0, 2),
       operationsPolicy: defaultOperationsPolicy,
+      verificationReports: [],
     }, "2026-07-27T18:00:00.000Z");
 
     const restored = parseOperationsSnapshot(serializeOperationsSnapshot(snapshot));
@@ -32,6 +33,21 @@ describe("operationele pilotopslag", () => {
     expect(parseOperationsSnapshot(JSON.stringify({ version: 99 })).success).toBe(false);
   });
 
+  it("herstelt bestaande versie-1-back-ups zonder controlehistorie", () => {
+    const legacyBackup = {
+      format: "keyflow-operations",
+      version: 1,
+      savedAt: "2026-07-27T18:00:00.000Z",
+      catalogQuantities: {},
+      transactions: [],
+      operationsPolicy: defaultOperationsPolicy,
+    };
+
+    const restored = parseOperationsSnapshot(JSON.stringify(legacyBackup));
+    expect(restored.success).toBe(true);
+    if (restored.success) expect(restored.state.verificationReports).toEqual([]);
+  });
+
   it("schrijft, leest en wist via een storage-adapter", () => {
     const values = new Map<string, string>();
     const storage = {
@@ -43,6 +59,7 @@ describe("operationele pilotopslag", () => {
       catalogQuantities: {},
       transactions: [],
       operationsPolicy: defaultOperationsPolicy,
+      verificationReports: [],
     });
 
     writeOperationsState(storage, snapshot);

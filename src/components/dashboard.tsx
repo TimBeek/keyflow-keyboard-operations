@@ -34,6 +34,10 @@ import {
   serializeOperationsSnapshot,
   writeOperationsState,
 } from "@/domain/operations-persistence";
+import type {
+  StickerVerificationReport,
+  StickerVerificationReportInput,
+} from "@/domain/sticker-verification";
 
 type IconName =
   | "home"
@@ -122,6 +126,7 @@ export function Dashboard() {
   const [catalogQuantities, setCatalogQuantities] = useState<Record<string, number>>({});
   const [transactions, setTransactions] = useState<InventoryTransactionEntry[]>(initialInventoryTransactions);
   const [operationsPolicy, setOperationsPolicy] = useState<OperationsPolicy>(defaultOperationsPolicy);
+  const [verificationReports, setVerificationReports] = useState<StickerVerificationReport[]>([]);
   const [persistenceReady, setPersistenceReady] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [persistenceMessage, setPersistenceMessage] = useState("Lokale pilotopslag laden…");
@@ -147,6 +152,7 @@ export function Dashboard() {
         setCatalogQuantities(restored.state.catalogQuantities);
         setTransactions(restored.state.transactions);
         setOperationsPolicy(restored.state.operationsPolicy);
+        setVerificationReports(restored.state.verificationReports);
         setStockItems((items) => items.map((item) => ({
           ...item,
           stock: restored.state?.catalogQuantities[item.sku] ?? item.stock,
@@ -171,6 +177,7 @@ export function Dashboard() {
           catalogQuantities,
           transactions,
           operationsPolicy,
+          verificationReports,
         });
         writeOperationsState(window.localStorage, snapshot);
         setLastSavedAt(snapshot.savedAt);
@@ -180,7 +187,7 @@ export function Dashboard() {
       }
     }, 250);
     return () => window.clearTimeout(timeoutId);
-  }, [catalogQuantities, operationsPolicy, persistenceReady, transactions]);
+  }, [catalogQuantities, operationsPolicy, persistenceReady, transactions, verificationReports]);
 
   function saveMutation(newQuantity: number, quantityDelta: number) {
     if (!mutation) return;
@@ -240,6 +247,22 @@ export function Dashboard() {
     return result;
   }
 
+  function recordStickerVerification(input: StickerVerificationReportInput) {
+    const report: StickerVerificationReport = {
+      ...input,
+      id: crypto.randomUUID(),
+      occurredAt: new Date().toISOString(),
+      actor: "Medewerker",
+    };
+    setVerificationReports((current) => [...current, report]);
+    setLastAction(
+      report.outcome === "passed"
+        ? `Hangmap ${report.storageNumber} gecontroleerd voor ${report.sku}.`
+        : `Afwijking bij hangmap ${report.storageNumber}: ${report.sku}.`,
+    );
+    return report;
+  }
+
   function switchRole(nextRole: UserRole) {
     setRole(nextRole);
     setActiveView("overview");
@@ -252,6 +275,7 @@ export function Dashboard() {
       catalogQuantities,
       transactions,
       operationsPolicy,
+      verificationReports,
     });
     const blob = new Blob([serializeOperationsSnapshot(snapshot)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -269,6 +293,7 @@ export function Dashboard() {
     setCatalogQuantities(restored.state.catalogQuantities);
     setTransactions(restored.state.transactions);
     setOperationsPolicy(restored.state.operationsPolicy);
+    setVerificationReports(restored.state.verificationReports);
     setStockItems((items) => items.map((item) => ({
       ...item,
       stock: restored.state.catalogQuantities[item.sku] ?? item.stock,
@@ -283,6 +308,7 @@ export function Dashboard() {
     setCatalogQuantities({});
     setTransactions(initialInventoryTransactions);
     setOperationsPolicy(defaultOperationsPolicy);
+    setVerificationReports([]);
     setStockItems(initialLowStock);
     setLastSavedAt(null);
     setLastAction("Lokale pilotgegevens teruggezet naar de veilige beginstand.");
@@ -353,6 +379,7 @@ export function Dashboard() {
             quantities={catalogQuantities}
             policy={operationsPolicy}
             onInventoryMutation={recordEmployeeInventoryMutation}
+            onStickerVerification={recordStickerVerification}
           />
         )}
 
@@ -383,7 +410,7 @@ export function Dashboard() {
 
         <section className="stats-grid">
           <article className="stat-card">
-            <div><span>Totale voorraad</span><strong>3.218</strong><small>stickervellen op 2 locaties</small></div>
+            <div><span>Totale voorraad</span><strong>3.218</strong><small>stickervellen in 148 genummerde hangmappen</small></div>
             <div className="stat-glyph stock"><Icon name="stock" size={27} /></div>
           </article>
           <article className="stat-card urgent">
@@ -446,8 +473,8 @@ export function Dashboard() {
           </section>
         </div>
         <section className="roadmap-panel">
-          <div className="roadmap-heading"><div><span className="workspace-kicker">PRODUCTIEROADMAP</span><h2>KeyFlow is 79% compleet</h2><p>Voortgang naar de volledige live productieversie.</p></div><strong>79%</strong></div>
-          <div className="roadmap-track"><span style={{ width: "79%" }} /></div>
+          <div className="roadmap-heading"><div><span className="workspace-kicker">PRODUCTIEROADMAP</span><h2>KeyFlow is 84% compleet</h2><p>Voortgang naar de volledige live productieversie.</p></div><strong>84%</strong></div>
+          <div className="roadmap-track"><span style={{ width: "84%" }} /></div>
           <div className="roadmap-steps">
             <span className="done">Basis & UX</span><span className="done">Excel-import</span><span className="done">Voorraad & planning</span><span className="current">Rollen & uitvoering</span><span>Database live</span><span>SSO & integraties</span><span>Productieacceptatie</span>
           </div>
@@ -483,6 +510,7 @@ export function Dashboard() {
             quantities={catalogQuantities}
             transactions={transactions}
             policy={operationsPolicy}
+            verificationReports={verificationReports}
             onPolicyChange={(nextPolicy) => {
               setOperationsPolicy(nextPolicy);
               setLastAction(`Conversiebeleid bijgewerkt · grens €${nextPolicy.thresholdEur}`);
@@ -501,7 +529,7 @@ export function Dashboard() {
 
         <footer className="app-footer">
           <span><i /> {persistenceReady ? `Lokaal bewaard${lastSavedAt ? ` · ${formatPersistenceTime(lastSavedAt)}` : ""}` : "Opslag laden…"}</span>
-          <span>{lastAction || `Productieroadmap 79% · ${role === "management" ? "managementweergave" : "werknemersuitvoering"}`}</span>
+          <span>{lastAction || `Productieroadmap 84% · ${role === "management" ? "managementweergave" : "werknemersuitvoering"}`}</span>
         </footer>
         <ConversionAdvisor open={advisorOpen} onClose={() => setAdvisorOpen(false)} />
         <AccessManagementDialog open={accessOpen} onClose={() => setAccessOpen(false)} />

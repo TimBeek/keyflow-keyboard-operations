@@ -3,6 +3,7 @@ import type {
   InventoryTransactionEntry,
   OperationsPolicy,
 } from "@/domain/operations";
+import type { StickerVerificationReport } from "@/domain/sticker-verification";
 
 export const OPERATIONS_STORAGE_KEY = "keyflow.operations-state.v1";
 
@@ -37,6 +38,27 @@ const policySchema = z.object({
   message: "ABC A-grens moet lager zijn dan de B-grens.",
 });
 
+const stickerVerificationReportSchema = z.object({
+  id: z.string().min(1),
+  occurredAt: z.string().min(10),
+  orderReference: z.string().min(1),
+  sku: z.string().min(1),
+  storageNumber: z.number().int().positive(),
+  model: z.string().min(1),
+  targetLayout: z.string().min(1),
+  variant: z.string().min(1),
+  outcome: z.enum(["passed", "blocked_unused", "scrapped"]),
+  failureReason: z.enum([
+    "wrong_storage",
+    "wrong_sku",
+    "wrong_layout",
+    "wrong_variant",
+    "position_mismatch",
+    "other",
+  ]).optional(),
+  actor: z.string().min(1),
+});
+
 const persistedOperationsStateSchema = z.object({
   format: z.literal("keyflow-operations"),
   version: z.literal(1),
@@ -44,6 +66,7 @@ const persistedOperationsStateSchema = z.object({
   catalogQuantities: z.record(z.string(), z.number().int().nonnegative()),
   transactions: z.array(transactionSchema).max(2500),
   operationsPolicy: policySchema,
+  verificationReports: z.array(stickerVerificationReportSchema).max(2500).default([]),
 });
 
 export type PersistedOperationsState = {
@@ -53,6 +76,7 @@ export type PersistedOperationsState = {
   catalogQuantities: Record<string, number>;
   transactions: InventoryTransactionEntry[];
   operationsPolicy: OperationsPolicy;
+  verificationReports: StickerVerificationReport[];
 };
 
 export type OperationsStateInput = Omit<

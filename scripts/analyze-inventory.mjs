@@ -21,7 +21,7 @@ const rows = production.data
   .filter((row) => row.some((cell) => cell !== null))
   .map((row, index) => ({
     sourceRow: index + 3,
-    number: row[0],
+    storageNumber: row[0],
     model: cleanText(row[1]),
     quantity: row[2],
     layout: cleanText(row[3]),
@@ -33,8 +33,12 @@ const rows = production.data
 const issues = [];
 const skuRows = new Map();
 const modelRows = new Map();
+const storageNumberRows = new Map();
 
 for (const row of rows) {
+  if (!Number.isInteger(row.storageNumber) || row.storageNumber <= 0) {
+    issues.push(issue("error", row.sourceRow, "storageNumber", `Ongeldig hangmapnummer: ${row.storageNumber}`));
+  }
   if (!Number.isInteger(row.quantity) || row.quantity < 0) {
     issues.push(issue("error", row.sourceRow, "quantity", `Ongeldig aantal: ${row.quantity}`));
   }
@@ -49,6 +53,7 @@ for (const row of rows) {
   }
   addIndex(skuRows, row.sku, row.sourceRow);
   addIndex(modelRows, normalize(row.model), row.sourceRow);
+  if (Number.isInteger(row.storageNumber)) addIndex(storageNumberRows, String(row.storageNumber), row.sourceRow);
 }
 
 for (const [sku, sourceRows] of skuRows) {
@@ -59,6 +64,11 @@ for (const [sku, sourceRows] of skuRows) {
 for (const [model, sourceRows] of modelRows) {
   if (model && sourceRows.length > 1) {
     issues.push(issue("review", sourceRows[0], "model", `Dubbele modelnaam na normalisatie op rijen ${sourceRows.join(", ")}.`));
+  }
+}
+for (const [storageNumber, sourceRows] of storageNumberRows) {
+  if (sourceRows.length > 1) {
+    issues.push(issue("review", sourceRows[0], "storageNumber", `Hangmapnummer ${storageNumber} wordt gebruikt op rijen ${sourceRows.join(", ")}.`));
   }
 }
 
