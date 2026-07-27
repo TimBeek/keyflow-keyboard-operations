@@ -350,8 +350,8 @@ export function Dashboard() {
           </section>
         </div>
         <section className="roadmap-panel">
-          <div className="roadmap-heading"><div><span className="workspace-kicker">PRODUCTIEROADMAP</span><h2>KeyFlow is 68% compleet</h2><p>Voortgang naar de volledige live productieversie.</p></div><strong>68%</strong></div>
-          <div className="roadmap-track"><span style={{ width: "68%" }} /></div>
+          <div className="roadmap-heading"><div><span className="workspace-kicker">PRODUCTIEROADMAP</span><h2>KeyFlow is 73% compleet</h2><p>Voortgang naar de volledige live productieversie.</p></div><strong>73%</strong></div>
+          <div className="roadmap-track"><span style={{ width: "73%" }} /></div>
           <div className="roadmap-steps">
             <span className="done">Basis & UX</span><span className="done">Excel-import</span><span className="done">Voorraad & planning</span><span className="current">Rollen & uitvoering</span><span>Database live</span><span>SSO & integraties</span><span>Productieacceptatie</span>
           </div>
@@ -397,7 +397,7 @@ export function Dashboard() {
 
         <footer className="app-footer">
           <span><i /> Systeem gereed</span>
-          <span>{lastAction || `Productieroadmap 68% · ${role === "management" ? "managementweergave" : "werknemersuitvoering"}`}</span>
+          <span>{lastAction || `Productieroadmap 73% · ${role === "management" ? "managementweergave" : "werknemersuitvoering"}`}</span>
         </footer>
         <ConversionAdvisor open={advisorOpen} onClose={() => setAdvisorOpen(false)} />
         <AccessManagementDialog open={accessOpen} onClose={() => setAccessOpen(false)} />

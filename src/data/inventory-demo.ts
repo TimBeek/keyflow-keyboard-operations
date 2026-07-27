@@ -22,6 +22,7 @@ export const inventoryCatalog: InventoryCatalogItem[] = [
   item("Dell Latitude 7300", "NB10060E1NL", "QWERTY US", 30, 3, 6.5, 7),
   item("HP EliteBook x360 1040 G8", "NB10061E1NL", "QWERTY US", 26, 2, 1.5, 3),
   item("Dell Latitude 5420", "NB10172E1FR", "AZERTY FR", 64, 4, 2.1, 6),
+  item("Dell Latitude 5420", "NB10172E1NL", "QWERTY US", 25, 2, 4.3, 7),
   item("Fujitsu Lifebook E548", "NB10063E1NL", "QWERTY US", 30, 1, 0, 2),
   item("HP EliteBook 850 G7", "NB10064E1NL", "QWERTY US", 18, 2, 4.8, 5),
   item("HP ZBook Fury 15 G7", "NB10065E1NL", "QWERTY US", 19, 1, 2.7, 4),
