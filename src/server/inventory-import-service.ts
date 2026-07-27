@@ -16,6 +16,15 @@ const importMetadataSchema = z.object({
   actorId: z.string().uuid(),
 });
 
+const importIdSchema = z.string().uuid();
+const resolveImportIssueSchema = z.object({
+  batchId: z.string().uuid(),
+  issueId: z.string().uuid(),
+  actorId: z.string().uuid(),
+  resolved: z.boolean(),
+  resolutionNote: z.string().trim().min(3).max(500),
+});
+
 export type ImportInventoryWorkbookInput = z.input<typeof importMetadataSchema> & {
   contents: Buffer;
 };
@@ -127,6 +136,149 @@ export async function importInventoryWorkbook(rawInput: ImportInventoryWorkbookI
   });
 }
 
+export async function getInventoryImportReview(rawBatchId: string) {
+  const batchId = importIdSchema.parse(rawBatchId);
+  const sql = database();
+  const [batch] = await sql<ImportReviewBatch[]>`
+    select
+      id as "batchId",
+      source_file_name as "fileName",
+      status,
+      record_count as "recordCount",
+      total_quantity as "totalQuantity",
+      error_count as "errorCount",
+      warning_count as "warningCount",
+      review_count as "reviewCount",
+      imported_at as "importedAt"
+    from inventory_import_batches
+    where id = ${batchId}::uuid
+    limit 1
+  `;
+  if (!batch) {
+    throw new InventoryImportPersistenceError("IMPORT_NOT_FOUND", "Voorraadimport niet gevonden.");
+  }
+
+  const issues = await sql<ImportReviewIssue[]>`
+    select
+      issue.id as "issueId",
+      issue.severity,
+      issue.field_name as "field",
+      issue.issue_code as "code",
+      issue.message,
+      issue.resolved,
+      issue.resolution_note as "resolutionNote",
+      issue.resolved_at as "resolvedAt",
+      row.source_row as "sourceRow",
+      row.model_name as "model",
+      row.quantity,
+      row.layout_name as "layout",
+      row.sku,
+      row.linked_models_text as "linkedModels"
+    from inventory_import_issues issue
+    left join inventory_import_rows row on row.id = issue.import_row_id
+    where issue.batch_id = ${batchId}::uuid
+    order by
+      issue.resolved asc,
+      case issue.severity when 'error' then 1 when 'review' then 2 else 3 end,
+      row.source_row asc,
+      issue.id asc
+  `;
+
+  return {
+    ...batch,
+    openIssueCount: issues.filter(({ resolved }) => !resolved).length,
+    issues,
+  };
+}
+
+export async function resolveInventoryImportIssue(rawInput: z.input<typeof resolveImportIssueSchema>) {
+  const input = resolveImportIssueSchema.parse(rawInput);
+  const sql = database();
+
+  return sql.begin(async (transaction) => {
+    const [issue] = await transaction<{
+      issue_id: string;
+      batch_status: ImportBatchResult["status"];
+    }[]>`
+      select
+        issue.id as issue_id,
+        batch.status as batch_status
+      from inventory_import_issues issue
+      inner join inventory_import_batches batch on batch.id = issue.batch_id
+      where issue.id = ${input.issueId}::uuid
+        and issue.batch_id = ${input.batchId}::uuid
+      for update
+    `;
+    if (!issue) {
+      throw new InventoryImportPersistenceError("ISSUE_NOT_FOUND", "Importbevinding niet gevonden.");
+    }
+    if (issue.batch_status === "applied" || issue.batch_status === "failed") {
+      throw new InventoryImportPersistenceError(
+        "IMPORT_LOCKED",
+        "Deze import kan niet meer worden gewijzigd.",
+      );
+    }
+
+    await transaction`
+      update inventory_import_issues
+      set
+        resolved = ${input.resolved},
+        resolution_note = ${input.resolutionNote},
+        resolved_by = ${input.actorId}::uuid,
+        resolved_at = case when ${input.resolved} then now() else null end
+      where id = ${input.issueId}::uuid
+    `;
+
+    const [open] = await transaction<{
+      total: number;
+      blockers: number;
+    }[]>`
+      select
+        count(*) filter (where not resolved)::integer as total,
+        count(*) filter (
+          where not resolved and severity in ('error', 'review')
+        )::integer as blockers
+      from inventory_import_issues
+      where batch_id = ${input.batchId}::uuid
+    `;
+    const status = open.blockers > 0 ? "needs_review" : "ready";
+
+    await transaction`
+      update inventory_import_batches
+      set status = ${status}
+      where id = ${input.batchId}::uuid
+    `;
+    await transaction`
+      insert into audit_logs (
+        actor_id,
+        action,
+        entity_type,
+        entity_id,
+        after_data
+      )
+      values (
+        ${input.actorId}::uuid,
+        ${input.resolved ? "inventory_import_issue_resolved" : "inventory_import_issue_reopened"},
+        'inventory_import_issue',
+        ${input.issueId},
+        ${transaction.json({
+          batchId: input.batchId,
+          resolved: input.resolved,
+          resolutionNote: input.resolutionNote,
+        })}
+      )
+    `;
+
+    return {
+      batchId: input.batchId,
+      issueId: input.issueId,
+      resolved: input.resolved,
+      status,
+      openIssueCount: open.total,
+    };
+  });
+}
+
 type ImportBatchResult = {
   batchId: string;
   status: "processing" | "needs_review" | "ready" | "applied" | "failed";
@@ -135,6 +287,28 @@ type ImportBatchResult = {
   errorCount: number;
   warningCount: number;
   reviewCount: number;
+};
+
+type ImportReviewBatch = Omit<ImportBatchResult, "duplicate"> & {
+  fileName: string;
+  importedAt: Date;
+};
+
+export type ImportReviewIssue = {
+  issueId: string;
+  severity: "error" | "warning" | "review";
+  field: string;
+  code: string;
+  message: string;
+  resolved: boolean;
+  resolutionNote: string | null;
+  resolvedAt: Date | null;
+  sourceRow: number | null;
+  model: string | null;
+  quantity: number | null;
+  layout: string | null;
+  sku: string | null;
+  linkedModels: string | null;
 };
 
 async function insertIssue(
@@ -170,5 +344,19 @@ export function inventoryImportErrorResponse(error: unknown) {
   if (error instanceof InventoryWorkbookError) {
     return { status: 422, body: { error: error.code, message: error.message } };
   }
+  if (error instanceof InventoryImportPersistenceError) {
+    const status = error.code === "IMPORT_LOCKED" ? 409 : 404;
+    return { status, body: { error: error.code, message: error.message } };
+  }
   throw error;
+}
+
+export class InventoryImportPersistenceError extends Error {
+  constructor(
+    public readonly code: "IMPORT_NOT_FOUND" | "ISSUE_NOT_FOUND" | "IMPORT_LOCKED",
+    message: string,
+  ) {
+    super(message);
+    this.name = "InventoryImportPersistenceError";
+  }
 }
