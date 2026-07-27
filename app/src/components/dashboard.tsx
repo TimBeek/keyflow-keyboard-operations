@@ -4,7 +4,14 @@ import { useMemo, useState } from "react";
 import { ConversionAdvisor } from "@/components/conversion-advisor";
 import { ImportReviewDialog } from "@/components/import-review";
 import { InventoryImportDialog } from "@/components/inventory-import";
+import { InventoryCatalog } from "@/components/inventory-catalog";
 import { InventoryMutationDialog, type InventoryItem } from "@/components/inventory-mutation";
+import {
+  ConversionsWorkspace,
+  ModelsWorkspace,
+  OrdersWorkspace,
+  ReportsWorkspace,
+} from "@/components/planning-workspaces";
 
 type IconName =
   | "home"
@@ -20,6 +27,8 @@ type IconName =
   | "minus"
   | "alert"
   | "arrow";
+
+type ViewName = "overview" | "inventory" | "conversions" | "orders" | "models" | "reports";
 
 function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
   const paths: Record<IconName, React.ReactNode> = {
@@ -44,14 +53,23 @@ function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
   );
 }
 
-const navItems: { label: string; icon: IconName; active?: boolean }[] = [
-  { label: "Overzicht", icon: "home", active: true },
-  { label: "Voorraad", icon: "stock" },
-  { label: "Conversies", icon: "convert" },
-  { label: "Bestellingen", icon: "orders" },
-  { label: "Modellen", icon: "models" },
-  { label: "Rapportages", icon: "reports" },
+const navItems: { id: ViewName; label: string; icon: IconName }[] = [
+  { id: "overview", label: "Overzicht", icon: "home" },
+  { id: "inventory", label: "Voorraad", icon: "stock" },
+  { id: "conversions", label: "Conversies", icon: "convert" },
+  { id: "orders", label: "Bestellingen", icon: "orders" },
+  { id: "models", label: "Modellen", icon: "models" },
+  { id: "reports", label: "Rapportages", icon: "reports" },
 ];
+
+const viewHeadings: Record<ViewName, { title: string; subtitle: string }> = {
+  overview: { title: "Goedemiddag, Tim", subtitle: "Dit vraagt vandaag je aandacht." },
+  inventory: { title: "Voorraad", subtitle: "Zoek, controleer en plan alle keyboardstickers." },
+  conversions: { title: "Conversies", subtitle: "Beheer de methode en voortgang per laptoporder." },
+  orders: { title: "Bestellingen", subtitle: "Zet automatisch voorraadadvies om in een gecontroleerd concept." },
+  models: { title: "Modellen", subtitle: "Beheer compatibiliteit zonder dubbele handmatige invoer." },
+  reports: { title: "Rapportages", subtitle: "Volg verbruik, dekking, trends en komende behoefte." },
+};
 
 const initialLowStock: InventoryItem[] = [
   { model: "Fujitsu Lifebook U7410", sku: "NB10210E1NL", layout: "QWERTY US", stock: 0, threshold: 10 },
@@ -68,13 +86,19 @@ const methods = [
 ];
 
 export function Dashboard() {
+  const [activeView, setActiveView] = useState<ViewName>("overview");
   const [query, setQuery] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [advisorOpen, setAdvisorOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [reviewBatchId, setReviewBatchId] = useState<string | null>(null);
   const [stockItems, setStockItems] = useState(initialLowStock);
-  const [mutation, setMutation] = useState<{ mode: "issue" | "receipt"; item: InventoryItem } | null>(null);
+  const [catalogQuantities, setCatalogQuantities] = useState<Record<string, number>>({});
+  const [mutation, setMutation] = useState<{
+    mode: "issue" | "receipt";
+    item: InventoryItem;
+    onConfirm?: (newQuantity: number) => void;
+  } | null>(null);
   const [lastAction, setLastAction] = useState("");
   const filteredStock = useMemo(
     () => stockItems.filter((item) => `${item.model} ${item.sku} ${item.layout}`.toLowerCase().includes(query.toLowerCase())),
@@ -84,7 +108,8 @@ export function Dashboard() {
 
   function saveMutation(newQuantity: number, quantityDelta: number) {
     if (!mutation) return;
-    setStockItems((items) => items.map((item) => item.sku === mutation.item.sku ? { ...item, stock: newQuantity } : item));
+    if (mutation.onConfirm) mutation.onConfirm(newQuantity);
+    else setStockItems((items) => items.map((item) => item.sku === mutation.item.sku ? { ...item, stock: newQuantity } : item));
     setLastAction(`${mutation.item.sku}: ${quantityDelta > 0 ? "+" : ""}${quantityDelta} geboekt · nieuwe voorraad ${newQuantity}`);
     setMutation(null);
   }
@@ -98,7 +123,11 @@ export function Dashboard() {
         </div>
         <nav aria-label="Hoofdnavigatie">
           {navItems.map((item) => (
-            <button key={item.label} className={`nav-item ${item.active ? "active" : ""}`}>
+            <button
+              key={item.id}
+              className={`nav-item ${activeView === item.id ? "active" : ""}`}
+              onClick={() => setActiveView(item.id)}
+            >
               <Icon name={item.icon} /><span>{item.label}</span>
             </button>
           ))}
@@ -117,20 +146,27 @@ export function Dashboard() {
         <header className="topbar">
           <div>
             <p className="eyebrow">MAANDAG 27 JULI</p>
-            <h1>Goedemiddag, Tim</h1>
-            <p>Dit vraagt vandaag je aandacht.</p>
+            <h1>{viewHeadings[activeView].title}</h1>
+            <p>{viewHeadings[activeView].subtitle}</p>
           </div>
           <div className="top-actions">
             <label className="global-search">
               <span className="sr-only">Zoeken</span>
               <Icon name="scan" />
-              <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Scan of zoek model, SKU…" />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                onFocus={() => activeView !== "inventory" && setActiveView("inventory")}
+                placeholder="Scan of zoek model, SKU…"
+              />
               <kbd>/</kbd>
             </label>
             <button className="icon-button" aria-label="Meldingen"><Icon name="alert" /><span className="notification-dot" /></button>
           </div>
         </header>
 
+        {activeView === "overview" && (
+          <>
         <section className="quick-actions" aria-label="Snelle acties">
           <button className="action-card issue" onClick={() => setMutation({ mode: "issue", item: defaultItem })}>
             <span className="action-icon"><Icon name="minus" size={26} /></span>
@@ -218,6 +254,33 @@ export function Dashboard() {
             </div>
           </section>
         </div>
+          </>
+        )}
+
+        {activeView === "inventory" && (
+          <InventoryCatalog
+            globalQuery={query}
+            quantities={catalogQuantities}
+            onReceive={(item) => {
+              const currentStock = catalogQuantities[item.sku] ?? item.stock;
+              setMutation({
+                mode: "receipt",
+                item: {
+                  model: item.model,
+                  sku: item.sku,
+                  layout: item.layout,
+                  stock: currentStock,
+                  threshold: calculateCatalogThreshold(item.averageWeeklyDemand, item.leadTimeDays, item.safetyStockWeeks),
+                },
+                onConfirm: (newQuantity) => setCatalogQuantities((current) => ({ ...current, [item.sku]: newQuantity })),
+              });
+            }}
+          />
+        )}
+        {activeView === "conversions" && <ConversionsWorkspace onNew={() => setAdvisorOpen(true)} />}
+        {activeView === "orders" && <OrdersWorkspace />}
+        {activeView === "models" && <ModelsWorkspace />}
+        {activeView === "reports" && <ReportsWorkspace />}
 
         <footer className="app-footer">
           <span><i /> Systeem gereed</span>
@@ -244,4 +307,8 @@ export function Dashboard() {
       </main>
     </div>
   );
+}
+
+function calculateCatalogThreshold(averageWeeklyDemand: number, leadTimeDays: number, safetyStockWeeks: number) {
+  return Math.ceil(averageWeeklyDemand * (leadTimeDays / 7 + safetyStockWeeks));
 }

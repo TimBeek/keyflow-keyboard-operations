@@ -20,6 +20,10 @@ De eerste applicatiebasis bevat:
 - een gecontroleerde Excel-upload naar importstaging, met bestandsduplicaatcontrole en herleidbare bevindingen per bronrij;
 - een importbeoordeling met filters, verplichte afhandelnotitie en auditregistratie;
 - gevalideerde correctieacties: waarde corrigeren, waarschuwing accepteren, dubbele regel apart behouden of een bronrij uitsluiten;
+- functionele hoofdnavigatie voor voorraad, conversies, bestellingen, modellen en rapportages;
+- een filterbare voorraadcatalogus met dekking, reserveringen, levertijd en planstatus;
+- automatisch besteladvies op basis van verbruik, levertijd, veiligheidsvoorraad en open bestellingen;
+- een interne conceptbestelling, modelgroepenoverzicht en 1/3/6-maandsrapportage;
 - een productiebuild zonder lint- of TypeScriptfouten;
 - een containerdefinitie en GitHub Actions voor CI en image-publicatie.
 
@@ -65,6 +69,7 @@ De database-API's zijn daarna beschikbaar via:
 - `POST /api/imports/inventory` voor een gecontroleerde `.xlsx`-upload;
 - `GET /api/imports/inventory/{batchId}` voor alle herleidbare bevindingen van een import;
 - `PATCH /api/imports/inventory/{batchId}/issues/{issueId}` voor auditbare afhandeling;
+- `POST /api/planning/reorder-advice` voor maximaal 500 herbruikbare forecastberekeningen per verzoek;
 - `GET /api/health` voor de databaseconfiguratiestatus.
 
 De import-upload gebruikt `multipart/form-data` met:
