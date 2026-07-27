@@ -32,6 +32,8 @@ export async function PATCH(
       actorId,
       resolved: body.resolved,
       resolutionNote: body.resolutionNote,
+      resolutionAction: body.resolutionAction,
+      correctedValue: body.correctedValue,
     });
     return Response.json(result);
   } catch (error) {

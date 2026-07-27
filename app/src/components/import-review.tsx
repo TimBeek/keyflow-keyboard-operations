@@ -1,8 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import {
+  InventoryResolutionError,
+  validateImportResolution,
+} from "@/import/inventory-resolution";
 
 type Severity = "error" | "warning" | "review";
+type ResolutionAction = "correct_value" | "keep_separate" | "accept_warning" | "reject_row";
 
 type ReviewIssue = {
   issueId: string;
@@ -12,6 +17,8 @@ type ReviewIssue = {
   message: string;
   resolved: boolean;
   resolutionNote: string | null;
+  resolutionAction: ResolutionAction | null;
+  correctedValue: string | null;
   resolvedAt: string | null;
   sourceRow: number | null;
   model: string | null;
@@ -48,6 +55,8 @@ export function ImportReviewDialog({ batchId, onClose }: Props) {
   const [filter, setFilter] = useState<Filter>("open");
   const [activeIssueId, setActiveIssueId] = useState<string | null>(null);
   const [note, setNote] = useState("");
+  const [resolutionAction, setResolutionAction] = useState<ResolutionAction>("correct_value");
+  const [correctedValue, setCorrectedValue] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(batchId !== "demo");
   const [saving, setSaving] = useState(false);
@@ -86,6 +95,17 @@ export function ImportReviewDialog({ batchId, onClose }: Props) {
       setError("Vul een toelichting van minimaal 3 tekens in.");
       return;
     }
+    let validated: ReturnType<typeof validateImportResolution>;
+    try {
+      validated = validateImportResolution(issue, resolutionAction, correctedValue);
+    } catch (validationError) {
+      setError(
+        validationError instanceof InventoryResolutionError
+          ? validationError.message
+          : "Controleer de gekozen afhandeling.",
+      );
+      return;
+    }
     setSaving(true);
     setError("");
 
@@ -96,16 +116,30 @@ export function ImportReviewDialog({ batchId, onClose }: Props) {
           {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ resolved: true, resolutionNote: note.trim() }),
+            body: JSON.stringify({
+              resolved: true,
+              resolutionNote: note.trim(),
+              resolutionAction: validated.action,
+              correctedValue: validated.correctedValue ?? undefined,
+            }),
           },
         );
         const body = await response.json() as { message?: string };
         if (!response.ok) throw new Error(body.message ?? "De bevinding kon niet worden afgehandeld.");
       }
 
-      setData((current) => current ? resolveLocally(current, issue.issueId, note.trim()) : current);
+      setData((current) => current
+        ? resolveLocally(
+          current,
+          issue.issueId,
+          note.trim(),
+          validated.action,
+          validated.correctedValue,
+        )
+        : current);
       setActiveIssueId(null);
       setNote("");
+      setCorrectedValue("");
     } catch (saveError) {
       setError(saveError instanceof Error ? saveError.message : "De bevinding kon niet worden afgehandeld.");
     } finally {
@@ -168,9 +202,40 @@ export function ImportReviewDialog({ batchId, onClose }: Props) {
                       </div>
                       <p>{issue.message}</p>
                       <small>Veld: {fieldLabel(issue.field)} · Code: {issue.code}</small>
-                      {issue.resolutionNote && <div className="resolution-note"><b>Toelichting:</b> {issue.resolutionNote}</div>}
+                      {issue.resolutionNote && (
+                        <div className="resolution-note">
+                          <b>{resolutionActionLabel(issue.resolutionAction)}</b>
+                          {issue.correctedValue && <span>Nieuwe waarde: {issue.correctedValue}</span>}
+                          <span>Toelichting: {issue.resolutionNote}</span>
+                        </div>
+                      )}
                       {activeIssueId === issue.issueId && (
                         <div className="resolution-form">
+                          <label>
+                            <span>Afhandelactie</span>
+                            <select
+                              value={resolutionAction}
+                              onChange={(event) => {
+                                setResolutionAction(event.target.value as ResolutionAction);
+                                setCorrectedValue("");
+                              }}
+                            >
+                              {resolutionOptions(issue).map(([value, label]) => (
+                                <option value={value} key={value}>{label}</option>
+                              ))}
+                            </select>
+                          </label>
+                          {resolutionAction === "correct_value" && (
+                            <label>
+                              <span>Gecorrigeerde waarde</span>
+                              <input
+                                value={correctedValue}
+                                onChange={(event) => setCorrectedValue(event.target.value)}
+                                maxLength={500}
+                                placeholder={correctionPlaceholder(issue)}
+                              />
+                            </label>
+                          )}
                           <label>
                             <span>Toelichting voor auditlog</span>
                             <textarea
@@ -182,8 +247,16 @@ export function ImportReviewDialog({ batchId, onClose }: Props) {
                             />
                           </label>
                           <div>
-                            <button className="secondary-button" onClick={() => { setActiveIssueId(null); setNote(""); }}>Annuleren</button>
-                            <button className="primary-button" disabled={saving || note.trim().length < 3} onClick={() => resolveIssue(issue)}>
+                            <button className="secondary-button" onClick={() => { setActiveIssueId(null); setNote(""); setCorrectedValue(""); }}>Annuleren</button>
+                            <button
+                              className="primary-button"
+                              disabled={
+                                saving
+                                || note.trim().length < 3
+                                || (resolutionAction === "correct_value" && !correctedValue.trim())
+                              }
+                              onClick={() => resolveIssue(issue)}
+                            >
                               {saving ? "Opslaan…" : "Afhandelen"}
                             </button>
                           </div>
@@ -191,7 +264,16 @@ export function ImportReviewDialog({ batchId, onClose }: Props) {
                       )}
                     </div>
                     {!issue.resolved && activeIssueId !== issue.issueId && (
-                      <button className="issue-action" onClick={() => { setActiveIssueId(issue.issueId); setNote(""); setError(""); }}>
+                      <button
+                        className="issue-action"
+                        onClick={() => {
+                          setActiveIssueId(issue.issueId);
+                          setResolutionAction(defaultResolutionAction(issue));
+                          setCorrectedValue("");
+                          setNote("");
+                          setError("");
+                        }}
+                      >
                         Beoordelen
                       </button>
                     )}
@@ -213,9 +295,30 @@ export function ImportReviewDialog({ batchId, onClose }: Props) {
   );
 }
 
-function resolveLocally(data: ReviewData, issueId: string, resolutionNote: string): ReviewData {
-  const issues = data.issues.map((issue) => issue.issueId === issueId
-    ? { ...issue, resolved: true, resolutionNote, resolvedAt: new Date().toISOString() }
+function resolveLocally(
+  data: ReviewData,
+  issueId: string,
+  resolutionNote: string,
+  resolutionAction: ResolutionAction,
+  correctedValue: string | null,
+): ReviewData {
+  const selectedIssue = data.issues.find((issue) => issue.issueId === issueId);
+  const issues = data.issues.map((issue) => (
+    issue.issueId === issueId
+    || (
+      resolutionAction === "reject_row"
+      && selectedIssue?.sourceRow !== null
+      && issue.sourceRow === selectedIssue?.sourceRow
+    )
+  )
+    ? {
+      ...applyDisplayedCorrection(issue, resolutionAction, correctedValue),
+      resolved: true,
+      resolutionNote,
+      resolutionAction,
+      correctedValue,
+      resolvedAt: new Date().toISOString(),
+    }
     : issue);
   const openIssueCount = issues.filter(({ resolved }) => !resolved).length;
   const blockers = issues.filter(({ resolved, severity }) => !resolved && (severity === "error" || severity === "review")).length;
@@ -225,6 +328,57 @@ function resolveLocally(data: ReviewData, issueId: string, resolutionNote: strin
     openIssueCount,
     status: blockers === 0 ? "ready" : "needs_review",
   };
+}
+
+function resolutionOptions(issue: ReviewIssue): [ResolutionAction, string][] {
+  if (issue.severity === "error") {
+    return [["correct_value", "Waarde corrigeren"], ["reject_row", "Rij niet importeren"]];
+  }
+  if (issue.severity === "review") {
+    return [["keep_separate", "Als aparte regel behouden"], ["reject_row", "Rij niet importeren"]];
+  }
+  return [
+    ["accept_warning", "Gecontroleerd en accepteren"],
+    ["correct_value", "Waarde aanvullen/corrigeren"],
+    ["reject_row", "Rij niet importeren"],
+  ];
+}
+
+function defaultResolutionAction(issue: ReviewIssue): ResolutionAction {
+  if (issue.severity === "error") return "correct_value";
+  if (issue.severity === "review") return "keep_separate";
+  return "accept_warning";
+}
+
+function correctionPlaceholder(issue: ReviewIssue) {
+  if (issue.field === "sku") return "Bijvoorbeeld NB10100E1NL";
+  if (issue.field === "quantity") return "Bijvoorbeeld 25";
+  if (issue.field === "layout") return "QWERTY US, AZERTY FR of QWERTZ DE";
+  if (issue.field === "linkedModels") return "Bijvoorbeeld Latitude 5400, 5410";
+  return "Vul de juiste waarde in";
+}
+
+function resolutionActionLabel(action: ResolutionAction | null) {
+  return ({
+    correct_value: "Waarde gecorrigeerd",
+    keep_separate: "Als aparte regel behouden",
+    accept_warning: "Waarschuwing gecontroleerd",
+    reject_row: "Rij uitgesloten",
+  } as Record<ResolutionAction, string>)[action ?? "accept_warning"];
+}
+
+function applyDisplayedCorrection(
+  issue: ReviewIssue,
+  action: ResolutionAction,
+  correctedValue: string | null,
+) {
+  if (action !== "correct_value" || !correctedValue) return issue;
+  if (issue.field === "sku") return { ...issue, sku: correctedValue };
+  if (issue.field === "quantity") return { ...issue, quantity: Number(correctedValue) };
+  if (issue.field === "layout") return { ...issue, layout: correctedValue.toUpperCase() };
+  if (issue.field === "linkedModels") return { ...issue, linkedModels: correctedValue };
+  if (issue.field === "model") return { ...issue, model: correctedValue };
+  return issue;
 }
 
 function severityLabel(severity: Severity) {
@@ -298,6 +452,8 @@ function demoIssue(
     message,
     resolved: false,
     resolutionNote: null,
+    resolutionAction: null,
+    correctedValue: null,
     resolvedAt: null,
     sourceRow,
     model,

@@ -19,6 +19,7 @@ De eerste applicatiebasis bevat:
 - een Excel-analysecommando dat importfouten, waarschuwingen en mogelijke dubbelen rapporteert;
 - een gecontroleerde Excel-upload naar importstaging, met bestandsduplicaatcontrole en herleidbare bevindingen per bronrij;
 - een importbeoordeling met filters, verplichte afhandelnotitie en auditregistratie;
+- gevalideerde correctieacties: waarde corrigeren, waarschuwing accepteren, dubbele regel apart behouden of een bronrij uitsluiten;
 - een productiebuild zonder lint- of TypeScriptfouten;
 - een containerdefinitie en GitHub Actions voor CI en image-publicatie.
 
@@ -72,6 +73,8 @@ De import-upload gebruikt `multipart/form-data` met:
 - optioneel `actorId`: UUID van een bestaande actieve gebruiker; zonder dit veld wordt de serverinstelling `KEYFLOW_IMPORT_ACTOR_ID` gebruikt.
 
 Een werkboek met harde fouten of mogelijke dubbelen krijgt status `needs_review`. Alleen een foutvrije analyse krijgt status `ready`; er wordt in deze stap nog niets naar de live voorraad geschreven.
+
+Harde fouten kunnen niet alleen met een notitie worden weggeklikt. Een beheerder moet de waarde corrigeren of de volledige bronrij uitsluiten. SKU, aantal en layout worden opnieuw gevalideerd voordat de afhandeling wordt opgeslagen.
 
 De ontwikkelmigratie maakt hiervoor een lokale beheerder aan met UUID `00000000-0000-0000-0000-000000000001`. Dit is uitsluitend auditidentiteit; gebruikersauthenticatie wordt vóór productie apart aangesloten.
 
