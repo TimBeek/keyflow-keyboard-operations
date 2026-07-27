@@ -1,0 +1,8 @@
+app/.git.generated-backup/
+.tools/
+app/.next/
+app/node_modules/
+app/.env
+app/.env.local
+*.log
+.DS_Store

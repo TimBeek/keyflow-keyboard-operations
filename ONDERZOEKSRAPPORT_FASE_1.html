@@ -1,0 +1,1198 @@
+﻿<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Onderzoeksrapport Keyboard Conversion Management</title>
+  <style>
+    @page { size: A4; margin: 18mm 17mm 19mm; }
+    * { box-sizing: border-box; }
+    html { font-family: "Segoe UI", Arial, sans-serif; color: #172033; font-size: 10.25pt; line-height: 1.48; }
+    body { margin: 0; }
+    h1 { color: #123f5a; font-size: 27pt; line-height: 1.1; margin: 18mm 0 8mm; border-bottom: 4px solid #2aa198; padding-bottom: 7mm; }
+    h1 + p { font-size: 10.5pt; color: #44546a; }
+    h2 { color: #123f5a; font-size: 17pt; line-height: 1.2; margin: 9mm 0 3mm; page-break-after: avoid; border-bottom: 1px solid #cad6df; padding-bottom: 1.5mm; }
+    h3 { color: #176b72; font-size: 12.5pt; margin: 6mm 0 2mm; page-break-after: avoid; }
+    h4 { color: #34495e; font-size: 11pt; margin: 4mm 0 1.5mm; page-break-after: avoid; }
+    p { margin: 0 0 3mm; orphans: 3; widows: 3; }
+    ul, ol { margin: 1.5mm 0 3.5mm 6mm; padding-left: 5mm; }
+    li { margin: 0 0 1.2mm; }
+    strong { color: #142b3d; }
+    code { font-family: Consolas, monospace; font-size: 9pt; background: #edf3f6; padding: 0.2mm 0.8mm; border-radius: 1mm; overflow-wrap: anywhere; }
+    blockquote { margin: 4mm 0; padding: 3mm 4mm; border-left: 4px solid #2aa198; background: #eef8f7; color: #24444a; }
+    table { border-collapse: collapse; width: 100%; margin: 3mm 0 5mm; font-size: 8.6pt; page-break-inside: auto; }
+    tr { page-break-inside: avoid; page-break-after: auto; }
+    th { background: #174f68; color: white; text-align: left; font-weight: 600; }
+    th, td { border: 1px solid #bdcbd4; padding: 1.8mm 2mm; vertical-align: top; }
+    tbody tr:nth-child(even) { background: #f3f7f9; }
+    a { color: #0b6971; text-decoration: none; overflow-wrap: anywhere; }
+    hr { border: 0; border-top: 1px solid #cad6df; margin: 6mm 0; }
+    h2:nth-of-type(1) { break-before: page; }
+    @media print {
+      a[href]::after { content: none; }
+      h1, h2, h3, h4 { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+<h1>Onderzoeksrapport fase 1 — Keyboard Sticker Sheet Inventory Management</h1>
+<p><strong>Status:</strong> herziene conceptversie ter goedkeuring<br><strong>Datum:</strong> 27 juli 2026<br><strong>Scope:</strong> analyse, functioneel ontwerp en technisch advies; conform opdracht bevat dit rapport geen applicatiecode.</p>
+<h2>1. Managementsamenvatting</h2>
+<p>De huidige Excel-oplossing is in essentie een handmatig bijgehouden voorraadlijst met een zoek- en invoerscherm erbovenop. Het bestand bevat 148 voorraadregels en 3.218 geregistreerde stickervellen. Het helpt medewerkers al met zoeken op model en taal en bevat een bruikbaar begin van modelcompatibiliteit. Het is echter geen betrouwbaar voorraadbeheersysteem: er is geen transactielog, geen herleidbare historie, geen gebruiker of tijdstip per mutatie, geen formele magazijnlocatie, geen leverancier of levertijd, geen open bestelling en geen eenduidige scheiding tussen stickervel, laptopmodel en fysieke voorraad.</p>
+<p>De grootste risico’s zijn:</p>
+<ol>
+<li>Voorraad wordt als direct wijzigbaar getal opgeslagen. Wie een aantal overschrijft, wist de geschiedenis.</li>
+<li>Eén stickervel kan meerdere laptopmodellen bedienen, maar die relatie staat als vrije tekst in één cel. Daardoor kan het systeem niet betrouwbaar tellen, valideren of automatisch vergelijken.</li>
+<li>Artikelnummers en modellen komen dubbel voor. Daarmee is onduidelijk of aantallen moeten worden opgeteld of dat verschillende stickervarianten worden bedoeld.</li>
+<li>Het “input”-werkblad bevat een kapotte zoekformule met <code>#REF!</code> en een niet-standaard dummyfunctie. De zoekuitvoer is in de aangeleverde kopie leeg.</li>
+<li>Forecasting is nu onmogelijk te valideren: alleen de actuele stand is beschikbaar; verbruik en leveringen door de tijd ontbreken.</li>
+</ol>
+<p>Het advies is een responsieve webapp/PWA met een relationele database, een append-only voorraadtransactielog en een eenvoudige scan-first interface. De voorraadstand wordt berekend uit transacties of veilig als gecontroleerde balans bijgehouden, maar nooit zonder bijbehorend logboek aangepast. De kern van het datamodel is:</p>
+<p><strong>één sticker-SKU/layoutvariant → veel compatibele laptopmodellen</strong>, via een expliciete koppeltabel met status, bron en geldigheidsperiode.</p>
+<p>Na aanvullende procesinformatie is de scope breder dan “stickervellenvoorraad”. ReMarkt gebruikt vier keyboard-conversiemethoden met verschillende kosten, kwaliteit, risico’s en toepassingsregels. De oplossing moet daarom uitgroeien tot <strong>Keyboard Conversion Management</strong>: per laptop adviseren welke methode geschikt is, materiaal en machinecapaciteit bewaken, de uitgevoerde methode registreren en kwaliteit/herwerk meten. De grens van €300 is een configureerbare bedrijfsregel en geen hardgecodeerde waarheid, omdat drukte, layoutbeschikbaarheid en uitzonderingen de keuze kunnen veranderen.</p>
+<p>Start niet met AI. Start met betrouwbare registratie, snel afboeken, ontvangen, zoeken, compatibiliteit en waarschuwingen. Na minimaal 3–6 maanden schone transactiehistorie kan een eenvoudige forecast worden geëvalueerd; na 6–12 maanden kan per SKU worden gekozen tussen een moving average, SBA/Croston of TSB voor intermitterende vraag. Voor de eerste maanden is de combinatie van laptopvoorraad, open werkvoorraad, leverancier-levertijd, safety stock en handmatig ingestelde min/max betrouwbaarder dan een statistisch model zonder historie.</p>
+<h3>1.1 Vier conversiemethoden</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Methode</th>
+<th>Huidige toepassing</th>
+<th>Sterkte</th>
+<th>Belangrijkste nadeel/risico</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>Goedkope losse stickers</td>
+<td>Uitfaseren; alleen uitzonderlijk</td>
+<td>Laagste materiaalkosten</td>
+<td>Iedere toets één voor één; arbeidsintensief en minder professioneel</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Noviply oude variant / voorraadvel</td>
+<td>De voorraad uit het huidige Excel; doorgaans laptops onder €300, vooral QWERTY US, momenteel laatste optie</td>
+<td>Volledig vel in één keer positioneren en drager verwijderen; snel</td>
+<td>Oude variant, voorraad- en modelafhankelijk; beleidsgrens wisselt met drukte</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Direct geprinte, sterkere Noviply-sticker</td>
+<td>Momenteel buitenlandse orders/layouts buiten QWERTY US en onder €300</td>
+<td>Sterker en visueel beter dan de oude variant</td>
+<td>“First-time-right” is kritisch; fout aanbrengen veroorzaakt veel problemen/herwerk</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Directe keyboard reprint</td>
+<td>Momenteel standaard boven €300; ook fallback als juiste layout ontbreekt</td>
+<td>Hoogwaardig uiterlijk, duurzame/professionele conversie</td>
+<td>Machine-, ontwerp-, operator- en procescapaciteit; verbruiksartikelen en kwaliteitscontrole nodig</td>
+</tr>
+</tbody></table>
+<p>Deze indeling is gebaseerd op de door ReMarkt beschreven praktijk. Publieke leveranciersinformatie ondersteunt onderdelen ervan, maar niet iedere interne productvariant of beslisregel is publiek gedocumenteerd. Met name “Noviply oude variant” versus “direct geprinte sterkere Noviply-sticker” moet tijdens masterdata-inrichting samen met productcodes, printertype en leverancier worden bevestigd.</p>
+<h3>1.2 Voorlopige beslislogica</h3>
+<p>De applicatie moet adviseren, maar de medewerker moet binnen bevoegdheden gemotiveerd kunnen afwijken.</p>
+<ol>
+<li>Bepaal gewenste klantlayout en controleer huidige keyboard-layout.</li>
+<li>Als geen conversie nodig is: registreer <code>geen conversie</code>.</li>
+<li>Controleer technische geschiktheid per methode, waaronder model, backlight, keyboardmateriaal, beschikbare template en fysieke compatibiliteit.</li>
+<li>Bij verkoopwaarde vanaf de configureerbare grens (initieel €300): adviseer directe keyboard reprint.</li>
+<li>Onder de grens:<ul>
+<li>voor niet-QWERTY-US/buitenlandse layout: adviseer de sterkere direct geprinte sticker indien beschikbaar en geschikt;</li>
+<li>voor QWERTY US: adviseer volgens de actuele operationele voorkeursvolgorde; de oude Noviply-voorraad is momenteel een laatste optie;</li>
+<li>goedkope losse stickers alleen als expliciet toegestane noodfallback.</li>
+</ul>
+</li>
+<li>Als de voorkeursmethode niet beschikbaar is, toon geordende alternatieven met reden, meerkosten, risico en verwachte doorlooptijd.</li>
+<li>Drukte/capaciteit mag het advies beïnvloeden via een tijdelijke, gedateerde beleidsregel; leg altijd vast waarom van het normale beleid is afgeweken.</li>
+</ol>
+<p>De €300-regel moet kunnen werken met inclusieve/exclusieve btw en een duidelijk waardetype, bijvoorbeeld verwachte netto verkoopwaarde op het moment van productie. Zonder deze definitie kunnen identieke laptops verschillend worden behandeld.</p>
+<h3>1.3 Aanvullend leveranciersonderzoek</h3>
+<p>Noviply positioneert haar keyboardstickers als circa 50 µ dun, model- en taalspecifiek, slijtvast en in ongeveer 30–60 seconden aan te brengen. De leverancier noemt precisie per model, Europese taalvarianten en het in één proces aanbrengen met een drager. Dit ondersteunt methode 2 en mogelijk delen van methode 3, maar de exacte oude en geprinte ReMarkt-varianten moeten aan eigen SKU’s en productieprocessen worden gekoppeld.</p>
+<p>Keyboard Print biedt een “Remote Keyboard Print Service” voor in-house reprinting. Volgens de leverancier:</p>
+<ul>
+<li>kan de machine twee keyboards per printcyclus bevatten;</li>
+<li>duurt een print ongeveer vier minuten per keyboard;</li>
+<li>zijn houders beschikbaar voor keyboards, laptops, 2-in-1-modellen en Surface-type keyboards;</li>
+<li>krijgt de klant toegang tot een layout-/designdatabase en ontwerpen voor nieuwe modellen;</li>
+<li>zijn primer, inkt, wiping fluid en inkchips verbruiksartikelen;</li>
+<li>horen training, onderhoud, online support en machine-swapservice bij het aanbod;</li>
+<li>kunnen normale en backlit keyboards worden verwerkt.</li>
+</ul>
+<p>Keyboard Print beschrijft bij de uitgebreidere digitale reprint een proces van voorbereiding, verwijderen/conditioneren van de oorspronkelijke toplaag, layoutplanning, precisieprint en kwaliteitscontrole. De leverancier vermeldt één jaar garantie op het geprinte oppervlak. De intern genoemde blue-lightstap is niet expliciet bevestigd op de geraadpleegde openbare pagina’s en wordt daarom een technisch validatiepunt.</p>
+<h2>2. Onderzoeksmethode en beperkingen</h2>
+<p>Het volledige aangeleverde <code>.xlsx</code>-bestand is technisch en inhoudelijk uitgelezen: werkbladen, gebruikte bereiken, waarden, formules, validaties, opmerkingen, voorwaardelijke opmaak, duplicaten en lege/afwijkende velden. Daarnaast zijn actuele primaire of gezaghebbende bronnen geraadpleegd van Microsoft, Oracle, Apple, GS1 en Nielsen Norman Group, aangevuld met wetenschappelijke literatuur over intermitterende vraag.</p>
+<p>Beperkingen:</p>
+<ul>
+<li>Er zijn geen gebruikersinterviews of observaties op de stickerafdeling uitgevoerd.</li>
+<li>Het bestand bevat geen mutatiehistorie; historisch verbruik kan dus niet achteraf worden gereconstrueerd.</li>
+<li>De betekenis van “Productie” versus “Voorraad” is uit inhoud en opmerkingen afgeleid en moet in een workshop worden bevestigd.</li>
+<li>Financiële gegevens, leveranciersafspraken, werkelijke levertijden, locaties en laptopvoorraad zijn niet meegeleverd.</li>
+<li>Sommige gekoppelde modellen kunnen inhoudelijk onjuist zijn. Dit rapport beoordeelt de datastructuur, niet de fysieke pasvorm van ieder stickervel.</li>
+</ul>
+<h2>3. Analyse van het huidige Excel-bestand</h2>
+<h3>3.1 Overzicht</h3>
+<table>
+<thead>
+<tr>
+<th>Werkblad</th>
+<th>Functie</th>
+<th align="right">Werkelijk gevulde inhoud</th>
+<th>Belangrijkste observatie</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>Productie</code></td>
+<td>Hoofdvoorraad</td>
+<td align="right">rijen 1–150; 148 gegevensregels</td>
+<td>Feitelijke masterlijst en voorraadstand</td>
+</tr>
+<tr>
+<td><code>Voorraad </code></td>
+<td>Voorraad op kantoor</td>
+<td align="right">rijen 1–7; 6 gegevensregels</td>
+<td>Tweede voorraadlijst, deels met benaderde aantallen</td>
+</tr>
+<tr>
+<td><code>input</code></td>
+<td>Zoeken, muteren en lage voorraad</td>
+<td align="right">rijen 1–61</td>
+<td>Handmatig bedieningsscherm; zoekformule is defect</td>
+</tr>
+</tbody></table>
+<p>De werkbladen zijn technisch tot circa 1.000 rijen/veel kolommen geformatteerd, maar grotendeels leeg. Er zijn geen Excel-tabellen, draaitabellen, grafieken of werkbladbeveiliging. Vrijwel alle gevulde cellen zijn wijzigbaar.</p>
+<h3>3.2 Werkblad <code>Productie</code></h3>
+<p>Kolommen:</p>
+<ul>
+<li><code>nr.</code>: handmatig volgnummer, uniek in de huidige lijst.</li>
+<li><code>Laptop</code>: representatief laptopmodel.</li>
+<li><code>Quantity</code>: actuele voorraad zoals handmatig bijgehouden.</li>
+<li><code>Taal</code>: <code>QWERTY US</code>, <code>AZERTY FR</code> of <code>QWERTZ DE</code>.</li>
+<li><code>Articel nr.</code>: intern artikelnummer; spelling en invoer zijn niet afgedwongen.</li>
+<li><code>Bijbehorende modelen</code>: vrije, kommagescheiden tekst met compatibele laptopmodellen.</li>
+<li><code>Opmerkingen</code>: pasvorm-, kleur- of labelafwijkingen en controlepunten.</li>
+</ul>
+<p>Kwantitatieve momentopname:</p>
+<ul>
+<li>148 regels.</li>
+<li>3.218 stuks geregistreerde voorraad.</li>
+<li>145 QWERTY US-regels, 2 AZERTY FR-regels en 1 QWERTZ DE-regel.</li>
+<li>Voorraadbereik 0–201.</li>
+<li>15 regels hebben een voorraad van 10 of lager.</li>
+<li>3 regels hebben een voorraad van 5 of lager:<ul>
+<li>Fujitsu Lifebook U7410: 0;</li>
+<li>HP 240 G8: 2;</li>
+<li>HP ZBook 15 G3, QWERTZ DE: 4.</li>
+</ul>
+</li>
+<li>14 regels bevatten een zichtbare opmerking.</li>
+<li>21 regels hebben geen gekoppelde modellen.</li>
+<li>Nog eens 9 regels hebben een placeholder of onbruikbare waarde zoals <code>Geen gevonden</code>, <code>-</code>, <code>\</code>, <code>0</code> of <code>A</code>.</li>
+<li>3 artikelnummers ontbreken of hebben een ongeldig formaat:<ul>
+<li>Dell Latitude 5401: <code>,,,,,,,,,,</code>;</li>
+<li>Dell Precision 7540: alleen een spatie;</li>
+<li>Fujitsu Lifebook U7410: leeg.</li>
+</ul>
+</li>
+</ul>
+<p>Dubbele artikelnummers:</p>
+<table>
+<thead>
+<tr>
+<th>Artikelnummer</th>
+<th>Regels</th>
+<th align="right">Opgetelde voorraad</th>
+<th>Risico</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>NB10100E1NL</td>
+<td>Microsoft Surface Pro 7 tweemaal</td>
+<td align="right">38</td>
+<td>Waarschijnlijk dubbel record</td>
+</tr>
+<tr>
+<td>NB10021E1NL</td>
+<td>Surface Laptop 3 en “Mircorsoft Surface Laptop 2”</td>
+<td align="right">56</td>
+<td>Mogelijk één SKU voor twee modellen, verkeerd gemodelleerd</td>
+</tr>
+<tr>
+<td>NB10190E1NL</td>
+<td>Dell Precision 3560 en Dell Precision 5560</td>
+<td align="right">41</td>
+<td>Verdacht: mogelijk fout artikelnummer of gedeelde SKU</td>
+</tr>
+</tbody></table>
+<p>Ook modelnamen komen na eenvoudige normalisatie dubbel voor: Dell Latitude 5420, HP ProBook 430 G5, Microsoft Surface Pro 7, HP ZBook 15 G3, Fujitsu Lifebook U7310 en Fujitsu Lifebook U7410. Hoofdletters, spaties en typefouten veroorzaken extra schijnvarianten, bijvoorbeeld <code>Mircorsoft</code>, <code>Eelitebook</code>, <code>stikker</code>, <code>Articel</code> en <code>modelen</code>.</p>
+<p>Belangrijke inhoudelijke signalen uit opmerkingen:</p>
+<ul>
+<li>Een label op het vel kan een andere taal noemen dan het vel feitelijk bevat.</li>
+<li>Pasvorm kan “beetje klein” zijn of gaten/uitsparingen missen.</li>
+<li>Kleur of toetsuitlijning kan afwijken.</li>
+<li>Sommige compatibiliteit is door AI toegevoegd of moet nog worden nagekeken.</li>
+</ul>
+<p>Deze informatie is waardevol, maar hoort niet uitsluitend in vrije notities. Maak er waar mogelijk gestructureerde kwaliteits- en compatibiliteitsvelden van.</p>
+<h3>3.3 Werkblad <code>Voorraad </code></h3>
+<p>Dit blad bevat 6 regels met vermoedelijk stickervellen die op kantoor liggen. Een threaded comment vermeldt: “hier kunnen alle sticker vellen die op het kantoor liggen”.</p>
+<p>Zwakke punten:</p>
+<ul>
+<li>Voorraad staat deels als tekst (<code>~200</code>) en deels als getal.</li>
+<li>Dezelfde artikelen lijken ook in <code>Productie</code> voor te komen, maar er is geen formele magazijnlocatie of transferregistratie.</li>
+<li>“Bijbehorende modellen” en aantallen per model zijn opnieuw vrije tekst.</li>
+<li>Er is geen garantie dat de totaalvoorraad de som van kantoor en productie is, of dat <code>Productie</code> juist al de totale voorraad bevat.</li>
+</ul>
+<p>Interpretatie die moet worden bevestigd: dit is waarschijnlijk een aparte fysieke locatie. In het nieuwe systeem moet “kantoor” een voorraadlocatie worden. Verplaatsingen tussen kantoor en stickerafdeling zijn dan transacties, geen tweede losstaande lijst.</p>
+<h3>3.4 Werkblad <code>input</code></h3>
+<p>Aanwezige conceptfuncties:</p>
+<ul>
+<li>voorraad bijwerken via stickernummer en aantal;</li>
+<li>zoeken op laptop, nummer of taal;</li>
+<li>taalfilter;</li>
+<li>lijst met lage voorraad;</li>
+<li>werkinstructie om bakken iedere vrijdag te controleren;</li>
+<li>instructie om Wout te informeren bij minder dan 5 stuks.</li>
+</ul>
+<p>Technische bevindingen:</p>
+<ul>
+<li>De enige zoekformule bevat <code>#REF!</code>-verwijzingen en <code>__xludf.DUMMYFUNCTION</code>.</li>
+<li>De gecachte waarde van de zoekuitvoer is leeg.</li>
+<li>De lage-voorraadlijst is een handmatig/statisch ogende momentopname en bevat doublures en tegenstrijdige aantallen.</li>
+<li>Er is slechts beperkte gegevensvalidatie.</li>
+<li>Er zijn geen blokkades tegen negatieve voorraad, dubbele artikelen of onbedoeld overschrijven.</li>
+<li>Er is geen audittrail van het “Update Sticker Stock”-proces.</li>
+</ul>
+<p>Wat goed werkt aan het concept:</p>
+<ul>
+<li>De gebruiker hoeft niet altijd direct in de hoofddata te werken.</li>
+<li>Zoeken op representatief of gekoppeld model is de juiste gebruikersbehoefte.</li>
+<li>Een taalfilter en een lage-voorraadweergave zijn relevante functies.</li>
+<li>De werkinstructies laten zien dat er al een operationele routine en escalatiedrempel bestaat.</li>
+</ul>
+<h3>3.5 Huidige werkwijze</h3>
+<p>De vermoedelijke huidige flow:</p>
+<ol>
+<li>Laptop wordt getest en van software voorzien.</li>
+<li>Stickerafdeling controleert de keyboard-layout.</li>
+<li>Indien nodig zoekt de medewerker in Excel naar laptop/model of stickervel.</li>
+<li>De medewerker neemt fysiek een vel.</li>
+<li>Het getal in Excel wordt handmatig verlaagd, direct of via het invoerblad.</li>
+<li>Eén keer per week worden bakken gecontroleerd.</li>
+<li>Bij minder dan 5 stuks wordt Wout handmatig geïnformeerd.</li>
+<li>Leveringen en kantoorvoorraad worden handmatig toegevoegd of in een tweede blad gezet.</li>
+</ol>
+<p>De flow kent geen geforceerde identificatie van gebruiker, locatie, reden of laptop/workorder. Daardoor is een verschil tussen systeem en bak achteraf niet verklaarbaar.</p>
+<h3>3.6 Belangrijke, overbodige en ontbrekende gegevens</h3>
+<p><strong>Behouden en structureren</strong></p>
+<ul>
+<li>intern artikelnummer/SKU;</li>
+<li>taal/layout;</li>
+<li>actuele aantallen per fysieke locatie;</li>
+<li>representatief model;</li>
+<li>compatibele modellen;</li>
+<li>opmerkingen over pasvorm, kleur en label;</li>
+<li>laag-voorraadsignaal.</li>
+</ul>
+<p><strong>Niet als zelfstandig bedrijfsgegeven behouden</strong></p>
+<ul>
+<li>handmatig volgnummer als primaire identiteit;</li>
+<li>dubbele modelnamen in meerdere tekstvelden;</li>
+<li>statische lage-voorraadkopieën;</li>
+<li>benaderde teksthoeveelheden zoals <code>~200</code>;</li>
+<li>lege, “geen gevonden”- of symboolwaarden als compatibiliteitsdata.</li>
+</ul>
+<p><strong>Ontbreekt</strong></p>
+<ul>
+<li>stabiele unieke ID’s;</li>
+<li>SKU-variant en fysieke layoutidentiteit;</li>
+<li>fabrikant, productfamilie, model en generatie als aparte velden;</li>
+<li>voorraadlocatie en eventueel baknummer;</li>
+<li>eenheid en verpakkingseenheid;</li>
+<li>transactietype, hoeveelheid, datum/tijd, gebruiker en reden;</li>
+<li>referentie naar laptop, batch, werkorder of productieorder;</li>
+<li>leverancier, leveranciersartikelnummer, prijs, MOQ, bestelveelvoud en levertijd;</li>
+<li>open inkooporders en verwachte ontvangst;</li>
+<li>gereserveerde voorraad;</li>
+<li>minimum, maximum, safety stock, servicelevel en reorder point;</li>
+<li>status van compatibiliteit: concept, fysiek getest, afgekeurd;</li>
+<li>bron en bewijs van compatibiliteit;</li>
+<li>kwaliteitsstatus/blokkade van een SKU;</li>
+<li>barcode/QR-code;</li>
+<li>voorraadwaarde;</li>
+<li>wijzigingslog en rollen/rechten;</li>
+<li>laptopvoorraad en geplande refurbish-vraag.</li>
+</ul>
+<h2>4. Industrieonderzoek en toepasbare best practices</h2>
+<p>Professionele WMS-, ERP- en MRO-oplossingen scheiden stamdata, voorraadbalans, transacties, locaties, planning en inkoop. De toepasbare principes zijn:</p>
+<ol>
+<li><strong>Item-location als planningsniveau.</strong> Voorraad en bestelparameters verschillen per SKU en locatie.</li>
+<li><strong>Transactiegestuurd.</strong> Ontvangst, verbruik, transfer, correctie, telling en retour zijn afzonderlijke gebeurtenissen.</li>
+<li><strong>Min/max en reorder point.</strong> Microsoft beschrijft min/max-aanvulling per artikel en locatie. Oracle definieert het reorder point als safety stock plus verwachte vraag tijdens de levertijd.</li>
+<li><strong>Beschikbare voorraad, niet alleen on-hand.</strong> Planning gebruikt: on-hand + bevestigde inkomende voorraad − reserveringen/verwachte vraag.</li>
+<li><strong>Cycle counting.</strong> Frequente deeltellingen vervangen of ondersteunen een zeldzame volledige telling; tellingen kunnen op drempel of risico worden gestart.</li>
+<li><strong>Mobiele/scannerflow.</strong> Professionele warehouse-apps vullen bekende waarden vooraf in, slaan irrelevante stappen over en ondersteunen camera- én hardware-scanners.</li>
+<li><strong>Segmentatie.</strong> ABC classificeert op economische impact; XYZ op voorspelbaarheid/variatie. Voor dit project is daarnaast criticality belangrijk: een goedkoop vel kan een dure laptopflow blokkeren.</li>
+<li><strong>Traceerbaarheid.</strong> Elke mutatie heeft actor, tijd, reden, bron en resultaat.</li>
+<li><strong>Exception management.</strong> Gebruikers werken vooral vanuit uitzonderingen: tekort, lage dekking, tellingverschil, ontbrekende compatibiliteit, vertraagde order.</li>
+<li><strong>Integratie via API en events.</strong> Geen directe databasekoppelingen met Magento/ERP/laptopdatabase; gebruik versieerbare API-contracten en idempotente imports.</li>
+</ol>
+<p>Kanban kan fysiek nuttig blijven: een tweebaksysteem of rood kaartje geeft een visuele fallback. De digitale applicatie moet echter de bron van waarheid worden. Een baklabel bevat SKU, taal, locatie en barcode/QR; de tweede bak of het minimum markeert het bestelpunt.</p>
+<h2>5. UX-onderzoek en ontwerpprincipes</h2>
+<h3>5.1 Doelgroepen</h3>
+<ul>
+<li><strong>Stickeroperator:</strong> razendsnel juiste vel vinden en één of meer stuks afboeken.</li>
+<li><strong>Voorraadbeheerder:</strong> ontvangen, tellen, corrigeren, compatibiliteit onderhouden.</li>
+<li><strong>Inkoper/planner:</strong> tekorten, dekking, besteladvies, leveranciers en orders.</li>
+<li><strong>Teamleider/manager:</strong> trends, betrouwbaarheid, uitzonderingen en KPI’s.</li>
+<li><strong>Beheerder:</strong> gebruikers, rollen, import, configuratie en audit.</li>
+</ul>
+<h3>5.2 Kernprincipes</h3>
+<p>Gebaseerd op Nielsen: toon systeemstatus, voorkom fouten, gebruik herkenning in plaats van herinnering, bied undo/correctie, hanteer consistente termen en toon alleen relevante informatie. Microsoft en Apple adviseren ruime touchdoelen; voor deze app is minimaal circa 44×44 CSS-pixels met zichtbare tussenruimte een praktische ondergrens.</p>
+<p>Ontwerpregels:</p>
+<ul>
+<li>Scanner of zoekveld krijgt automatisch focus.</li>
+<li>Zoek op SKU, barcode, fabrikant, exact model, alias, typefouttolerante naam en gekoppeld model.</li>
+<li>Toon vóór bevestiging: foto/visuele identificatie, taal, SKU, locatie, voorraad en compatibiliteitsstatus.</li>
+<li>Standaardactie is “−1”, één prominente knop of één scan; afwijkend aantal vraagt expliciete invoer.</li>
+<li>Na actie: groot groen resultaat, nieuwe voorraad, geluid/haptiek waar beschikbaar en 10–30 seconden “ongedaan maken”.</li>
+<li>Negatieve voorraad is standaard verboden; alleen een bevoegde correctie met reden mag een verschil oplossen.</li>
+<li>Risicovolle bulk- of correctieacties vragen reden en een samenvatting, niet op elke normale <code>−1</code>.</li>
+<li>Sneltoetsen voor experts, bijvoorbeeld <code>/</code> zoeken, <code>-</code> afboeken, <code>+</code> ontvangen, <code>Enter</code> bevestigen, maar alle functies blijven zichtbaar en touchbaar.</li>
+<li>Desktop, 10-inch tablet en handheld/scanner krijgen responsieve taakgerichte layouts.</li>
+<li>Kleur is nooit het enige signaal; gebruik tekst, icoon en status.</li>
+<li>Offline kan later met een beperkte wachtrij, unieke mutatie-ID’s en expliciete synchronisatiestatus. Geen stille “last write wins”.</li>
+</ul>
+<h3>5.3 Voorgestelde hoofdschermen</h3>
+<ol>
+<li><strong>Vandaag / operationeel startscherm</strong><ul>
+<li>scannen of zoeken;</li>
+<li>snelle afboeking;</li>
+<li>ontvangen;</li>
+<li>open tellingen;</li>
+<li>urgente tekorten.</li>
+</ul>
+</li>
+<li><strong>Zoekresultaat</strong><ul>
+<li>beste exacte match bovenaan;</li>
+<li>compatibele SKU’s met status “getest” of “onbevestigd”;</li>
+<li>voorraad per locatie en afstand/bak.</li>
+</ul>
+</li>
+<li><strong>SKU-detail</strong><ul>
+<li>voorraad, dekking, foto, taal, compatibele modellen;</li>
+<li>recente transacties;</li>
+<li>open bestelling en besteladvies;</li>
+<li>kwaliteitswaarschuwing.</li>
+</ul>
+</li>
+<li><strong>Ontvangst</strong><ul>
+<li>scan order/SKU;</li>
+<li>aantal en locatie;</li>
+<li>afwijking/beschadiging;</li>
+<li>bevestigen en label printen.</li>
+</ul>
+</li>
+<li><strong>Tellen</strong><ul>
+<li>scan locatie en SKU;</li>
+<li>blind count waar gewenst;</li>
+<li>verschil en hertelling;</li>
+<li>correctie pas na autorisatie.</li>
+</ul>
+</li>
+<li><strong>Planning</strong><ul>
+<li>uitzonderingen gerangschikt op stockoutrisico en operationele impact.</li>
+</ul>
+</li>
+</ol>
+<p>Doel voor de meest voorkomende flow: scan model of SKU → controleer match → tik <code>−1</code>. Bij een bekende barcode kan afboeken met één scan plus één bevestiging; optioneel kan een “continuous scan”-modus na pilot automatisch <code>−1</code> boeken met directe undo.</p>
+<h2>6. Functioneel ontwerp</h2>
+<h3>6.1 Must-have bedrijfsprocessen</h3>
+<p><strong>Verbruik/afboeken</strong></p>
+<ul>
+<li>SKU via barcode, model of zoekopdracht vinden.</li>
+<li>Locatie en hoeveelheid vastleggen.</li>
+<li>Reden standaard <code>refurbish_verbruik</code>.</li>
+<li>Optioneel laptop-ID/workorder registreren.</li>
+<li>Atomaire voorraadmutatie: transactie en balans slagen samen of geen van beide.</li>
+<li>Drempels direct opnieuw evalueren.</li>
+</ul>
+<p><strong>Ontvangst</strong></p>
+<ul>
+<li>Ontvangst tegen inkooporder of losse ontvangst met reden.</li>
+<li>Aantal, locatie, leverancier, pakbon en gebruiker registreren.</li>
+<li>Eventueel afwijking/quarantaine.</li>
+</ul>
+<p><strong>Transfer</strong></p>
+<ul>
+<li>Van kantoor naar stickerafdeling of tussen bakken.</li>
+<li>Eén logisch transferdocument met uit- en inboeking.</li>
+</ul>
+<p><strong>Telling/correctie</strong></p>
+<ul>
+<li>Periodieke of ad-hoc cycle count.</li>
+<li>Telling is niet hetzelfde als voorraad handmatig overschrijven.</li>
+<li>Verschil leidt na bevestiging tot correctietransactie met reden en autorisatie.</li>
+</ul>
+<p><strong>Compatibiliteit</strong></p>
+<ul>
+<li>Eén SKU kan veel modellen ondersteunen.</li>
+<li>Eén model kan meerdere SKU’s ondersteunen, bijvoorbeeld verschillende taal, kleur, kwaliteit of alternatieven.</li>
+<li>Koppeling bevat <code>fit_status</code>: onbevestigd, fysiek getest, conditioneel, afgekeurd.</li>
+<li>Conditionele match kan uitleg bevatten: “iets klein”, “geen trackpoint-uitsparing”, “label zegt QWERTZ”.</li>
+<li>Alleen bevoegde gebruikers mogen een koppeling als fysiek getest markeren.</li>
+</ul>
+<p><strong>Waarschuwingen</strong></p>
+<ul>
+<li>onder reorder point;</li>
+<li>verwachte stockout vóór volgende levering;</li>
+<li>laptopvraag groter dan beschikbare stickerdekking;</li>
+<li>nulvoorraad met actuele laptopvraag;</li>
+<li>achterstallige telling;</li>
+<li>open order te laat;</li>
+<li>ontbrekende/ongeverifieerde compatibiliteit;</li>
+<li>ongewoon grote mutatie of tellingverschil.</li>
+</ul>
+<p><strong>Methodeadvies en conversieorder</strong></p>
+<ul>
+<li>Lees gewenste klantlayout, laptopmodel, verkoopwaarde, orderland/-kanaal en actuele workload.</li>
+<li>Bepaal technisch toegestane methoden en controleer materiaal, template, machine en bevoegde operator.</li>
+<li>Pas de op dat moment geldige beleidsversie toe.</li>
+<li>Toon één voorkeursmethode en maximaal enkele gerangschikte alternatieven.</li>
+<li>Laat een bevoegde medewerker afwijken met een gestandaardiseerde reden, bijvoorbeeld capaciteit, layout niet beschikbaar, kwaliteitsrisico of spoed.</li>
+<li>Reserveer sticker of printertijd/verbruiksmateriaal bij vrijgave van de conversieorder.</li>
+<li>Registreer start, gereedmelding, kwaliteitscontrole, herwerk, materiaalverlies en doorlooptijd.</li>
+<li>Laat de regelmotor nooit uitsluitend op orderland beslissen: gewenste layout is leidend; land/markt is ondersteunend.</li>
+</ul>
+<p><strong>Directe keyboard reprint</strong></p>
+<ul>
+<li>Controleer of model-layouttemplate is goedgekeurd.</li>
+<li>Plan machine, houder en bevoegde operator.</li>
+<li>Controleer minimumvoorraad van primer, inkt, reinigingsvloeistof en overige consumables.</li>
+<li>Registreer pre-cleaning/voorbereiding, print, eventuele intern gebruikte blue-light/uithardingsstap en kwaliteitsvrijgave.</li>
+<li>Blokkeer aflevering bij mislukte of ontbrekende kwaliteitscontrole.</li>
+<li>Meet first-pass yield, herprintpercentage, cyclustijd en uitval.</li>
+</ul>
+<p><strong>Sterkere direct geprinte sticker</strong></p>
+<ul>
+<li>Behandel het geprinte vel als een geproduceerd item met grondstofverbruik en batch/printtijd.</li>
+<li>Leg vast welke printer, templateversie en operator het vel produceerde.</li>
+<li>Scan het geproduceerde vel vóór toepassing naar de juiste laptop/conversieorder.</li>
+<li>Gebruik een expliciete “dry alignment”/visuele controle vóór definitief aanbrengen, omdat verkeerd positioneren volgens de praktijk moeilijk herstelbaar is.</li>
+<li>Registreer mislukte applicaties als scrap/herwerk, niet als onverklaarde voorraadcorrectie.</li>
+</ul>
+<h3>6.2 Laptopmodel normalisatie</h3>
+<p>Maak fabrikant, familie en modelnaam afzonderlijk. Voorbeeld:</p>
+<ul>
+<li>fabrikant: HP;</li>
+<li>familie: EliteBook;</li>
+<li>model: 840 G8;</li>
+<li>genormaliseerde weergave: HP EliteBook 840 G8.</li>
+</ul>
+<p>Aliases ondersteunen typefouten en alternatieve schrijfwijzen, maar verwijzen naar één canoniek model. Een modelgroep is nuttig voor beheer en navigatie, maar compatibiliteit moet uiteindelijk expliciet tussen SKU en model worden vastgelegd. Anders kan een te brede groep onterecht pasvorm erven.</p>
+<p>Voorgestelde validatieflow:</p>
+<ol>
+<li>Import herkent vermoedelijke bestaande modellen.</li>
+<li>Mogelijke dubbelen worden als reviewtaak getoond.</li>
+<li>Gekoppelde vrije tekst wordt naar afzonderlijke modelkandidaten gesplitst.</li>
+<li>Een beheerder keurt matches goed.</li>
+<li>Fysieke test kan status naar “getest” verhogen.</li>
+<li>Wijzigingen zijn gedateerd; oude relaties blijven historisch herleidbaar.</li>
+</ol>
+<h3>6.3 Rollen en rechten</h3>
+<table>
+<thead>
+<tr>
+<th>Rol</th>
+<th>Rechten</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Operator</td>
+<td>zoeken, normaal afboeken, eigen recente actie corrigeren/undo</td>
+</tr>
+<tr>
+<td>Voorraadbeheerder</td>
+<td>ontvangen, transfer, tellen, gemotiveerde correctie</td>
+</tr>
+<tr>
+<td>Planner/inkoper</td>
+<td>leveranciers, besteladvies, inkooporders</td>
+</tr>
+<tr>
+<td>Databeheerder</td>
+<td>SKU’s, modellen, aliases en compatibiliteit</td>
+</tr>
+<tr>
+<td>Manager/auditor</td>
+<td>dashboards en audit, geen operationele mutaties nodig</td>
+</tr>
+<tr>
+<td>Systeembeheerder</td>
+<td>gebruikers, configuratie, integraties</td>
+</tr>
+</tbody></table>
+<p>Functiescheiding: grote correcties, verwijderen van masterdata en aanpassing van kritieke bestelparameters vereisen verhoogde rechten en worden altijd gelogd.</p>
+<h2>7. Databasevoorstel</h2>
+<h3>7.1 Kernentiteiten</h3>
+<table>
+<thead>
+<tr>
+<th>Entiteit</th>
+<th>Doel</th>
+<th>Belangrijkste velden</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>manufacturers</code></td>
+<td>Canonieke fabrikant</td>
+<td>id, naam</td>
+</tr>
+<tr>
+<td><code>model_families</code></td>
+<td>Productfamilie</td>
+<td>id, manufacturer_id, naam</td>
+</tr>
+<tr>
+<td><code>laptop_models</code></td>
+<td>Canoniek model</td>
+<td>id, family_id, modelnaam, generatie, status</td>
+</tr>
+<tr>
+<td><code>model_aliases</code></td>
+<td>Zoeknamen/typevarianten</td>
+<td>id, model_id, alias, bron</td>
+</tr>
+<tr>
+<td><code>keyboard_layouts</code></td>
+<td>Logische taal/layout</td>
+<td>id, code, taal, geometrie/standaard</td>
+</tr>
+<tr>
+<td><code>sticker_skus</code></td>
+<td>Bestelbare/fysieke variant</td>
+<td>id, sku, layout_id, kleur, uitvoering, status, barcode</td>
+</tr>
+<tr>
+<td><code>sku_model_compatibility</code></td>
+<td>Many-to-many pasvorm</td>
+<td>sku_id, model_id, status, confidence, notitie, bron, getest_op, getest_door</td>
+</tr>
+<tr>
+<td><code>warehouses</code></td>
+<td>Site/magazijn</td>
+<td>id, naam</td>
+</tr>
+<tr>
+<td><code>locations</code></td>
+<td>Kantoor, afdeling, bak</td>
+<td>id, warehouse_id, code, type, actief</td>
+</tr>
+<tr>
+<td><code>inventory_balances</code></td>
+<td>Snelle actuele balans</td>
+<td>sku_id, location_id, on_hand, reserved, version</td>
+</tr>
+<tr>
+<td><code>inventory_transactions</code></td>
+<td>Onveranderbare mutaties</td>
+<td>id, sku_id, location_id, type, quantity_delta, timestamp, user_id, reason, reference_type/id, idempotency_key</td>
+</tr>
+<tr>
+<td><code>stock_counts</code> / <code>stock_count_lines</code></td>
+<td>Tellingen en verschillen</td>
+<td>status, locatie, teller, counted_qty, expected_qty</td>
+</tr>
+<tr>
+<td><code>suppliers</code></td>
+<td>Leveranciers</td>
+<td>id, naam, contact, actief</td>
+</tr>
+<tr>
+<td><code>supplier_skus</code></td>
+<td>Leverancierscondities</td>
+<td>supplier_id, sku_id, supplier_code, lead_time_days, MOQ, order_multiple, prijs, valuta</td>
+</tr>
+<tr>
+<td><code>purchase_orders</code> / <code>purchase_order_lines</code></td>
+<td>Bestellingen en ontvangst</td>
+<td>status, besteld, ontvangen, verwacht_op</td>
+</tr>
+<tr>
+<td><code>planning_parameters</code></td>
+<td>Voorraadbeleid per SKU/locatie</td>
+<td>min, max, safety_stock, service_level, methode, review_cycle</td>
+</tr>
+<tr>
+<td><code>demand_forecasts</code></td>
+<td>Versies van voorspellingen</td>
+<td>sku_id, location_id, bucket, model, forecast, interval, run_id</td>
+</tr>
+<tr>
+<td><code>laptop_inventory_snapshots</code></td>
+<td>Externe laptopvraag</td>
+<td>model_id, status, quantity, snapshot_at, source</td>
+</tr>
+<tr>
+<td><code>notifications</code></td>
+<td>Uitzonderingen</td>
+<td>type, ernst, status, entity, first/last_seen</td>
+</tr>
+<tr>
+<td><code>users</code>, <code>roles</code>, <code>user_roles</code></td>
+<td>Toegang</td>
+<td>identiteit en rol</td>
+</tr>
+<tr>
+<td><code>audit_logs</code></td>
+<td>Masterdata- en configuratiewijziging</td>
+<td>actor, tijd, entity, before/after, correlation_id</td>
+</tr>
+<tr>
+<td><code>attachments</code></td>
+<td>Foto/bewijs/pakbon</td>
+<td>object storage key, type, checksum, relatie</td>
+</tr>
+<tr>
+<td><code>conversion_methods</code></td>
+<td>De vier procesopties</td>
+<td>id, code, naam, lifecycle_status, quality_tier, requires_skill</td>
+</tr>
+<tr>
+<td><code>conversion_policies</code></td>
+<td>Versiebeheerde beslisregels</td>
+<td>method_id, value_from/to, target_layout, priority, workload_condition, valid_from/to</td>
+</tr>
+<tr>
+<td><code>conversion_capabilities</code></td>
+<td>Geschiktheid per model/methode</td>
+<td>method_id, model_id, layout_id, template_id, status, beperking, getest_op</td>
+</tr>
+<tr>
+<td><code>conversion_jobs</code></td>
+<td>Uitvoering per laptop/order</td>
+<td>laptop_id, order_id, method_id, operator_id, status, started/completed_at, policy_version, override_reason</td>
+</tr>
+<tr>
+<td><code>conversion_job_materials</code></td>
+<td>Werkelijk materiaalverbruik</td>
+<td>job_id, consumable_sku_id, quantity, transaction_id</td>
+</tr>
+<tr>
+<td><code>equipment</code></td>
+<td>Printers en hulpmiddelen</td>
+<td>id, equipment_type, serienummer, locatie, status, capaciteit</td>
+</tr>
+<tr>
+<td><code>equipment_templates</code></td>
+<td>Print-/snijontwerpen</td>
+<td>equipment_id, model_id, layout_id, version, approval_status</td>
+</tr>
+<tr>
+<td><code>equipment_events</code></td>
+<td>Gebruik, storing en onderhoud</td>
+<td>equipment_id, type, tijd, tellerstand, duur, actor</td>
+</tr>
+<tr>
+<td><code>quality_checks</code></td>
+<td>First-time-right en vrijgave</td>
+<td>job_id, resultaat, defect_type, controleur, foto, checked_at</td>
+</tr>
+<tr>
+<td><code>rework_events</code></td>
+<td>Herwerk en uitval</td>
+<td>job_id, oorzaak, vervolgactie, materiaalverlies, arbeidstijd</td>
+</tr>
+</tbody></table>
+<h3>7.2 Relaties en ontwerpkeuzes</h3>
+<ul>
+<li><code>keyboard_layouts</code> is de semantische layout; <code>sticker_skus</code> is de fysieke/commerciële variant. Twee verschillende vellen kunnen dus dezelfde taal/layout hebben maar een andere pasvorm, kleur of leverancier.</li>
+<li>Compatibiliteit is many-to-many. Leg geen lijst met modellen als JSON of kommagescheiden tekst in de SKU-tabel vast.</li>
+<li>Voorraad bestaat per SKU × locatie.</li>
+<li>Een voorraadtransactie heeft één hoeveelheid met teken. Transfers gebruiken twee gekoppelde regels binnen één transactie-eenheid.</li>
+<li>De balans is een afgeleide/prestatiegerichte tabel en moet altijd overeenkomen met de som van transacties vanaf een gecontroleerd openingssaldo.</li>
+<li>Transacties worden niet verwijderd of aangepast; correcties gebeuren met een tegengestelde transactie.</li>
+<li>Forecasts en laptopvoorraad zijn snapshots met bron en tijdstip, zodat dashboards reproduceerbaar blijven.</li>
+<li>Geldbedragen gebruiken vaste decimalen; aantallen zijn gehele getallen zolang geen deelvellen bestaan.</li>
+<li>Elk extern bericht heeft een <code>idempotency_key</code> om dubbele boekingen bij retry te voorkomen.</li>
+<li>Een conversiebeleid is versieerbaar. Een latere wijziging van de €300-grens mag oude beslissingen niet achteraf herschrijven.</li>
+<li>Een laptop/conversieorder bewaart zowel het systeemadvies als de werkelijk gekozen methode en eventuele afwijkingsreden.</li>
+<li>Methoden 1–3 verbruiken sticker-SKU’s; methode 4 verbruikt printmedia/inkt/primer en machinecapaciteit. De voorraadmotor blijft hetzelfde, maar de stuklijst per methode verschilt.</li>
+<li>Een methode kan <code>active</code>, <code>fallback_only</code> of <code>phasing_out</code> zijn. Methode 1 hoort initieel de status <code>phasing_out</code> of <code>fallback_only</code> te krijgen.</li>
+<li>Compatibiliteit en printbaarheid zijn niet identiek. Een model kan geschikt zijn voor een sticker-SKU, voor directe reprint, voor beide of voor geen van beide.</li>
+</ul>
+<h3>7.3 Voorraadberekeningen</h3>
+<ul>
+<li><code>on_hand = openingssaldo + som(quantity_delta)</code></li>
+<li><code>available = on_hand − reserved</code></li>
+<li><code>inventory_position = on_hand + confirmed_on_order − reserved − known_demand</code></li>
+<li><code>coverage_days = available / forecast_daily_demand</code>, met expliciete behandeling van nulvraag</li>
+<li><code>reorder_point = expected_lead_time_demand + safety_stock</code></li>
+<li>besteladvies bij <code>inventory_position ≤ reorder_point</code></li>
+<li>doelaantal bij min/max: <code>max_level − inventory_position</code>, afgerond op MOQ/bestelveelvoud</li>
+</ul>
+<h2>8. Forecasting- en voorraadstrategie</h2>
+<h3>8.1 Wat nu wel en niet kan</h3>
+<p>Het huidige Excel-bestand bevat een actuele stand, geen tijdreeks. Een gemiddeld week- of maandverbruik, trend, seizoenspatroon, servicelevel of forecastfout kan dus niet worden berekend. Elk exact “nog vier maanden voorraad”-antwoord op basis van alleen dit bestand zou schijnzekerheid zijn.</p>
+<p>Vanaf livegang moet iedere afboeking, ontvangst, correctie en stockout worden geregistreerd. Correcties en transfers mogen niet als vraag worden geteld. Ook gemiste vraag/stockout moet worden vastgelegd, anders onderschat historie de echte behoefte.</p>
+<h3>8.2 Aanbevolen fasering</h3>
+<p><strong>Dag 1–90</strong></p>
+<ul>
+<li>Handmatig gevalideerde min/max per kritieke SKU.</li>
+<li>Vraaggestuurde vergelijking met huidige laptopvoorraad en open refurbish-werkvoorraad.</li>
+<li>Reorder point op basis van leverancier-levertijd, bekende vraag en conservatieve buffer.</li>
+<li>Wekelijkse review van uitzonderingen.</li>
+</ul>
+<p><strong>Na 3–6 maanden</strong></p>
+<ul>
+<li>Eenvoudige baselines: gemiddelde per week, gewogen moving average en naïeve forecast.</li>
+<li>Per SKU meten: zero-demand percentage, gemiddelde interval tussen afboekingen en variatie.</li>
+<li>Forecast Backtesting met rolling origin; vergelijk bias, MAE/MASE en vooral voorraad-KPI’s zoals fill rate en stockouts.</li>
+</ul>
+<p><strong>Na 6–12 maanden</strong></p>
+<ul>
+<li>Regelmatige vraag: exponentiële smoothing/ETS of seizoensmodel wanneer data dat ondersteunt.</li>
+<li>Intermitterende vraag: SBA/Croston als benchmark.</li>
+<li>Obsolescentie of afnemende modelvraag: TSB, omdat de vraagkans ook tijdens nulperioden afneemt.</li>
+<li>Externe regressors: laptopvoorraad, ingestroomde batches, refurbishplanning en modelmix.</li>
+<li>Geen complex AI-model zonder aantoonbare verbetering ten opzichte van eenvoudige benchmarks.</li>
+</ul>
+<p>Onderzoek naar spare-parts demand bevestigt dat conventionele smoothing tekortschiet bij lange reeksen van nulvraag. Croston splitst vraaggrootte en tussentijd; SBA corrigeert bias. TSB is geschikter wanneer vraag kan uitsterven, omdat het de vraagkans ook in nulperioden bijwerkt.</p>
+<h3>8.3 Safety stock</h3>
+<p>Gebruik in de MVP een transparante beleidsbuffer:</p>
+<ul>
+<li>kritieke A-items: hogere servicegraad;</li>
+<li>lange/onzekere levertijd: grotere buffer;</li>
+<li>bewezen alternatieve SKU: kleinere buffer mogelijk;</li>
+<li>goedkoop maar productiestoppend item: criticality kan ABC overstijgen.</li>
+</ul>
+<p>Met voldoende historie:</p>
+<p><code>safety stock ≈ z × standaardafwijking van de forecastfout over de levertijd</code></p>
+<p>Dit vereist betrouwbare forecastfouten en levertijdvariatie. Een vast percentage van gemiddelde vraag is eenvoudiger, maar minder nauwkeurig en moet als tijdelijke regel worden gelabeld.</p>
+<h3>8.4 EOQ</h3>
+<p>EOQ kan een theoretisch bestelvolume geven uit jaarvraag, bestelkosten en voorraadkosten, maar is hier niet automatisch de beste eerste keuze. Vellen zijn vermoedelijk goedkoop, vraag is intermitterend, ruimte/obsolescentie en leveranciers-MOQ kunnen belangrijker zijn. Gebruik aanvankelijk min/max met MOQ en bestelveelvoud. Voeg EOQ alleen toe wanneer bestel- en holdingkosten betrouwbaar bekend zijn.</p>
+<h3>8.5 ABC–XYZ–criticality</h3>
+<ul>
+<li><strong>ABC:</strong> jaarlijkse verbruikswaarde.</li>
+<li><strong>XYZ:</strong> vraagstabiliteit/voorspelbaarheid.</li>
+<li><strong>Criticality:</strong> impact van geen voorraad op refurbish-output.</li>
+</ul>
+<p>Aanbevolen planningsegment: bijvoorbeeld <code>A-X-kritiek</code> of <code>C-Z-kritiek</code>. Cycle-countfrequentie en servicelevel volgen uit de combinatie, niet alleen uit prijs.</p>
+<h2>9. Vergelijking met laptopvoorraad</h2>
+<p>Dit is een zeer waardevolle uitbreiding en kan eerder waarde leveren dan statistische forecasting.</p>
+<p>Benodigde gegevens per laptopsnapshot:</p>
+<ul>
+<li>canoniek model-ID;</li>
+<li>operationele status: aanwezig, ingepland, wacht op test, wacht op sticker, verkocht/gereserveerd;</li>
+<li>hoeveelheid;</li>
+<li>huidige fysieke keyboard-layout indien bekend;</li>
+<li>gewenste verkooplayout/markt;</li>
+<li>verwachte doorloopdatum.</li>
+</ul>
+<p>Berekening:</p>
+<ol>
+<li>Selecteer laptops die waarschijnlijk een sticker nodig hebben.</li>
+<li>Map ieder model via <code>sku_model_compatibility</code> naar toegestane SKU’s.</li>
+<li>Pas taal, kleur, fysieke variant en goedkeuringsstatus toe.</li>
+<li>Trek al gereserveerde stickers af.</li>
+<li>Verdeel vraag niet blind dubbel over alternatieve SKU’s; gebruik een allocatieregel of optimalisatie.</li>
+<li>Vergelijk netto behoefte met beschikbare voorraad en bevestigde ontvangsten.</li>
+</ol>
+<p>Voorbeeldmelding:</p>
+<blockquote>
+<p>NB10082E1NL: 30 beschikbaar, 420 relevante laptops, 20 onderweg. Netto tekort 370. Eerste verwachte stockout binnen 3 werkdagen.</p>
+</blockquote>
+<p>Toon ook de aannames: welke laptopstatussen zijn meegeteld, welk percentage verwacht een sticker nodig te hebben en welke compatibiliteitskoppelingen zijn onbevestigd. Zo blijft het advies uitlegbaar.</p>
+<p>Professionele material-planning gebruikt hiervoor onafhankelijke vraag of een stuklijst. Voor dit proces kan een eenvoudige “usage rule” per model hetzelfde doen: verwacht aantal vellen per laptop (meestal 0 of 1) × kans dat vervanging nodig is × geplande laptophoeveelheid.</p>
+<h2>10. Dashboardvoorstel</h2>
+<h3>10.1 Operationeel</h3>
+<ul>
+<li>afboekingen vandaag/deze week;</li>
+<li>nulvoorraad en lage dekking;</li>
+<li>open tellingen en verschillen;</li>
+<li>te verwerken ontvangsten;</li>
+<li>recente transacties en undo/correcties;</li>
+<li>zoekopdrachten zonder resultaat.</li>
+</ul>
+<h3>10.2 Planning en inkoop</h3>
+<ul>
+<li>SKU’s onder reorder point;</li>
+<li>voorraaddekking 7/30/90/180 dagen;</li>
+<li>voorspelde stockout vóór ontvangst;</li>
+<li>besteladvies met MOQ, ordermultiple en leverancier;</li>
+<li>open en te late bestellingen;</li>
+<li>snelste dalers;</li>
+<li>topverbruik;</li>
+<li>laptopvraag versus stickerbeschikbaarheid.</li>
+</ul>
+<h3>10.3 Management</h3>
+<ul>
+<li>totale voorraad en waarde;</li>
+<li>stockout-rate en fill rate;</li>
+<li>voorraadnauwkeurigheid uit tellingen;</li>
+<li>dead/slow stock, bijvoorbeeld geen echte vraag in 180/365 dagen;</li>
+<li>ABC/XYZ/criticality-matrix;</li>
+<li>forecast bias en fout per segment;</li>
+<li>voorraadomloopsnelheid;</li>
+<li>afboekingen per model/layout/taal;</li>
+<li>operationele blokkades door stickervoorraad.</li>
+<li>verdeling over de vier conversiemethoden;</li>
+<li>kosten en arbeidstijd per methode, waardeklasse en layout;</li>
+<li>first-pass yield, herwerk en klachten per methode;</li>
+<li>aantal beleidsafwijkingen en afwijkingsreden;</li>
+<li>marge-impact: conversiekosten versus verkoopwaarde;</li>
+<li>aandeel van de uit te faseren losse stickers.</li>
+</ul>
+<h3>10.4 Printer en conversiecapaciteit</h3>
+<ul>
+<li>jobs in wachtrij per methode;</li>
+<li>verwachte doorlooptijd en capaciteitsbenutting;</li>
+<li>directe reprint: prints, cyclustijd, first-pass yield en herprints;</li>
+<li>sterkere geprinte stickers: geproduceerd, toegepast, scrap en resterende voorraad;</li>
+<li>voorraad primer, inkt, reinigingsvloeistof, stickergrondstof en andere consumables;</li>
+<li>machines in storing/onderhoud;</li>
+<li>ontbrekende of nog niet goedgekeurde model-layouttemplates;</li>
+<li>orders waarvoor de voorkeursmethode niet beschikbaar is.</li>
+</ul>
+<h3>10.5 Datakwaliteit</h3>
+<ul>
+<li>dubbele of ontbrekende SKU’s;</li>
+<li>modellen zonder canonieke mapping;</li>
+<li>onbevestigde compatibiliteit;</li>
+<li>SKU’s zonder leverancier/levertijd/min-max;</li>
+<li>negatieve of verdachte mutaties;</li>
+<li>importfouten.</li>
+</ul>
+<p>Ontwerp dashboards als uitzonderingenlijsten met doorklik naar actie. Een totaalgetal zonder eigenaar of vervolgstap is minder waardevol.</p>
+<h2>11. Integraties</h2>
+<h3>11.1 Barcode en QR</h3>
+<p>HID-scanners die zich als toetsenbord gedragen zijn de eenvoudigste start. Ondersteun daarnaast camera-scanning op tablet/telefoon. Code 128 is geschikt voor compacte interne SKU-labels; QR/Data Matrix kan meer informatie of een URL bevatten. Gebruik in de barcode primair een stabiele identifier, geen veranderlijke voorraad of locatie.</p>
+<p>GS1/GTIN is relevant wanneer leveranciers gestandaardiseerde handelsartikelen leveren. Voor interne, niet-verhandelde items kan een interne identifier volgens de traceability-context volstaan. Voorkom dat één barcode tegelijk SKU, aantal en actuele locatie “waarheid” maakt.</p>
+<h3>11.2 Laptopdatabase</h3>
+<ul>
+<li>Voorkeur: read-only API of periodieke snapshotimport.</li>
+<li>Canonieke externe model-ID bewaren.</li>
+<li>Mappingreview voor onbekende modellen.</li>
+<li>Later eventgedreven reservering bij instroom of werkorder.</li>
+</ul>
+<h3>11.3 ERP/WMS</h3>
+<ul>
+<li>Masterdata en inkooporders via versieerbare REST/JSON API of bestandimport.</li>
+<li>Duidelijke systeemeigenaar per gegeven: bijvoorbeeld ERP voor leverancier/order, stickerapp voor compatibiliteit en operationeel verbruik.</li>
+<li>Webhooks/outbox voor betrouwbare gebeurtenissen.</li>
+<li>Geen dubbel boekhoudkundig voorraadbeheer zonder reconciliatieregels.</li>
+</ul>
+<h3>11.4 Magento</h3>
+<p>Magento is waarschijnlijk geen directe bron voor intern stickervelverbruik. Koppel alleen wanneer verkooporders/verkoopmarkt aantoonbaar gewenste layoutvraag veroorzaken. Gebruik order- of productevents, niet screen scraping.</p>
+<h3>11.5 Excel/CSV</h3>
+<ul>
+<li>Importwizard met kolommapping, preview, validatie en foutbestand.</li>
+<li>Dry run vóór commit.</li>
+<li>Herhaalbare imports via externe sleutel en idempotentie.</li>
+<li>Export van gefilterde lijsten en transacties; geen export die later ongecontroleerd de master overschrijft.</li>
+</ul>
+<h3>11.6 Labelprinters</h3>
+<ul>
+<li>Label bevat SKU, korte layout/modelgroep, locatie/bak en barcode.</li>
+<li>Printtemplates per formaat/printer.</li>
+<li>Herdruk wordt gelogd; barcode blijft dezelfde SKU-identiteit.</li>
+</ul>
+<h2>12. Technisch ontwerp en architectuuradvies</h2>
+<h3>12.1 Aanbevolen doelarchitectuur</h3>
+<p>Een modulaire monoliet is de beste balans voor fase 1: één deploybare backend met helder gescheiden domeinmodules, één relationele database en een responsieve web/PWA-client. Microservices voegen nu operationele complexiteit toe zonder bewezen schaalbehoefte.</p>
+<p>Modules:</p>
+<ul>
+<li>identiteit en autorisatie;</li>
+<li>catalogus/masterdata;</li>
+<li>compatibiliteit;</li>
+<li>voorraad en transacties;</li>
+<li>tellingen;</li>
+<li>inkoop/ontvangst;</li>
+<li>planning/forecast;</li>
+<li>integraties/import;</li>
+<li>meldingen;</li>
+<li>rapportage/audit.</li>
+<li>conversieadvies en versieerbaar beleidsbeheer;</li>
+<li>productie-/conversieorders, machinecapaciteit en kwaliteitscontrole.</li>
+</ul>
+<p>Technische eigenschappen:</p>
+<ul>
+<li>PostgreSQL of gelijkwaardige relationele database;</li>
+<li>transactionele API;</li>
+<li>optimistic locking of rijvergrendeling op balansregels;</li>
+<li>idempotente mutatie-endpoints;</li>
+<li>object storage voor foto’s/documenten;</li>
+<li>achtergrondtaken voor imports, alerts en forecasts;</li>
+<li>centrale logging, metrics, tracing en foutmonitoring;</li>
+<li>dagelijkse back-up en getest herstel;</li>
+<li>SSO via bestaande bedrijfsidentiteit indien beschikbaar;</li>
+<li>versleuteling in transit en at rest;</li>
+<li>geautomatiseerde tests op voorraad-invarianten.</li>
+<li>een uitlegbare regelmotor voor waardedrempel, layout, compatibiliteit, capaciteit en fallback; geen ondoorzichtige AI-beslisser voor de operationele keuze.</li>
+</ul>
+<h3>12.2 Belangrijke invarianten</h3>
+<ul>
+<li>Geen mutatie zonder gebruiker/service-identiteit, tijd, reden en correlation-ID.</li>
+<li>Een normale uitgifte kan on-hand niet onder nul brengen.</li>
+<li>Een SKU-code en barcode zijn uniek binnen hun scope.</li>
+<li>Een compatibiliteitskoppeling verwijst naar bestaande actieve records.</li>
+<li>Transfer uit en in is atomair en netto nul.</li>
+<li>Balans en transacties kunnen dagelijks worden gereconcilieerd.</li>
+<li>Externe retry veroorzaakt nooit een dubbele boeking.</li>
+</ul>
+<h3>12.3 Rapportagearchitectuur</h3>
+<p>Voor de MVP kunnen dashboards uit relationele views/materialized views komen. Splits pas later naar een datawarehouse wanneer volume, integraties of historisch BI-gebruik dat rechtvaardigen. Bewaar vanaf dag één tijdstippen en snapshots op een analysevriendelijke manier.</p>
+<h3>12.4 Offline</h3>
+<p>Een PWA kan beperkte offline ondersteuning krijgen, maar voorraadmutaties bij meerdere apparaten zijn conflictgevoelig. Advies:</p>
+<ul>
+<li>MVP online-first met duidelijke verbindingsstatus;</li>
+<li>later offline wachtrij met lokaal unieke ID, actor/device en tijd;</li>
+<li>server valideert in volgorde en meldt conflicten expliciet;</li>
+<li>geen lokaal berekende definitieve voorraad als meerdere apparaten actief zijn.</li>
+</ul>
+<h3>12.5 Niet-functionele eisen</h3>
+<ul>
+<li>gebruikelijke zoekactie &lt;1 seconde bij normale interne belasting;</li>
+<li>normale mutatie &lt;2 seconden inclusief zichtbare bevestiging;</li>
+<li>beschikbaarheid passend bij werktijden en productie-impact;</li>
+<li>WCAG 2.2 AA als acceptatiedoel;</li>
+<li>volledige auditretentie conform intern beleid;</li>
+<li>herstelpunt en hersteltijd expliciet afspreken;</li>
+<li>Nederlandse UI, met consistente Engelse technische codes waar nodig;</li>
+<li>exporteerbaarheid en leveranciersneutraliteit van data.</li>
+</ul>
+<h2>13. Risicoanalyse</h2>
+<table>
+<thead>
+<tr>
+<th>Risico</th>
+<th>Kans/impact</th>
+<th>Beheersing</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Slechte brondata wordt blind gemigreerd</td>
+<td>Hoog/hoog</td>
+<td>staging, deduplicatie, eigenaar per review, openingsvoorraad tellen</td>
+</tr>
+<tr>
+<td>Verkeerde compatibiliteit blokkeert of beschadigt laptop</td>
+<td>Middel/hoog</td>
+<td>status, fysieke test, bron, foto, vier-ogen bij kritieke wijziging</td>
+</tr>
+<tr>
+<td>Gebruikers blijven Excel gebruiken</td>
+<td>Hoog/hoog</td>
+<td>scan-first UX, training, cut-overdatum, Excel read-only archief</td>
+</tr>
+<tr>
+<td>Systeemvoorraad wijkt af van bakken</td>
+<td>Middel/hoog</td>
+<td>cycle counts, transactiediscipline, locatiebarcode, afwijkingsdashboard</td>
+</tr>
+<tr>
+<td>Dubbel afboeken door retries/scans</td>
+<td>Middel/hoog</td>
+<td>idempotency key, debounce, zichtbare feedback, undo</td>
+</tr>
+<tr>
+<td>Forecast wekt schijnzekerheid</td>
+<td>Hoog/middel</td>
+<td>intervals/aannames tonen, benchmarken, pas activeren met voldoende historie</td>
+</tr>
+<tr>
+<td>Laptopmapping telt vraag dubbel</td>
+<td>Middel/hoog</td>
+<td>allocatieregels en expliciete alternatieven</td>
+</tr>
+<tr>
+<td>Negatieve voorraad wordt verborgen</td>
+<td>Middel/hoog</td>
+<td>blokkade en correctieworkflow</td>
+</tr>
+<tr>
+<td>Leverancierslevertijd is theoretisch i.p.v. werkelijk</td>
+<td>Hoog/middel</td>
+<td>werkelijke ontvangstdata meten en variatie gebruiken</td>
+</tr>
+<tr>
+<td>Offline synchronisatieconflict</td>
+<td>Middel/middel</td>
+<td>online-first, beperkte queue, conflictworkflow</td>
+</tr>
+<tr>
+<td>Integratie-eigenaarschap onduidelijk</td>
+<td>Middel/hoog</td>
+<td>data ownership matrix en contracttests</td>
+</tr>
+<tr>
+<td>Te veel scope in eerste release</td>
+<td>Hoog/hoog</td>
+<td>strikte MVP en beslispoorten</td>
+</tr>
+<tr>
+<td>Persoonsdata/audit te ruim toegankelijk</td>
+<td>Laag/middel</td>
+<td>least privilege, bewaartermijn, audittoegang beperken</td>
+</tr>
+</tbody></table>
+<h2>14. Prioriteiten</h2>
+<h3>Must have — MVP</h3>
+<ul>
+<li>gevalideerde import en dataopschoning;</li>
+<li>masterdata voor alle vier conversiemethoden en hun lifecycle-status;</li>
+<li>configureerbare, versieerbare beslisregels met initiële €300-grens;</li>
+<li>advies én werkelijk gekozen methode per laptop/order, inclusief afwijkingsreden;</li>
+<li>SKU’s, layouts, canonieke laptopmodellen, aliases en many-to-many compatibiliteit;</li>
+<li>voorraad per locatie;</li>
+<li>afboeken, ontvangen, transfer, tellen en corrigeren met transactielog;</li>
+<li>snelle zoekfunctie en barcode/HID-scanner;</li>
+<li>lage voorraad/reorder-point alerts;</li>
+<li>gebruikersrollen en audittrail;</li>
+<li>operationeel dashboard;</li>
+<li>Excel/CSV export;</li>
+<li>back-up, monitoring en reconciliatie;</li>
+<li>openingsvoorraad via fysieke telling.</li>
+<li>kwaliteitsresultaat en herwerkregistratie voor risicovolle sticker- en printprocessen.</li>
+</ul>
+<h3>Should have</h3>
+<ul>
+<li>leveranciers, levertijden, MOQ en open inkooporders;</li>
+<li>besteladvies met min/max en safety stock;</li>
+<li>laptopvoorraadsnapshot en dekking;</li>
+<li>camera-scanning;</li>
+<li>cycle-countplanning op ABC/criticality;</li>
+<li>foto’s en compatibiliteitsbewijs;</li>
+<li>labelprinten;</li>
+<li>notificaties binnen de organisatie;</li>
+<li>bulkmutaties met beveiligde workflow.</li>
+<li>printer/arbeidsplaatscapaciteit, consumables en templatebeschikbaarheid;</li>
+<li>orderwachtrij voor keyboardconversie.</li>
+</ul>
+<h3>Could have</h3>
+<ul>
+<li>forecasting per vraagtype na voldoende historie;</li>
+<li>XYZ-analyse en forecastmonitoring;</li>
+<li>PWA offline wachtrij;</li>
+<li>reserveringen per refurbishbatch/workorder;</li>
+<li>API/webhooks voor ERP/WMS/Magento;</li>
+<li>heatmaps en geavanceerde trendanalyse;</li>
+<li>automatische leverancier-prestatiemeting.</li>
+</ul>
+<h3>Nice to have</h3>
+<ul>
+<li>AI-ondersteunde modelnormalisatie met menselijke goedkeuring;</li>
+<li>AI-verklaring van uitzonderingen;</li>
+<li>computer vision voor velherkenning;</li>
+<li>wearables/haptische scanners;</li>
+<li>dynamische orderoptimalisatie;</li>
+<li>dark mode en persoonlijke favorieten, tenzij gebruikersvalidatie ze eerder prioriteert.</li>
+</ul>
+<h2>15. Migratie- en implementatieadvies</h2>
+<h3>Fase 0 — Besluiten en data-eigenaarschap</h3>
+<ul>
+<li>Bevestig betekenis van <code>Productie</code> en <code>Voorraad </code>.</li>
+<li>Wijs proceseigenaar, data-eigenaar en technisch eigenaar aan.</li>
+<li>Kies canoniek artikelnummerbeleid en fysieke locaties.</li>
+<li>Leg vast wanneer een laptop een sticker “nodig” heeft.</li>
+<li>Stel servicelevels en escalatie-eigenaren vast.</li>
+<li>Benoem en codeer de vier methoden definitief; koppel ieder fysiek materiaal en iedere printer.</li>
+<li>Definieer “verkoopwaarde” bij de €300-grens: bron, btw-behandeling en meetmoment.</li>
+<li>Leg de normale voorkeursvolgorde en bevoegdheden voor afwijking vast.</li>
+<li>Bevestig welke methode “Noviply direct geprint” precies is en welke printer/grondstoffen daarbij horen.</li>
+<li>Valideer de directe keyboardprintstappen, waaronder de genoemde blue-light/uitharding, met operator en leverancier.</li>
+</ul>
+<h3>Fase 1 — Datacleaning en prototypevalidatie</h3>
+<ul>
+<li>Dubbelen reviewen, niet automatisch samenvoegen.</li>
+<li>Vrije compatibiliteit splitsen naar kandidaatmodellen.</li>
+<li>Fysieke pasvormstatussen controleren.</li>
+<li>Ontbrekende leveranciers, locaties en parameters aanvullen.</li>
+<li>Taakflows testen met operators op de werkvloer.</li>
+<li>Meet met een korte tijdstudie per methode: voorbereiding, toepassing/print, QC, herwerk en uitval.</li>
+<li>Verzamel minimaal kostprijs, arbeidstijd, materiaalverbruik en klacht-/garantie-informatie per methode.</li>
+</ul>
+<h3>Fase 2 — MVP en cut-over</h3>
+<ul>
+<li>Masterdata en transacties activeren.</li>
+<li>Alle bakken fysiek tellen en openingssaldo boeken.</li>
+<li>Labels plaatsen.</li>
+<li>Excel als read-only archief bewaren.</li>
+<li>Pilot op één locatie/ploeg, daarna gecontroleerde uitrol.</li>
+<li>Start methodeadvies in “adviesmodus”: medewerker bevestigt of wijkt gemotiveerd af; analyseer afwijkingen vóór automatische handhaving.</li>
+</ul>
+<h3>Fase 3 — Planning en koppelingen</h3>
+<ul>
+<li>Inkooporders en laptopvoorraad koppelen.</li>
+<li>Min/max kalibreren.</li>
+<li>Datakwaliteit en voorraadnauwkeurigheid wekelijks beoordelen.</li>
+</ul>
+<h3>Fase 4 — Forecasting</h3>
+<ul>
+<li>Minimaal 3–6 maanden schone historie beoordelen.</li>
+<li>Baselines en intermitterende methoden backtesten.</li>
+<li>Alleen modellen activeren die voorraad-KPI’s aantoonbaar verbeteren.</li>
+</ul>
+<h2>16. Acceptatiecriteria voor de latere MVP</h2>
+<ul>
+<li>Een operator kan binnen maximaal enkele seconden een bekende SKU/model vinden en één vel afboeken.</li>
+<li>Iedere mutatie is herleidbaar naar wie, wat, wanneer, waar en waarom.</li>
+<li>Het systeem voorkomt een normale uitgifte onder nul.</li>
+<li>Eén SKU kan zonder dubbel onderhoud aan meerdere modellen worden gekoppeld.</li>
+<li>Zoeken op ieder gekoppeld model vindt de juiste, goedgekeurde SKU.</li>
+<li>Voorraad per locatie en totaal zijn zichtbaar en reconcilieerbaar.</li>
+<li>Een ontvangst of transfer kan niet half worden geboekt.</li>
+<li>Lage voorraad en verwachte tekorten hebben een eigenaar en status.</li>
+<li>Import toont fouten vóórdat gegevens definitief worden geschreven.</li>
+<li>Een fysieke telling kan verschillen registreren zonder historie te overschrijven.</li>
+<li>Kernflows zijn bruikbaar met muis, toetsenbord, touch en gangbare HID-scanner.</li>
+</ul>
+<h2>17. Extra functies met hoge potentiële waarde</h2>
+<ul>
+<li><strong>No-match queue:</strong> registreert modellen waarop vaak wordt gezocht maar waarvoor geen vel is gevonden; direct input voor assortiment en compatibiliteitswerk.</li>
+<li><strong>Substitutiebeleid:</strong> voorkeurs-SKU en toegestane alternatieven met rangorde; voorkomt dubbel tellen van dekking.</li>
+<li><strong>Kwaliteitsblokkade:</strong> blokkeer een partij/SKU bij verkeerde opdruk, kleur of pasvorm.</li>
+<li><strong>Usage probability per model:</strong> niet iedere laptop heeft een sticker nodig; meet werkelijke ratio per model en herkomstbatch.</li>
+<li><strong>Stockout capture:</strong> registreer gemiste behoefte, anders ziet forecasting alleen wat kon worden uitgegeven.</li>
+<li><strong>Supplier scorecard:</strong> werkelijke versus beloofde levertijd, volledigheid en kwaliteit.</li>
+<li><strong>Alert fatigue control:</strong> groepeer meldingen, gebruik ernst en wijs een eigenaar toe; stuur niet dagelijks dezelfde ongeadresseerde waarschuwing opnieuw.</li>
+<li><strong>Reconciliation report:</strong> dagelijkse controle tussen transacties en balans, plus wekelijkse fysieke uitzonderingen.</li>
+<li><strong>Decision log:</strong> leg handmatige override van besteladvies vast om later beleid te verbeteren.</li>
+</ul>
+<h2>18. Conclusie en besluitvoorstel</h2>
+<p>Het project is gerechtvaardigd: de huidige Excel bevat nuttige domeinkennis, maar de structuur kan de gewenste betrouwbaarheid, forecasting en integraties niet dragen. Door de vier conversiemethoden is de bedrijfswaarde bovendien groter dan voorraadbeheer alleen. Het systeem moet materiaal, methodekeuze, machinecapaciteit, kwaliteit en herwerk verbinden. De eerste investering moet niet naar dashboards of AI gaan, maar naar een correct domeinmodel, uitlegbare beslisregels en foutarme mutatie- en uitvoeringsregistratie.</p>
+<p>Voorgesteld besluit:</p>
+<ol>
+<li>Keur de doelrichting “responsieve web/PWA + relationele database + append-only transactielog” goed.</li>
+<li>Bevestig dat SKU/layoutvariant en laptopmodel afzonderlijke entiteiten zijn met een many-to-many compatibiliteitsrelatie.</li>
+<li>Plan een korte validatieworkshop met stickeroperator, voorraadbeheerder, inkoper en eigenaar van de laptopdatabase.</li>
+<li>Laat vóór ontwikkeling de drie dubbele artikelnummers, zes dubbele modelnamen, kantoorvoorraad en ontbrekende artikelnummers inhoudelijk beoordelen.</li>
+<li>Leg in dezelfde workshop de vier methoden, €300-definitie, voorkeursvolgorde, uitzonderingen, printers, consumables, kwaliteitscontrole en blue-lightstap definitief vast.</li>
+<li>Definieer daarna de MVP-backlog en UX-prototype; begin pas na goedkeuring met applicatiecode.</li>
+</ol>
+<h2>19. Bronnen</h2>
+<ul>
+<li>Microsoft Learn, <a href="https://learn.microsoft.com/en-us/dynamics365/supply-chain/warehousing/replenishment">Replenishment overview</a> — min/max- en demand replenishment.</li>
+<li>Microsoft Learn, <a href="https://learn.microsoft.com/en-us/dynamics365/supply-chain/warehousing/tasks/define-cycle-counting-microsoft-dynamics-365-finance-operations-enterprise-edition-july-2017">Define cycle counting</a> — cycle counting en mobiele warehouseflow.</li>
+<li>Microsoft Learn, <a href="https://learn.microsoft.com/en-us/dynamics365/supply-chain/warehousing/scan-bar-codes-using-a-camera">Scan bar codes using a camera</a> — camera-scanning en ondersteunde barcodes.</li>
+<li>Microsoft Learn, <a href="https://learn.microsoft.com/en-us/dynamics365/supply-chain/warehousing/warehouse-mobile-device-tracking-dimensions-license-plate-picking-behavior">Warehouse mobile device tracking dimensions and picking behavior</a> — minimaliseren van scanning en handmatige invoer.</li>
+<li>Microsoft Learn, <a href="https://learn.microsoft.com/en-us/windows/apps/develop/input/touch-interactions">Touch interactions</a> — touchdoelen en responsieve interactie.</li>
+<li>Oracle, <a href="https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/article_1155215810.html">Inventory Optimization</a> — segmentatie, servicelevels, safety stock en reorder point.</li>
+<li>Oracle, <a href="https://docs.oracle.com/cd/A60725_05/html/comnls/us/inv/roplan.htm">Reorder Point Planning</a> — reorder point, lead-time demand, safety stock en EOQ.</li>
+<li>Apple, <a href="https://developer.apple.com/design/human-interface-guidelines/accessibility">Accessibility</a> — control size, spacing en alternatieve input.</li>
+<li>Nielsen Norman Group, <a href="https://www.nngroup.com/articles/ten-usability-heuristics/">Ten Usability Heuristics</a> — foutpreventie, status, consistentie en recognition over recall.</li>
+<li>GS1, <a href="https://ref.gs1.org/standards/global-traceability/2.0.0/">Global Traceability Standard</a> — identificatie en traceerbaarheidsgegevens.</li>
+<li>Hyndman &amp; Athanasopoulos, <a href="https://otexts.com/fpp3/counts.html">Forecasting: Principles and Practice — time series of counts</a> — Croston en beperkingen.</li>
+<li>Babai et al., <a href="https://doi.org/10.1016/j.ijpe.2018.01.026">A new method to forecast intermittent demand in the presence of inventory obsolescence</a> — SBA/TSB en obsolescentie.</li>
+<li>Teunter, Syntetos &amp; Babai, <a href="https://doi.org/10.1016/j.ejor.2011.07.018">Intermittent demand: Linking forecasting to inventory obsolescence</a> — vraagkans bij nulperioden.</li>
+<li>Syntetos &amp; Boylan, <a href="https://doi.org/10.1016/j.ijpe.2005.04.004">On the stock control performance of intermittent demand estimators</a> — voorraadprestatie van intermitterende forecastmethoden.</li>
+<li>Noviply, <a href="https://noviply.com/laptop-keyboard-sticker/">Laptop Keyboard Sticker</a> — model-/taalspecifieke stickervellen, materiaaleigenschappen en toepassing.</li>
+<li>Noviply, <a href="https://noviply.com/laptop-keyboard-reprinting/">Laptop Keyboard Reprinting</a> — leveranciersvergelijking tussen stickers en directe reprint; als commerciële bron geïnterpreteerd.</li>
+<li>Keyboard Print, <a href="https://www.keyboardprint.ro/remote-print">Remote Print</a> — in-house printercapaciteit, cyclustijd, ontwerpen, consumables en ondersteuning.</li>
+<li>Keyboard Print, <a href="https://www.keyboardprint.ro/digital-reprint">Digital Reprint</a> — processtappen, backlit-ondersteuning en kwaliteitscontrole.</li>
+</ul>
+
+</body>
+</html>
+
