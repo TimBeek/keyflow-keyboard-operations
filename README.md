@@ -17,6 +17,7 @@ De eerste applicatiebasis bevat:
 - een server-side voorraad-API met rijvergrendeling, idempotentie en bescherming tegen negatieve voorraad;
 - een health endpoint dat veilig meldt of de databaseomgeving is geconfigureerd;
 - een Excel-analysecommando dat importfouten, waarschuwingen en mogelijke dubbelen rapporteert;
+- een gecontroleerde Excel-upload naar importstaging, met bestandsduplicaatcontrole en herleidbare bevindingen per bronrij;
 - een productiebuild zonder lint- of TypeScriptfouten;
 - een containerdefinitie en GitHub Actions voor CI en image-publicatie.
 
@@ -56,7 +57,18 @@ npm run build
 npm run db:migrate
 ```
 
-De database-API is daarna beschikbaar via `POST /api/inventory/mutations`. De status is zichtbaar via `GET /api/health`.
+De database-API's zijn daarna beschikbaar via:
+
+- `POST /api/inventory/mutations` voor een idempotente voorraadmutatie;
+- `POST /api/imports/inventory` voor een gecontroleerde `.xlsx`-upload;
+- `GET /api/health` voor de databaseconfiguratiestatus.
+
+De import-upload gebruikt `multipart/form-data` met:
+
+- `file`: maximaal 10 MB, uitsluitend `.xlsx`;
+- `actorId`: UUID van een bestaande actieve gebruiker.
+
+Een werkboek met harde fouten of mogelijke dubbelen krijgt status `needs_review`. Alleen een foutvrije analyse krijgt status `ready`; er wordt in deze stap nog niets naar de live voorraad geschreven.
 
 ## Excel controleren
 
