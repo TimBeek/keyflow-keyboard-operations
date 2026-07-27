@@ -66,9 +66,11 @@ De database-API's zijn daarna beschikbaar via:
 De import-upload gebruikt `multipart/form-data` met:
 
 - `file`: maximaal 10 MB, uitsluitend `.xlsx`;
-- `actorId`: UUID van een bestaande actieve gebruiker.
+- optioneel `actorId`: UUID van een bestaande actieve gebruiker; zonder dit veld wordt de serverinstelling `KEYFLOW_IMPORT_ACTOR_ID` gebruikt.
 
 Een werkboek met harde fouten of mogelijke dubbelen krijgt status `needs_review`. Alleen een foutvrije analyse krijgt status `ready`; er wordt in deze stap nog niets naar de live voorraad geschreven.
+
+De ontwikkelmigratie maakt hiervoor een lokale beheerder aan met UUID `00000000-0000-0000-0000-000000000001`. Dit is uitsluitend auditidentiteit; gebruikersauthenticatie wordt vóór productie apart aangesloten.
 
 ## Excel controleren
 

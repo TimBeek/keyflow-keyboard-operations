@@ -16,12 +16,24 @@ export async function POST(request: Request) {
   try {
     const form = await request.formData();
     const file = form.get("file");
-    const actorId = form.get("actorId");
+    const suppliedActorId = form.get("actorId");
+    const actorId = typeof suppliedActorId === "string" && suppliedActorId
+      ? suppliedActorId
+      : process.env.KEYFLOW_IMPORT_ACTOR_ID;
 
-    if (!(file instanceof File) || typeof actorId !== "string") {
+    if (!(file instanceof File)) {
       return Response.json(
-        { error: "INVALID_UPLOAD", message: "Velden 'file' en 'actorId' zijn verplicht." },
+        { error: "INVALID_UPLOAD", message: "Veld 'file' is verplicht." },
         { status: 400 },
+      );
+    }
+    if (!actorId) {
+      return Response.json(
+        {
+          error: "OPERATOR_NOT_CONFIGURED",
+          message: "Configureer KEYFLOW_IMPORT_ACTOR_ID voordat voorraad kan worden geïmporteerd.",
+        },
+        { status: 503 },
       );
     }
     if (!file.name.toLowerCase().endsWith(".xlsx") || !acceptedMimeTypes.has(file.type)) {
