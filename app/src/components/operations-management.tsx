@@ -8,11 +8,16 @@ import {
   type OperationsPolicy,
   type OperationalMethodId,
 } from "@/domain/operations";
+import {
+  stickerVerificationFailureLabel,
+  type StickerVerificationReport,
+} from "@/domain/sticker-verification";
 
 type Props = {
   quantities: Record<string, number>;
   transactions: InventoryTransactionEntry[];
   policy: OperationsPolicy;
+  verificationReports: StickerVerificationReport[];
   onPolicyChange: (policy: OperationsPolicy) => void;
   persistence: {
     ready: boolean;
@@ -24,7 +29,7 @@ type Props = {
   onResetPilotData: () => void;
 };
 
-type Tab = "abc" | "ledger" | "policy";
+type Tab = "abc" | "ledger" | "verification" | "policy";
 
 const methodLabels: Record<OperationalMethodId, { name: string; detail: string }> = {
   loose_stickers: { name: "Losse stickers", detail: "Uitfaseringsfallback" },
@@ -37,6 +42,7 @@ export function OperationsManagement({
   quantities,
   transactions,
   policy,
+  verificationReports,
   onPolicyChange,
   persistence,
   onExportBackup,
@@ -71,6 +77,8 @@ export function OperationsManagement({
   const mismatchCount = transactions
     .filter((entry) => entry.reasonCode === "fit_mismatch")
     .reduce((sum, entry) => sum + Math.abs(entry.quantityDelta), 0);
+  const blockedUnusedCount = verificationReports.filter((report) => report.outcome === "blocked_unused").length;
+  const verificationAlertCount = verificationReports.filter((report) => report.outcome !== "passed").length;
 
   function updateMethod(method: OperationalMethodId, enabled: boolean) {
     setDraft((current) => ({
@@ -100,7 +108,7 @@ export function OperationsManagement({
         <article><span>Actuele voorbeeldvoorraad</span><strong>{currentStock}</strong><small>vellen in de geladen catalogus</small></article>
         <article><span>Uitgeboekt</span><strong>{issued}</strong><small>12-wekenbasis + live sessie</small></article>
         <article><span>Ingeboekt</span><strong>{received}</strong><small>leveringen en correcties</small></article>
-        <article className={mismatchCount > 0 ? "attention" : ""}><span>Past niet / uitval</span><strong>{mismatchCount}</strong><small>apart analyseerbare vellen</small></article>
+        <article className={mismatchCount + blockedUnusedCount > 0 ? "attention" : ""}><span>Controle-afwijkingen</span><strong>{verificationAlertCount}</strong><small>{mismatchCount} uitval · {blockedUnusedCount} zonder afboeking</small></article>
       </section>
 
       <section className="panel operations-panel">
@@ -116,6 +124,7 @@ export function OperationsManagement({
         <div className="operations-tabs" role="tablist" aria-label="Operationeel beheer">
           <button className={tab === "abc" ? "active" : ""} onClick={() => setTab("abc")}>ABC & hardlopers</button>
           <button className={tab === "ledger" ? "active" : ""} onClick={() => setTab("ledger")}>Boekingen</button>
+          <button className={tab === "verification" ? "active" : ""} onClick={() => setTab("verification")}>Hangmapcontroles</button>
           <button className={tab === "policy" ? "active" : ""} onClick={() => setTab("policy")}>Configuratie</button>
         </div>
 
@@ -177,6 +186,33 @@ export function OperationsManagement({
                   ))}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {tab === "verification" && (
+          <div className="operations-tab-content">
+            <div className="verification-summary">
+              <article><span>Controles akkoord</span><strong>{verificationReports.filter((report) => report.outcome === "passed").length}</strong><small>locatie, SKU, layout, E1/E2 en positionering</small></article>
+              <article><span>Gestopt zonder afboeken</span><strong>{blockedUnusedCount}</strong><small>vel bleef bruikbaar</small></article>
+              <article><span>Uitval na controle</span><strong>{verificationReports.filter((report) => report.outcome === "scrapped").length}</strong><small>apart van normaal verbruik geboekt</small></article>
+            </div>
+            <div className="table-wrap">
+              <table className="operations-table verification-table">
+                <thead><tr><th>Moment / order</th><th>Hangmap</th><th>Sticker / laptop</th><th>Controle-uitkomst</th><th>Medewerker</th></tr></thead>
+                <tbody>
+                  {[...verificationReports].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt)).slice(0, 30).map((report) => (
+                    <tr key={report.id}>
+                      <td><strong>{formatDate(report.occurredAt)}</strong><span>{report.orderReference}</span></td>
+                      <td><strong className="storage-number">Nr. {report.storageNumber}</strong><span>Hangmappenwagen</span></td>
+                      <td><strong>{report.sku} · {report.variant}</strong><span>{report.model} · {report.targetLayout}</span></td>
+                      <td><span className={`verification-outcome ${report.outcome}`}>{verificationOutcomeLabel(report.outcome)}</span><small>{report.outcome === "passed" ? "Alle vijf punten bevestigd" : stickerVerificationFailureLabel(report.failureReason)}</small></td>
+                      <td><strong>{report.actor}</strong></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {verificationReports.length === 0 && <div className="empty">Nog geen hangmapcontroles in deze pilot. Nieuwe controles verschijnen hier automatisch.</div>}
             </div>
           </div>
         )}
@@ -282,7 +318,16 @@ function reasonLabel(reason: string) {
     conversion_usage: "Automatisch na conversie",
     supplier_delivery: "Levering leverancier",
     fit_mismatch: "Sticker past niet",
+    verification_scrap: "Afwijking na hangmapcontrole",
     quality_scrap: "Kwaliteitsuitval",
     manual_issue: "Handmatig afgeboekt",
   }[reason] ?? reason;
+}
+
+function verificationOutcomeLabel(outcome: StickerVerificationReport["outcome"]) {
+  return {
+    passed: "Controle akkoord",
+    blocked_unused: "Gestopt · niet afgeboekt",
+    scrapped: "Uitval · afgeboekt",
+  }[outcome];
 }

@@ -10,8 +10,11 @@ De werknemersflow is ontworpen voor handscanner, toetsenbord en tablet en beperk
 6. Bij meerdere treffers kiest de medewerker uit een korte lijst; bij nul treffers wordt de uitvoering geblokkeerd.
 7. Kies zo nodig een verkoopwaardeklasse: `< €100`, `€100–199`, `€200–299`, `€300–399`, `€400–499` of `€500+`.
 8. Controleer aanwezige en gewenste layout.
-9. KeyFlow toont direct methode, exact Noviply-SKU, E1/E2, locatie en voorraad.
-10. Volg de aftekenlijst. Bij afronden wordt een oud Noviply-vel automatisch afgeboekt.
-11. Registreer een niet-passende sticker apart; een volgende geslaagde sticker wordt daarna eveneens geboekt.
+9. KeyFlow toont direct methode, het exacte nummer van de hangmap, Noviply-SKU, E1/E2, layout en voorraad.
+10. Pak uitsluitend de getoonde genummerde hangmap uit de hangmappenwagen.
+11. Bevestig vóór het aanbrengen apart: hangmapnummer, SKU, layout, E1/E2 en droge positionering/toetsvorm.
+12. Bij een afwijking kies je bewust tussen `melden zonder afboeken` voor een nog bruikbaar vel en `uitval −1` voor een gebruikt of beschadigd vel.
+13. Pas na een volledig goedgekeurde pakcontrole wordt de uitvoeringslijst beschikbaar.
+14. Bij succesvol afronden wordt precies één oud Noviply-vel automatisch afgeboekt.
 
 De orderlookup gebruikt nu een vervangbare pilotadapter met representatieve orders. De gebruikersflow blijft gelijk wanneer deze adapter later op het echte ordersysteem wordt aangesloten.

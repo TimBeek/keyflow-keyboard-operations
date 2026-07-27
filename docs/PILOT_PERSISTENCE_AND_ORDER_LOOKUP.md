@@ -13,7 +13,7 @@ De scannerinvoer accepteert een volledige orderreferentie, een korte alias en ee
 
 ## Lokale pilotpersistentie
 
-Voorraadaantallen, transacties en het managementbeleid worden automatisch in de browser opgeslagen. De gegevens:
+Voorraadaantallen, transacties, Noviply-pakcontroles en het managementbeleid worden automatisch in de browser opgeslagen. De gegevens:
 
 - worden door een versienummer en schema gevalideerd;
 - worden na verversen of opnieuw openen van de app hersteld;

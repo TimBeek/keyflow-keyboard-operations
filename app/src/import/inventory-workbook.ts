@@ -10,8 +10,10 @@ export type ImportSeverity = "error" | "warning" | "review";
 export type InventoryImportIssue = {
   severity: ImportSeverity;
   sourceRow: number;
-  field: "quantity" | "sku" | "layout" | "linkedModels" | "model";
+  field: "storageNumber" | "quantity" | "sku" | "layout" | "linkedModels" | "model";
   code:
+    | "INVALID_STORAGE_NUMBER"
+    | "DUPLICATE_STORAGE_NUMBER"
     | "INVALID_QUANTITY"
     | "INVALID_SKU"
     | "UNKNOWN_LAYOUT"
@@ -23,7 +25,7 @@ export type InventoryImportIssue = {
 
 export type InventoryImportRow = {
   sourceRow: number;
-  number: number | null;
+  storageNumber: number | null;
   model: string;
   normalizedModel: string;
   quantity: number | null;
@@ -62,7 +64,7 @@ export function analyzeInventoryWorkbook(sheets: WorkbookSheet[]): InventoryWork
       const model = cleanText(row[1]);
       return {
         sourceRow: index + 3,
-        number: integerOrNull(row[0]),
+        storageNumber: integerOrNull(row[0]),
         model,
         normalizedModel: normalize(model),
         quantity: integerOrNull(row[2]),
@@ -77,8 +79,12 @@ export function analyzeInventoryWorkbook(sheets: WorkbookSheet[]): InventoryWork
   const issues: InventoryImportIssue[] = [];
   const skuRows = new Map<string, number[]>();
   const modelRows = new Map<string, number[]>();
+  const storageNumberRows = new Map<string, number[]>();
 
   for (const row of rows) {
+    if (row.storageNumber === null || row.storageNumber <= 0) {
+      issues.push(issue("error", row.sourceRow, "storageNumber", "INVALID_STORAGE_NUMBER", `Ongeldig hangmapnummer: ${row.storageNumber ?? "leeg"}`));
+    }
     if (row.quantity === null || row.quantity < 0) {
       issues.push(issue("error", row.sourceRow, "quantity", "INVALID_QUANTITY", `Ongeldig aantal: ${row.quantity ?? "leeg"}`));
     }
@@ -93,6 +99,7 @@ export function analyzeInventoryWorkbook(sheets: WorkbookSheet[]): InventoryWork
     }
     addIndex(skuRows, row.sku, row.sourceRow);
     addIndex(modelRows, row.normalizedModel, row.sourceRow);
+    if (row.storageNumber !== null) addIndex(storageNumberRows, String(row.storageNumber), row.sourceRow);
   }
 
   for (const [sku, sourceRows] of skuRows) {
@@ -103,6 +110,11 @@ export function analyzeInventoryWorkbook(sheets: WorkbookSheet[]): InventoryWork
   for (const [model, sourceRows] of modelRows) {
     if (model && sourceRows.length > 1) {
       issues.push(issue("review", sourceRows[0], "model", "DUPLICATE_MODEL", `Dubbele modelnaam na normalisatie op rijen ${sourceRows.join(", ")}.`));
+    }
+  }
+  for (const [storageNumber, sourceRows] of storageNumberRows) {
+    if (sourceRows.length > 1) {
+      issues.push(issue("review", sourceRows[0], "storageNumber", "DUPLICATE_STORAGE_NUMBER", `Hangmapnummer ${storageNumber} wordt gebruikt op rijen ${sourceRows.join(", ")}.`));
     }
   }
 

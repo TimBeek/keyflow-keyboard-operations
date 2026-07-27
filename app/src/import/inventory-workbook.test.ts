@@ -35,6 +35,7 @@ describe("analyzeInventoryWorkbook", () => {
       reviews: 0,
     });
     expect(result.rows[0].sourceRow).toBe(3);
+    expect(result.rows[0].storageNumber).toBe(1);
   });
 
   it("signaleert fouten, waarschuwingen en genormaliseerde dubbelen", () => {
@@ -69,5 +70,19 @@ describe("analyzeInventoryWorkbook", () => {
     expect(() =>
       analyzeInventoryWorkbook([{ sheet: "Overzicht", data: [] }]),
     ).toThrowError(InventoryWorkbookError);
+  });
+
+  it("behandelt nr. als unieke fysieke hangmaplocatie", () => {
+    const result = analyzeInventoryWorkbook(
+      workbook(
+        [75, "Dell Latitude 5420", 25, "QWERTY US", "NB10172E1NL", "Latitude 5420", null],
+        [75, "HP EliteBook 850", 5, "QWERTY US", "NB10064E1NL", "EliteBook 850", null],
+        [null, "HP 240 G8", 2, "QWERTY US", "NB10200E2NL", "HP 240 G8", null],
+      ),
+    );
+
+    expect(result.issues.map(({ code }) => code)).toEqual(
+      expect.arrayContaining(["DUPLICATE_STORAGE_NUMBER", "INVALID_STORAGE_NUMBER"]),
+    );
   });
 });

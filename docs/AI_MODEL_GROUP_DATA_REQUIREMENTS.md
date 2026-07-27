@@ -29,3 +29,5 @@ Per laptopmodel en keyboardvariant zijn ten minste nodig:
 ## Eerstvolgende gegevensverzameling
 
 De huidige Excel-voorraad bevat modelnaam, SKU en een E1/E2-aanduiding in het SKU-nummer. Voor betrouwbare AI-groepering ontbreken vooral fabrikantonderdeelnummers, afmetingen, foto's en gestructureerde resultaten van geslaagde en mislukte pastesten.
+
+De Excel-kolom `nr.` is uitsluitend de fysieke hangmaplocatie. Een gelijk of nabij hangmapnummer is geen bewijs dat modellen, layouts of E1/E2-varianten compatibel zijn.

@@ -19,6 +19,7 @@ export const compatibilityStatus = pgEnum("compatibility_status", ["unverified",
 export const transactionType = pgEnum("inventory_transaction_type", ["opening", "issue", "receipt", "transfer_out", "transfer_in", "adjustment", "reservation", "release"]);
 export const conversionJobStatus = pgEnum("conversion_job_status", ["draft", "advised", "released", "in_progress", "quality_check", "completed", "blocked", "cancelled"]);
 export const qualityResult = pgEnum("quality_result", ["passed", "rework", "scrap", "blocked"]);
+export const stickerVerificationOutcome = pgEnum("sticker_verification_outcome", ["passed", "blocked_unused", "scrapped"]);
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -70,12 +71,15 @@ export const stickerSkus = pgTable("sticker_skus", {
   layoutId: uuid("layout_id").notNull().references(() => keyboardLayouts.id),
   methodCode: text("method_code").notNull(),
   barcode: text("barcode"),
+  hangingFileNumber: integer("hanging_file_number"),
   status: recordStatus("status").notNull().default("active"),
   notes: text("notes"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (table) => [
   uniqueIndex("sticker_skus_sku_uq").on(table.sku),
   uniqueIndex("sticker_skus_barcode_uq").on(table.barcode),
+  uniqueIndex("sticker_skus_hanging_file_number_uq").on(table.hangingFileNumber),
+  check("sticker_skus_hanging_file_number_positive", sql`${table.hangingFileNumber} is null or ${table.hangingFileNumber} > 0`),
 ]);
 
 export const skuModelCompatibility = pgTable("sku_model_compatibility", {
@@ -194,6 +198,24 @@ export const qualityChecks = pgTable("quality_checks", {
   checkedBy: uuid("checked_by").notNull().references(() => users.id),
   checkedAt: timestamp("checked_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const stickerVerificationReports = pgTable("sticker_verification_reports", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  jobId: uuid("job_id").references(() => conversionJobs.id),
+  orderReference: text("order_reference").notNull(),
+  skuId: uuid("sku_id").notNull().references(() => stickerSkus.id),
+  hangingFileNumber: integer("hanging_file_number").notNull(),
+  modelName: text("model_name").notNull(),
+  targetLayoutId: uuid("target_layout_id").notNull().references(() => keyboardLayouts.id),
+  variant: text("variant").notNull(),
+  outcome: stickerVerificationOutcome("outcome").notNull(),
+  failureReason: text("failure_reason"),
+  inventoryTransactionId: uuid("inventory_transaction_id").references(() => inventoryTransactions.id),
+  checkedBy: uuid("checked_by").notNull().references(() => users.id),
+  checkedAt: timestamp("checked_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  check("sticker_verification_hanging_file_number_positive", sql`${table.hangingFileNumber} > 0`),
+]);
 
 export const auditLogs = pgTable("audit_logs", {
   id: uuid("id").primaryKey().defaultRandom(),

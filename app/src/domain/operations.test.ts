@@ -16,6 +16,7 @@ describe("Noviply SKU matching", () => {
       expect(match.item.sku).toBe("NB10052E1NL");
       expect(match.variant).toBe("E1");
       expect(match.currentStock).toBe(15);
+      expect(match.item.storageNumber).toBe(1);
     }
   });
 
@@ -36,6 +37,17 @@ describe("Noviply SKU matching", () => {
 
   it("leest ook E2 als afzonderlijke stickeruitvoering", () => {
     expect(extractStickerVariant("NB10200E2NL")).toBe("E2");
+  });
+
+  it("verwijst de Dell Latitude 5420 QWERTY US naar hangmap 75", () => {
+    const match = findNoviplySku("Dell Latitude 5420", "QWERTY US", inventoryCatalog, {});
+
+    expect(match.status).toBe("matched");
+    if (match.status === "matched") {
+      expect(match.item.sku).toBe("NB10172E1NL");
+      expect(match.item.storageNumber).toBe(75);
+      expect(match.variant).toBe("E1");
+    }
   });
 });
 

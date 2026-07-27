@@ -103,7 +103,7 @@ export async function importInventoryWorkbook(rawInput: ImportInventoryWorkbookI
           ${createdBatch.id}::uuid,
           'Productie',
           ${row.sourceRow},
-          ${row.number},
+          ${row.storageNumber},
           ${row.model},
           ${row.normalizedModel},
           ${row.quantity},
@@ -185,6 +185,7 @@ export async function getInventoryImportReview(rawBatchId: string, actorId: stri
       issue.corrected_value as "correctedValue",
       issue.resolved_at as "resolvedAt",
       row.source_row as "sourceRow",
+      row.source_number as "storageNumber",
       row.model_name as "model",
       row.quantity,
       row.layout_name as "layout",
@@ -369,6 +370,7 @@ export type ImportReviewIssue = {
   correctedValue: string | null;
   resolvedAt: Date | null;
   sourceRow: number | null;
+  storageNumber: number | null;
   model: string | null;
   quantity: number | null;
   layout: string | null;
@@ -452,6 +454,11 @@ async function applyRowResolution(
   if (field === "sku") {
     await transaction`
       update inventory_import_rows set sku = ${correctedValue}
+      where id = ${rowId}::uuid
+    `;
+  } else if (field === "storageNumber") {
+    await transaction`
+      update inventory_import_rows set source_number = ${Number(correctedValue)}
       where id = ${rowId}::uuid
     `;
   } else if (field === "quantity") {

@@ -50,6 +50,12 @@ export function validateImportResolution(
       "Het gecorrigeerde aantal moet een geheel getal tussen 0 en 100.000 zijn.",
     );
   }
+  if (issue.field === "storageNumber" && (!/^[1-9]\d*$/.test(value) || Number(value) > 10_000)) {
+    throw new InventoryResolutionError(
+      "INVALID_CORRECTED_VALUE",
+      "Het hangmapnummer moet een geheel getal tussen 1 en 10.000 zijn.",
+    );
+  }
   if (issue.field === "layout" && !["QWERTY US", "AZERTY FR", "QWERTZ DE"].includes(value.toUpperCase())) {
     throw new InventoryResolutionError(
       "INVALID_CORRECTED_VALUE",

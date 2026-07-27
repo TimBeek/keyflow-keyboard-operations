@@ -17,6 +17,11 @@ describe("validateImportResolution", () => {
       "correct_value",
       "qwerty us",
     )).toEqual({ action: "correct_value", correctedValue: "QWERTY US" });
+    expect(validateImportResolution(
+      { severity: "error", field: "storageNumber" },
+      "correct_value",
+      "75",
+    )).toEqual({ action: "correct_value", correctedValue: "75" });
   });
 
   it("weigert het administratief accepteren van een harde fout", () => {
@@ -39,5 +44,13 @@ describe("validateImportResolution", () => {
       "keep_separate",
       "reject_row",
     ]);
+  });
+
+  it("weigert een ongeldig hangmapnummer", () => {
+    expect(() => validateImportResolution(
+      { severity: "error", field: "storageNumber" },
+      "correct_value",
+      "0",
+    )).toThrow("tussen 1 en 10.000");
   });
 });

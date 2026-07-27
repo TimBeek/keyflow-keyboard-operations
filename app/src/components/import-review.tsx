@@ -21,6 +21,7 @@ type ReviewIssue = {
   correctedValue: string | null;
   resolvedAt: string | null;
   sourceRow: number | null;
+  storageNumber?: number | null;
   model: string | null;
   quantity: number | null;
   layout: string | null;
@@ -352,6 +353,7 @@ function defaultResolutionAction(issue: ReviewIssue): ResolutionAction {
 
 function correctionPlaceholder(issue: ReviewIssue) {
   if (issue.field === "sku") return "Bijvoorbeeld NB10100E1NL";
+  if (issue.field === "storageNumber") return "Bijvoorbeeld 75";
   if (issue.field === "quantity") return "Bijvoorbeeld 25";
   if (issue.field === "layout") return "QWERTY US, AZERTY FR of QWERTZ DE";
   if (issue.field === "linkedModels") return "Bijvoorbeeld Latitude 5400, 5410";
@@ -374,6 +376,7 @@ function applyDisplayedCorrection(
 ) {
   if (action !== "correct_value" || !correctedValue) return issue;
   if (issue.field === "sku") return { ...issue, sku: correctedValue };
+  if (issue.field === "storageNumber") return { ...issue, storageNumber: Number(correctedValue) };
   if (issue.field === "quantity") return { ...issue, quantity: Number(correctedValue) };
   if (issue.field === "layout") return { ...issue, layout: correctedValue.toUpperCase() };
   if (issue.field === "linkedModels") return { ...issue, linkedModels: correctedValue };
@@ -390,6 +393,7 @@ function severityLabel(severity: Severity) {
 function fieldLabel(field: string) {
   return ({
     quantity: "Aantal",
+    storageNumber: "Hangmapnummer",
     sku: "Artikelnummer",
     layout: "Layout",
     linkedModels: "Compatibiliteit",
