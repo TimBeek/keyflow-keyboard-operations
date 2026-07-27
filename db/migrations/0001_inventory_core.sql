@@ -1,5 +1,3 @@
-begin;
-
 create extension if not exists pgcrypto;
 
 do $$ begin
@@ -217,5 +215,3 @@ values
   ('STICKER_AFDELING', 'Stickerafdeling'),
   ('KANTOOR', 'Kantoorvoorraad')
 on conflict (code) do nothing;
-
-commit;
