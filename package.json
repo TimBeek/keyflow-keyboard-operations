@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "import:analyze": "node scripts/analyze-inventory.mjs"
+    "import:analyze": "node scripts/analyze-inventory.mjs",
+    "db:migrate": "node scripts/migrate.mjs"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",
