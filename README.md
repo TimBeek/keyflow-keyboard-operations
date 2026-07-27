@@ -13,11 +13,16 @@ De eerste applicatiebasis bevat:
 - een interactieve conversieadviseur met fallback- en blokkeerregels;
 - veilige afboek- en ontvangstberekeningen die negatieve voorraad voorkomen;
 - een PostgreSQL-datamodel voor gebruikers, modellen, compatibiliteit, voorraadtransacties, conversieorders, kwaliteit en audit;
+- een eerste PostgreSQL-migratie met de vier methoden, drie layouts en twee voorraadlocaties;
+- een server-side voorraad-API met rijvergrendeling, idempotentie en bescherming tegen negatieve voorraad;
+- een health endpoint dat veilig meldt of de databaseomgeving is geconfigureerd;
 - een Excel-analysecommando dat importfouten, waarschuwingen en mogelijke dubbelen rapporteert;
 - een productiebuild zonder lint- of TypeScriptfouten;
 - een containerdefinitie en GitHub Actions voor CI en image-publicatie.
 
 De mutaties zijn in deze ontwikkelversie alleen actief binnen de geopende browsersessie. Duurzame opslag en gebruikersauthenticatie worden aangesloten zodra de PostgreSQL- en hostingomgeving beschikbaar zijn.
+
+De server-side transactielaag is al aanwezig en wordt actief zodra `DATABASE_URL` is ingesteld en de migratie is uitgevoerd.
 
 ## Lokaal starten
 
@@ -40,6 +45,18 @@ npm run test
 npm run lint
 npm run build
 ```
+
+## PostgreSQL initialiseren
+
+1. Kopieer `app/.env.example` naar `app/.env.local`.
+2. Vul een geldige `DATABASE_URL` in.
+3. Voer vanuit `app` uit:
+
+```text
+npm run db:migrate
+```
+
+De database-API is daarna beschikbaar via `POST /api/inventory/mutations`. De status is zichtbaar via `GET /api/health`.
 
 ## Excel controleren
 
