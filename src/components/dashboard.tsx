@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ConversionAdvisor } from "@/components/conversion-advisor";
+import { InventoryImportDialog } from "@/components/inventory-import";
 import { InventoryMutationDialog, type InventoryItem } from "@/components/inventory-mutation";
 
 type IconName =
@@ -13,6 +14,7 @@ type IconName =
   | "reports"
   | "settings"
   | "scan"
+  | "upload"
   | "plus"
   | "minus"
   | "alert"
@@ -28,6 +30,7 @@ function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
     reports: <><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></>,
     settings: <><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.4 1A8 8 0 0 0 15 6l-.3-2.6h-4L10.4 6A8 8 0 0 0 8.8 7L6.5 6.1l-2 3.4 2 1.5a7 7 0 0 0 0 2l-2 1.5 2 3.4 2.3-1A8 8 0 0 0 10.4 18l.3 2.6h4L15 18a8 8 0 0 0 1.6-1l2.3 1 2-3.4-2-1.5c.1-.4.1-.7.1-1.1Z"/></>,
     scan: <><path d="M4 8V4h4M16 4h4v4M20 16v4h-4M8 20H4v-4"/><path d="M7 12h10M9 9v6M12 9v6M15 9v6"/></>,
+    upload: <><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 14v6h16v-6"/></>,
     plus: <path d="M12 5v14M5 12h14"/>,
     minus: <path d="M5 12h14"/>,
     alert: <><path d="M12 3 2.8 20h18.4Z"/><path d="M12 9v5M12 17h.01"/></>,
@@ -67,6 +70,7 @@ export function Dashboard() {
   const [query, setQuery] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [advisorOpen, setAdvisorOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [stockItems, setStockItems] = useState(initialLowStock);
   const [mutation, setMutation] = useState<{ mode: "issue" | "receipt"; item: InventoryItem } | null>(null);
   const [lastAction, setLastAction] = useState("");
@@ -141,6 +145,11 @@ export function Dashboard() {
             <span><strong>Nieuwe conversie</strong><small>Vind de beste methode voor een laptop</small></span>
             <Icon name="arrow" />
           </button>
+          <button className="action-card import" onClick={() => setImportOpen(true)}>
+            <span className="action-icon"><Icon name="upload" size={26} /></span>
+            <span><strong>Excel importeren</strong><small>Controleer voorraad zonder direct te boeken</small></span>
+            <Icon name="arrow" />
+          </button>
         </section>
 
         <section className="stats-grid">
@@ -213,6 +222,7 @@ export function Dashboard() {
           <span>{lastAction || "Prototype met geverifieerde Excel-momentopname"}</span>
         </footer>
         <ConversionAdvisor open={advisorOpen} onClose={() => setAdvisorOpen(false)} />
+        <InventoryImportDialog open={importOpen} onClose={() => setImportOpen(false)} />
         {mutation && (
           <InventoryMutationDialog
             open
