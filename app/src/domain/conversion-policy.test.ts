@@ -34,6 +34,15 @@ describe("recommendConversion", () => {
     expect(result.policy.rule).toBe("premium_value");
   });
 
+  it("uses the employee value-band label in the explanation", () => {
+    const result = recommendConversion({
+      ...base,
+      saleValueEur: 300,
+      saleValueLabel: "€300 – €399",
+    });
+    expect(result.reason).toContain("klasse €300 – €399");
+  });
+
   it("advises the stronger printed sticker for a foreign layout below threshold", () => {
     const result = recommendConversion({ ...base, targetLayout: "QWERTZ DE" });
     expect(result.primary).toBe("printed_sticker");

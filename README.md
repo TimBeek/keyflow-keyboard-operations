@@ -29,6 +29,9 @@ De eerste applicatiebasis bevat:
 - een vereenvoudigde werknemersflow met methodeadvies, werkinstructies en aftekenlijst;
 - exact oud Noviply-SKU-advies met zichtbare E1/E2-variant en automatische afboeking;
 - werknemersboekingen voor leveranciersontvangsten en niet-passende stickers;
+- scanner-first orderinvoer met automatische doorgang na Enter of Tab;
+- korte modelnummerinvoer (`5420`) met automatische resolutie of een beperkte keuzelijst;
+- vaste verkoopwaardeklassen in plaats van handmatige bedragen;
 - een managementwerkruimte voor transacties, ABC-classificatie en configureerbaar conversiebeleid;
 - een productiebuild zonder lint- of TypeScriptfouten;
 - een containerdefinitie en GitHub Actions voor CI en image-publicatie.
@@ -101,6 +104,7 @@ De huidige bron levert 148 regels en 3.218 stuks op. De validator vindt 3 harde 
 ## Documentatie
 
 - `docs/PRODUCT_ROADMAP.md` — gewogen voortgang naar de volledige productieversie;
+- `docs/EMPLOYEE_WORKFLOW.md` — scanner-, modelnummer- en waardeklasseflow voor werknemers;
 - `docs/AI_MODEL_GROUP_DATA_REQUIREMENTS.md` — vereiste bron- en validatiedata voor veilige AI-modelgroepvoorstellen;
 - `ONDERZOEKSRAPPORT_FASE_1.pdf` — goedgekeurde onderzoeksbasis;
 - `docs/DEPLOYMENT.md` — voorgestelde GitHub- en productie-uitrol;

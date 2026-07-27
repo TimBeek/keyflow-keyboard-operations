@@ -12,6 +12,7 @@ export type ConversionMethodId = (typeof conversionMethodIds)[number];
 
 export const conversionPolicyInputSchema = z.object({
   saleValueEur: z.number().nonnegative(),
+  saleValueLabel: z.string().min(1).max(40).optional(),
   thresholdEur: z.number().positive().default(300),
   currentLayout: z.string().min(2),
   targetLayout: z.string().min(2),
@@ -90,6 +91,9 @@ export function recommendConversion(rawInput: ConversionPolicyInput): Conversion
   }
 
   const isPremium = input.saleValueEur >= input.thresholdEur;
+  const saleValueClause = input.saleValueLabel
+    ? `valt in de klasse ${input.saleValueLabel}`
+    : `is €${formatAmount(input.saleValueEur)}`;
   const isQwertyUs = normalizeLayout(input.targetLayout) === "qwerty us";
   let preferred: Exclude<ConversionMethodId, "none">[];
   let rule: string;
@@ -98,7 +102,7 @@ export function recommendConversion(rawInput: ConversionPolicyInput): Conversion
   if (isPremium) {
     preferred = ["direct_reprint", "printed_sticker", "noviply_sheet", "loose_stickers"];
     rule = "premium_value";
-    reason = `De verkoopwaarde is €${formatAmount(input.saleValueEur)} en ligt op of boven de beleidsgrens van €${formatAmount(input.thresholdEur)}. Directe keyboardprint heeft daarom de voorkeur.`;
+    reason = `De verkoopwaarde ${saleValueClause} en ligt op of boven de beleidsgrens van €${formatAmount(input.thresholdEur)}. Directe keyboardprint heeft daarom de voorkeur.`;
   } else if (!isQwertyUs) {
     preferred = ["printed_sticker", "direct_reprint", "noviply_sheet", "loose_stickers"];
     rule = "foreign_layout_below_threshold";

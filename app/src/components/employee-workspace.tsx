@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import type { InventoryCatalogItem } from "@/data/inventory-demo";
 import {
   methodLabel,
@@ -13,6 +13,15 @@ import {
   type InventoryMutationRequest,
   type OperationsPolicy,
 } from "@/domain/operations";
+import {
+  classifyValueBand,
+  getSaleValueBand,
+  policyValueForBand,
+  resolveModelQuery,
+  saleValueBands,
+  type ModelResolution,
+  type SaleValueBandId,
+} from "@/domain/order-entry";
 
 const layouts = ["QWERTY US", "AZERTY FR", "QWERTZ DE", "QWERTY UK", "QWERTY ES", "QWERTY IT"];
 
@@ -40,15 +49,19 @@ export function EmployeeWorkspace({
   policy,
   onInventoryMutation,
 }: Props) {
-  const [orderReference, setOrderReference] = useState("ORD-260727-1859");
-  const [model, setModel] = useState("Dell Latitude 7400");
-  const [saleValue, setSaleValue] = useState(279);
+  const orderInputRef = useRef<HTMLInputElement>(null);
+  const modelInputRef = useRef<HTMLInputElement>(null);
+  const [orderReference, setOrderReference] = useState("");
+  const [orderConfirmed, setOrderConfirmed] = useState(false);
+  const [modelQuery, setModelQuery] = useState("5420");
+  const [selectedModel, setSelectedModel] = useState<string | null>(null);
+  const [saleBandId, setSaleBandId] = useState<SaleValueBandId>("200_299");
   const [currentLayout, setCurrentLayout] = useState("QWERTY UK");
   const [targetLayout, setTargetLayout] = useState("QWERTY US");
   const [step, setStep] = useState<WorkStep>("input");
   const [checks, setChecks] = useState<boolean[]>([]);
   const [stockMode, setStockMode] = useState<StockMode>("receipt");
-  const [scanSku, setScanSku] = useState("NB10052E1NL");
+  const [scanSku, setScanSku] = useState("NB10172E1NL");
   const [stockQuantity, setStockQuantity] = useState(1);
   const [stockReference, setStockReference] = useState("");
   const [stockMessage, setStockMessage] = useState("");
@@ -58,12 +71,22 @@ export function EmployeeWorkspace({
     () => [...new Set(catalog.map((item) => item.model))].sort(),
     [catalog],
   );
+  const modelResolution = useMemo(
+    () => resolveModelQuery(modelQuery, modelOptions),
+    [modelOptions, modelQuery],
+  );
+  const model = selectedModel
+    ?? (modelResolution.status === "unique" ? modelResolution.model : "");
+  const saleBand = getSaleValueBand(saleBandId);
+  const valueBandClassification = classifyValueBand(saleBand, policy.thresholdEur);
+  const saleValue = policyValueForBand(saleBand, policy.thresholdEur);
   const noviplyMatch = useMemo(
     () => findNoviplySku(model, targetLayout, catalog, quantities),
     [catalog, model, quantities, targetLayout],
   );
   const recommendation = useMemo(() => recommendConversion({
     saleValueEur: saleValue,
+    saleValueLabel: saleBand.label,
     thresholdEur: policy.thresholdEur,
     currentLayout,
     targetLayout,
@@ -80,7 +103,7 @@ export function EmployeeWorkspace({
       printed_sticker: true,
       direct_reprint: true,
     },
-  }), [currentLayout, noviplyMatch.status, policy, saleValue, targetLayout]);
+  }), [currentLayout, noviplyMatch.status, policy, saleBand.label, saleValue, targetLayout]);
 
   const methodInstructions = instructions[recommendation.primary];
   const matchedSticker = noviplyMatch.status === "matched" ? noviplyMatch : null;
@@ -94,8 +117,34 @@ export function EmployeeWorkspace({
 
   function reset() {
     setStep("input");
+    setOrderReference("");
+    setOrderConfirmed(false);
+    setModelQuery("");
+    setSelectedModel(null);
     setChecks([]);
     setExecutionMessage("");
+    requestAnimationFrame(() => orderInputRef.current?.focus());
+  }
+
+  function confirmOrder() {
+    const reference = orderReference.trim().toUpperCase();
+    if (!reference) return;
+    setOrderReference(reference);
+    setOrderConfirmed(true);
+    requestAnimationFrame(() => {
+      modelInputRef.current?.focus();
+      modelInputRef.current?.select();
+    });
+  }
+
+  function changeModelQuery(value: string) {
+    setModelQuery(value);
+    setSelectedModel(null);
+  }
+
+  function chooseModel(nextModel: string) {
+    setSelectedModel(nextModel);
+    setModelQuery(nextModel);
   }
 
   function completeExecution() {
@@ -179,7 +228,7 @@ export function EmployeeWorkspace({
   return (
     <div className="employee-workspace">
       <section className="employee-banner">
-        <div><span>WERKNEMERSMODUS</span><h2>Welke methode moet ik gebruiken?</h2><p>Vul de laptop in. Methode, sticker-SKU en voorraad verschijnen direct.</p></div>
+        <div><span>WERKNEMERSMODUS</span><h2>Scan, kies en voer uit</h2><p>Scan de order, typ alleen het modelnummer en kies een waardeklasse.</p></div>
         <div className="shift-summary"><span>Actief beleid</span><strong>Grens € {policy.thresholdEur}</strong><small>Werkdruk: {workloadLabel(policy.workload)}</small></div>
       </section>
 
@@ -193,14 +242,61 @@ export function EmployeeWorkspace({
           {step === "input" && (
             <div className="employee-input-layout">
               <div className="employee-form">
-                <label className="wide"><span>Ordernummer of laptop-ID</span><input value={orderReference} onChange={(event) => setOrderReference(event.target.value)} autoFocus /></label>
-                <label className="wide"><span>Laptopmodel</span><input list="employee-models" value={model} onChange={(event) => setModel(event.target.value)} /><datalist id="employee-models">{modelOptions.map((option) => <option key={option} value={option} />)}</datalist></label>
-                <label><span>Verkoopwaarde</span><div className="money-input"><b>€</b><input type="number" min="0" value={saleValue} onChange={(event) => setSaleValue(Number(event.target.value))} /></div></label>
+                <label className="wide scan-order-field">
+                  <span>1. Scan ordernummer of laptop-ID</span>
+                  <div className={`scan-order-input ${orderConfirmed ? "confirmed" : ""}`}>
+                    <b aria-hidden="true">▥</b>
+                    <input
+                      ref={orderInputRef}
+                      value={orderReference}
+                      onChange={(event) => {
+                        setOrderReference(event.target.value);
+                        setOrderConfirmed(false);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === "Tab") confirmOrder();
+                      }}
+                      onBlur={() => {
+                        if (orderReference.trim()) setOrderConfirmed(true);
+                      }}
+                      placeholder="Scan de barcode…"
+                      autoFocus
+                    />
+                    <button type="button" disabled={!orderReference.trim()} onClick={confirmOrder}>{orderConfirmed ? "✓ Gescand" : "Bevestig"}</button>
+                  </div>
+                  <small>De scanner geeft automatisch Enter; daarna springt KeyFlow naar het modelnummer.</small>
+                </label>
+                <label className="wide model-entry-field">
+                  <span>2. Typ alleen het modelnummer</span>
+                  <input
+                    ref={modelInputRef}
+                    value={modelQuery}
+                    onChange={(event) => changeModelQuery(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" && modelResolution.status === "unique") {
+                        chooseModel(modelResolution.model);
+                        event.currentTarget.blur();
+                      }
+                    }}
+                    placeholder="Bijvoorbeeld 5420, 850 G7 of U7410"
+                    aria-describedby="model-resolution"
+                  />
+                  <ModelResolver resolution={modelResolution} selectedModel={model} onSelect={chooseModel} />
+                </label>
+                <fieldset className="wide value-band-field">
+                  <legend>3. Kies de verkoopwaardeklasse</legend>
+                  <div>
+                    {saleValueBands.map((band) => (
+                      <button type="button" key={band.id} className={saleBandId === band.id ? "active" : ""} onClick={() => setSaleBandId(band.id)}>{band.shortLabel}</button>
+                    ))}
+                  </div>
+                </fieldset>
                 <label><span>Huidige layout</span><select value={currentLayout} onChange={(event) => setCurrentLayout(event.target.value)}>{layouts.map((layout) => <option key={layout}>{layout}</option>)}</select></label>
                 <label><span>Gewenste klantlayout</span><select value={targetLayout} onChange={(event) => setTargetLayout(event.target.value)}>{layouts.map((layout) => <option key={layout}>{layout}</option>)}</select></label>
               </div>
+              {valueBandClassification === "overlap" && <div className="value-band-warning">De managementgrens van €{policy.thresholdEur} valt midden in {saleBand.label}. Laat management de grens op een klassengrens zetten of controleer het exacte bedrag.</div>}
               <LiveAdvice recommendation={recommendation} match={noviplyMatch} />
-              <button className="employee-primary employee-continue" disabled={!orderReference.trim() || !model.trim() || recommendation.primary === "none"} onClick={() => setStep("advice")}>Open advies en werkinstructie →</button>
+              <button className="employee-primary employee-continue" disabled={!orderConfirmed || !model || recommendation.primary === "none" || valueBandClassification === "overlap"} onClick={() => setStep("advice")}>Open advies voor {model || "gekozen model"} →</button>
             </div>
           )}
 
@@ -221,7 +317,7 @@ export function EmployeeWorkspace({
                 <div><dt>Order</dt><dd>{orderReference}</dd></div>
                 <div><dt>Model</dt><dd>{model}</dd></div>
                 <div><dt>Layout</dt><dd>{currentLayout} → {targetLayout}</dd></div>
-                <div><dt>Waarde</dt><dd>€ {saleValue.toLocaleString("nl-NL")}</dd></div>
+                <div><dt>Waarde</dt><dd>{saleBand.label}</dd></div>
               </dl>
               {recommendation.warnings.map((warning) => <div className="employee-warning" key={warning}>{warning}</div>)}
               <button className="employee-primary" disabled={recommendation.primary === "none"} onClick={startExecution}>Start uitvoering</button>
@@ -274,10 +370,23 @@ export function EmployeeWorkspace({
           <section className="panel employee-queue">
             <div><span className="workspace-kicker">MIJN WACHTRIJ</span><b>3 open</b></div>
             {[
-              ["ORD-1859", "Dell Latitude 7400", "QWERTY US"],
+              ["ORD-1859", "Dell Latitude 5420", "QWERTY US"],
               ["ORD-1861", "HP EliteBook 850 G7", "QWERTY US"],
               ["ORD-1864", "HP ZBook 15 G3", "QWERTZ DE"],
-            ].map(([order, laptop, layout]) => <button key={order}><span><strong>{order}</strong><small>{laptop}</small></span><b>{layout}</b></button>)}
+            ].map(([order, laptop, layout]) => (
+              <button
+                key={order}
+                onClick={() => {
+                  setOrderReference(order);
+                  setOrderConfirmed(true);
+                  setModelQuery(laptop);
+                  setSelectedModel(laptop);
+                  setStep("input");
+                }}
+              >
+                <span><strong>{order}</strong><small>{laptop}</small></span><b>{layout}</b>
+              </button>
+            ))}
           </section>
           <section className="employee-help">
             <strong>Twijfel over E1/E2 of pasvorm?</strong><p>Niet gokken. Boek een mislukte pastest apart en vraag een teamleider; zo verbetert de compatibiliteitsdata.</p>
@@ -286,6 +395,34 @@ export function EmployeeWorkspace({
       </div>
     </div>
   );
+}
+
+function ModelResolver({
+  resolution,
+  selectedModel,
+  onSelect,
+}: {
+  resolution: ModelResolution;
+  selectedModel: string;
+  onSelect: (model: string) => void;
+}) {
+  if (selectedModel && resolution.status === "unique") {
+    return <div id="model-resolution" className="model-resolution resolved"><b>✓ Automatisch herkend</b><strong>{selectedModel}</strong></div>;
+  }
+  if (resolution.status === "multiple") {
+    return (
+      <div id="model-resolution" className="model-resolution multiple">
+        <b>Kies het juiste model</b>
+        <div role="listbox" aria-label="Gevonden laptopmodellen">
+          {resolution.matches.map((match) => <button type="button" role="option" aria-selected={selectedModel === match} key={match} onClick={() => onSelect(match)}>{match}</button>)}
+        </div>
+      </div>
+    );
+  }
+  if (resolution.status === "none") {
+    return <div id="model-resolution" className="model-resolution not-found"><b>Geen model gevonden</b><span>Controleer het nummer of vraag een teamleider het model toe te voegen.</span></div>;
+  }
+  return <div id="model-resolution" className="model-resolution hint"><span>Merk en serie worden automatisch aangevuld.</span></div>;
 }
 
 function LiveAdvice({
@@ -320,7 +457,7 @@ function stepNumber(step: WorkStep) {
 
 function stepTitle(step: WorkStep) {
   return {
-    input: "Vul de laptopgegevens in",
+    input: "Scan de order en kies het model",
     advice: "Controleer methode en stickernummer",
     execution: "Volg de werkinstructies",
     completed: "Uitvoering afgerond",

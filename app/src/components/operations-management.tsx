@@ -170,7 +170,13 @@ export function OperationsManagement({
           <div className="operations-tab-content policy-grid">
             <section className="policy-editor">
               <h3>Conversieregels</h3>
-              <label><span>Verkoopwaardegrens keyboardprint</span><div className="money-input"><b>€</b><input type="number" min="1" value={draft.thresholdEur} onChange={(event) => setDraft({ ...draft, thresholdEur: Number(event.target.value) })} /></div></label>
+              <label>
+                <span>Verkoopwaardegrens keyboardprint</span>
+                <select value={draft.thresholdEur} onChange={(event) => setDraft({ ...draft, thresholdEur: Number(event.target.value) })}>
+                  {[100, 200, 300, 400, 500].map((amount) => <option value={amount} key={amount}>Vanaf €{amount}</option>)}
+                </select>
+                <small className="policy-field-help">De grens sluit zo altijd exact aan op de waardeklassen van werknemers.</small>
+              </label>
               <label><span>Actuele werkdruk</span><select value={draft.workload} onChange={(event) => setDraft({ ...draft, workload: event.target.value as OperationsPolicy["workload"] })}><option value="normal">Normaal</option><option value="busy">Druk</option><option value="critical">Kritiek</option></select></label>
               <h4>Beschikbare methoden</h4>
               <div className="method-toggles">

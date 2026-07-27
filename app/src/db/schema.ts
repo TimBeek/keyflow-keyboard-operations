@@ -158,6 +158,8 @@ export const conversionJobs = pgTable("conversion_jobs", {
   currentLayoutId: uuid("current_layout_id").notNull().references(() => keyboardLayouts.id),
   targetLayoutId: uuid("target_layout_id").notNull().references(() => keyboardLayouts.id),
   saleValueEur: numeric("sale_value_eur", { precision: 10, scale: 2 }).notNull(),
+  saleValueBand: text("sale_value_band"),
+  modelLookupQuery: text("model_lookup_query"),
   advisedMethodCode: text("advised_method_code").notNull().references(() => conversionMethods.code),
   chosenMethodCode: text("chosen_method_code").references(() => conversionMethods.code),
   selectedStickerSkuId: uuid("selected_sticker_sku_id").references(() => stickerSkus.id),
