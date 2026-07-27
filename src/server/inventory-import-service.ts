@@ -9,6 +9,12 @@ import {
   type InventoryImportIssue,
   type WorkbookSheet,
 } from "@/import/inventory-workbook";
+import {
+  InventoryResolutionError,
+  resolutionActionSchema,
+  validateImportResolution,
+  type ResolutionAction,
+} from "@/import/inventory-resolution";
 import { database } from "@/server/database";
 
 const importMetadataSchema = z.object({
@@ -23,6 +29,8 @@ const resolveImportIssueSchema = z.object({
   actorId: z.string().uuid(),
   resolved: z.boolean(),
   resolutionNote: z.string().trim().min(3).max(500),
+  resolutionAction: resolutionActionSchema,
+  correctedValue: z.string().max(500).optional(),
 });
 
 export type ImportInventoryWorkbookInput = z.input<typeof importMetadataSchema> & {
@@ -167,6 +175,8 @@ export async function getInventoryImportReview(rawBatchId: string) {
       issue.message,
       issue.resolved,
       issue.resolution_note as "resolutionNote",
+      issue.resolution_action as "resolutionAction",
+      issue.corrected_value as "correctedValue",
       issue.resolved_at as "resolvedAt",
       row.source_row as "sourceRow",
       row.model_name as "model",
@@ -199,9 +209,15 @@ export async function resolveInventoryImportIssue(rawInput: z.input<typeof resol
     const [issue] = await transaction<{
       issue_id: string;
       batch_status: ImportBatchResult["status"];
+      import_row_id: string | null;
+      severity: ImportReviewIssue["severity"];
+      field: string;
     }[]>`
       select
         issue.id as issue_id,
+        issue.import_row_id,
+        issue.severity,
+        issue.field_name as field,
         batch.status as batch_status
       from inventory_import_issues issue
       inner join inventory_import_batches batch on batch.id = issue.batch_id
@@ -219,15 +235,51 @@ export async function resolveInventoryImportIssue(rawInput: z.input<typeof resol
       );
     }
 
-    await transaction`
-      update inventory_import_issues
-      set
-        resolved = ${input.resolved},
-        resolution_note = ${input.resolutionNote},
-        resolved_by = ${input.actorId}::uuid,
-        resolved_at = case when ${input.resolved} then now() else null end
-      where id = ${input.issueId}::uuid
-    `;
+    const resolution = validateImportResolution(
+      issue,
+      input.resolutionAction,
+      input.correctedValue,
+    );
+    if (!issue.import_row_id) {
+      throw new InventoryImportPersistenceError(
+        "ROW_NOT_FOUND",
+        "De bronrij van deze bevinding ontbreekt.",
+      );
+    }
+    await applyRowResolution(
+      transaction,
+      issue.import_row_id,
+      issue.field,
+      resolution.action,
+      resolution.correctedValue,
+    );
+
+    if (resolution.action === "reject_row") {
+      await transaction`
+        update inventory_import_issues
+        set
+          resolved = true,
+          resolution_note = ${input.resolutionNote},
+          resolution_action = 'reject_row',
+          corrected_value = null,
+          resolved_by = ${input.actorId}::uuid,
+          resolved_at = now()
+        where import_row_id = ${issue.import_row_id}::uuid
+          and batch_id = ${input.batchId}::uuid
+      `;
+    } else {
+      await transaction`
+        update inventory_import_issues
+        set
+          resolved = ${input.resolved},
+          resolution_note = ${input.resolutionNote},
+          resolution_action = ${resolution.action},
+          corrected_value = ${resolution.correctedValue},
+          resolved_by = ${input.actorId}::uuid,
+          resolved_at = case when ${input.resolved} then now() else null end
+        where id = ${input.issueId}::uuid
+      `;
+    }
 
     const [open] = await transaction<{
       total: number;
@@ -265,6 +317,8 @@ export async function resolveInventoryImportIssue(rawInput: z.input<typeof resol
           batchId: input.batchId,
           resolved: input.resolved,
           resolutionNote: input.resolutionNote,
+          resolutionAction: resolution.action,
+          correctedValue: resolution.correctedValue,
         })}
       )
     `;
@@ -273,6 +327,8 @@ export async function resolveInventoryImportIssue(rawInput: z.input<typeof resol
       batchId: input.batchId,
       issueId: input.issueId,
       resolved: input.resolved,
+      resolutionAction: resolution.action,
+      correctedValue: resolution.correctedValue,
       status,
       openIssueCount: open.total,
     };
@@ -302,6 +358,8 @@ export type ImportReviewIssue = {
   message: string;
   resolved: boolean;
   resolutionNote: string | null;
+  resolutionAction: ResolutionAction | null;
+  correctedValue: string | null;
   resolvedAt: Date | null;
   sourceRow: number | null;
   model: string | null;
@@ -344,6 +402,9 @@ export function inventoryImportErrorResponse(error: unknown) {
   if (error instanceof InventoryWorkbookError) {
     return { status: 422, body: { error: error.code, message: error.message } };
   }
+  if (error instanceof InventoryResolutionError) {
+    return { status: 422, body: { error: error.code, message: error.message } };
+  }
   if (error instanceof InventoryImportPersistenceError) {
     const status = error.code === "IMPORT_LOCKED" ? 409 : 404;
     return { status, body: { error: error.code, message: error.message } };
@@ -353,10 +414,58 @@ export function inventoryImportErrorResponse(error: unknown) {
 
 export class InventoryImportPersistenceError extends Error {
   constructor(
-    public readonly code: "IMPORT_NOT_FOUND" | "ISSUE_NOT_FOUND" | "IMPORT_LOCKED",
+    public readonly code: "IMPORT_NOT_FOUND" | "ISSUE_NOT_FOUND" | "IMPORT_LOCKED" | "ROW_NOT_FOUND",
     message: string,
   ) {
     super(message);
     this.name = "InventoryImportPersistenceError";
+  }
+}
+
+async function applyRowResolution(
+  transaction: TransactionSql,
+  rowId: string,
+  field: string,
+  action: ResolutionAction,
+  correctedValue: string | null,
+) {
+  if (action === "reject_row") {
+    await transaction`
+      update inventory_import_rows
+      set resolution_status = 'rejected'
+      where id = ${rowId}::uuid
+    `;
+    return;
+  }
+  if (action !== "correct_value" || correctedValue === null) return;
+
+  if (field === "sku") {
+    await transaction`
+      update inventory_import_rows set sku = ${correctedValue}
+      where id = ${rowId}::uuid
+    `;
+  } else if (field === "quantity") {
+    await transaction`
+      update inventory_import_rows set quantity = ${Number(correctedValue)}
+      where id = ${rowId}::uuid
+    `;
+  } else if (field === "layout") {
+    await transaction`
+      update inventory_import_rows set layout_name = ${correctedValue}
+      where id = ${rowId}::uuid
+    `;
+  } else if (field === "linkedModels") {
+    await transaction`
+      update inventory_import_rows set linked_models_text = ${correctedValue}
+      where id = ${rowId}::uuid
+    `;
+  } else if (field === "model") {
+    await transaction`
+      update inventory_import_rows
+      set
+        model_name = ${correctedValue},
+        normalized_model_name = ${correctedValue.toLowerCase()}
+      where id = ${rowId}::uuid
+    `;
   }
 }
