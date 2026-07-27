@@ -7,12 +7,23 @@ import {
 export const runtime = "nodejs";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ batchId: string }> },
 ) {
   try {
     const { batchId } = await context.params;
-    return Response.json(await getInventoryImportReview(batchId));
+    const actorId = new URL(request.url).searchParams.get("actorId")
+      || process.env.KEYFLOW_IMPORT_ACTOR_ID;
+    if (!actorId) {
+      return Response.json(
+        {
+          error: "OPERATOR_NOT_CONFIGURED",
+          message: "Configureer KEYFLOW_IMPORT_ACTOR_ID voordat imports worden bekeken.",
+        },
+        { status: 503 },
+      );
+    }
+    return Response.json(await getInventoryImportReview(batchId, actorId));
   } catch (error) {
     if (error instanceof DatabaseConfigurationError) {
       return Response.json(

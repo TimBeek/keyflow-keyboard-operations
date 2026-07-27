@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { ConversionAdvisor } from "@/components/conversion-advisor";
+import { AccessManagementDialog } from "@/components/access-management";
+import { EmployeeWorkspace } from "@/components/employee-workspace";
 import { ImportReviewDialog } from "@/components/import-review";
 import { InventoryImportDialog } from "@/components/inventory-import";
 import { InventoryCatalog } from "@/components/inventory-catalog";
@@ -12,6 +14,7 @@ import {
   OrdersWorkspace,
   ReportsWorkspace,
 } from "@/components/planning-workspaces";
+import type { UserRole } from "@/domain/access-control";
 
 type IconName =
   | "home"
@@ -86,10 +89,12 @@ const methods = [
 ];
 
 export function Dashboard() {
+  const [role, setRole] = useState<UserRole>("management");
   const [activeView, setActiveView] = useState<ViewName>("overview");
   const [query, setQuery] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [advisorOpen, setAdvisorOpen] = useState(false);
+  const [accessOpen, setAccessOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [reviewBatchId, setReviewBatchId] = useState<string | null>(null);
   const [stockItems, setStockItems] = useState(initialLowStock);
@@ -114,6 +119,13 @@ export function Dashboard() {
     setMutation(null);
   }
 
+  function switchRole(nextRole: UserRole) {
+    setRole(nextRole);
+    setActiveView("overview");
+    setQuery("");
+    setMutation(null);
+  }
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -122,7 +134,7 @@ export function Dashboard() {
           <div><strong>KeyFlow</strong><span>Keyboard Operations</span></div>
         </div>
         <nav aria-label="Hoofdnavigatie">
-          {navItems.map((item) => (
+          {(role === "management" ? navItems : [{ id: "overview" as const, label: "Uitvoering", icon: "convert" as const }]).map((item) => (
             <button
               key={item.id}
               className={`nav-item ${activeView === item.id ? "active" : ""}`}
@@ -133,10 +145,10 @@ export function Dashboard() {
           ))}
         </nav>
         <div className="sidebar-footer">
-          <button className="nav-item"><Icon name="settings" /><span>Instellingen</span></button>
+          <button className="nav-item" onClick={() => role === "management" && setAccessOpen(true)}><Icon name="settings" /><span>{role === "management" ? "Toegangsbeheer" : "Hulp"}</span></button>
           <div className="profile">
-            <div className="avatar">TB</div>
-            <div><strong>Tim Beek</strong><span>Beheerder</span></div>
+            <div className="avatar">{role === "management" ? "TB" : "MW"}</div>
+            <div><strong>{role === "management" ? "Tim Beek" : "Medewerker"}</strong><span>{role === "management" ? "Management" : "Uitvoering"}</span></div>
             <button aria-label="Profielmenu">•••</button>
           </div>
         </div>
@@ -146,11 +158,18 @@ export function Dashboard() {
         <header className="topbar">
           <div>
             <p className="eyebrow">MAANDAG 27 JULI</p>
-            <h1>{viewHeadings[activeView].title}</h1>
-            <p>{viewHeadings[activeView].subtitle}</p>
+            <h1>{role === "employee" ? "Uitvoering keyboardconversies" : viewHeadings[activeView].title}</h1>
+            <p>{role === "employee" ? "Eén duidelijke taak tegelijk, met automatisch methodeadvies." : viewHeadings[activeView].subtitle}</p>
           </div>
           <div className="top-actions">
-            <label className="global-search">
+            <div className="role-switcher" aria-label="Demorol kiezen">
+              <span>TOEGANG</span>
+              <div>
+                <button className={role === "employee" ? "active" : ""} onClick={() => switchRole("employee")}>Werknemer</button>
+                <button className={role === "management" ? "active" : ""} onClick={() => switchRole("management")}>Management</button>
+              </div>
+            </div>
+            {role === "management" && <label className="global-search">
               <span className="sr-only">Zoeken</span>
               <Icon name="scan" />
               <input
@@ -160,12 +179,14 @@ export function Dashboard() {
                 placeholder="Scan of zoek model, SKU…"
               />
               <kbd>/</kbd>
-            </label>
+            </label>}
             <button className="icon-button" aria-label="Meldingen"><Icon name="alert" /><span className="notification-dot" /></button>
           </div>
         </header>
 
-        {activeView === "overview" && (
+        {role === "employee" && <EmployeeWorkspace />}
+
+        {role === "management" && activeView === "overview" && (
           <>
         <section className="quick-actions" aria-label="Snelle acties">
           <button className="action-card issue" onClick={() => setMutation({ mode: "issue", item: defaultItem })}>
@@ -254,10 +275,17 @@ export function Dashboard() {
             </div>
           </section>
         </div>
+        <section className="roadmap-panel">
+          <div className="roadmap-heading"><div><span className="workspace-kicker">PRODUCTIEROADMAP</span><h2>KeyFlow is 60% compleet</h2><p>Voortgang naar de volledige live productieversie.</p></div><strong>60%</strong></div>
+          <div className="roadmap-track"><span style={{ width: "60%" }} /></div>
+          <div className="roadmap-steps">
+            <span className="done">Basis & UX</span><span className="done">Excel-import</span><span className="done">Voorraad & planning</span><span className="current">Rollen & uitvoering</span><span>Database live</span><span>SSO & integraties</span><span>Productieacceptatie</span>
+          </div>
+        </section>
           </>
         )}
 
-        {activeView === "inventory" && (
+        {role === "management" && activeView === "inventory" && (
           <InventoryCatalog
             globalQuery={query}
             quantities={catalogQuantities}
@@ -277,16 +305,17 @@ export function Dashboard() {
             }}
           />
         )}
-        {activeView === "conversions" && <ConversionsWorkspace onNew={() => setAdvisorOpen(true)} />}
-        {activeView === "orders" && <OrdersWorkspace />}
-        {activeView === "models" && <ModelsWorkspace />}
-        {activeView === "reports" && <ReportsWorkspace />}
+        {role === "management" && activeView === "conversions" && <ConversionsWorkspace onNew={() => setAdvisorOpen(true)} />}
+        {role === "management" && activeView === "orders" && <OrdersWorkspace />}
+        {role === "management" && activeView === "models" && <ModelsWorkspace />}
+        {role === "management" && activeView === "reports" && <ReportsWorkspace />}
 
         <footer className="app-footer">
           <span><i /> Systeem gereed</span>
-          <span>{lastAction || "Prototype met geverifieerde Excel-momentopname"}</span>
+          <span>{lastAction || `Productieroadmap 60% · ${role === "management" ? "managementweergave" : "werknemersuitvoering"}`}</span>
         </footer>
         <ConversionAdvisor open={advisorOpen} onClose={() => setAdvisorOpen(false)} />
+        <AccessManagementDialog open={accessOpen} onClose={() => setAccessOpen(false)} />
         <InventoryImportDialog
           open={importOpen}
           onClose={() => setImportOpen(false)}
