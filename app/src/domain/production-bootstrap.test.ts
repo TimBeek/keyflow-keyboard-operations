@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   createProductionBootstrapPlan,
+  isPostgresUuid,
   normalizeProductionModel,
   productionManufacturer,
   ProductionBootstrapValidationError,
@@ -66,6 +67,12 @@ describe("productiedatabase-bootstrapplan", () => {
     expect(productionManufacturer("Toshiba Dynabook Satellite Pro A50-EC")).toBe("Dynabook");
     expect(normalizeProductionModel("Dell Precision7530")).toBe("dell precision 7530");
     expect(normalizeProductionModel("Dell Precision 7530")).toBe("dell precision 7530");
+  });
+
+  it("accepteert de vaste PostgreSQL-auditidentiteiten uit de migraties", () => {
+    expect(isPostgresUuid("00000000-0000-0000-0000-000000000001")).toBe(true);
+    expect(isPostgresUuid("10000000-0000-4000-8000-000000000001")).toBe(true);
+    expect(isPostgresUuid("geen-uuid")).toBe(false);
   });
 
   it("weigert een gewijzigd of beschadigd broncontract vóór databasegebruik", () => {

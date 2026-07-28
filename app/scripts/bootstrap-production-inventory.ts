@@ -3,7 +3,10 @@ import {
   loadProductionSource,
   productionPlanSummary,
 } from "./lib/production-source";
-import { normalizeProductionModel } from "../src/domain/production-bootstrap";
+import {
+  isPostgresUuid,
+  normalizeProductionModel,
+} from "../src/domain/production-bootstrap";
 
 async function main() {
 const allowedArguments = new Set(["--apply"]);
@@ -31,7 +34,7 @@ if (!apply) {
 const databaseUrl = process.env.DATABASE_URL;
 const actorId = process.env.KEYFLOW_IMPORT_ACTOR_ID;
 if (!databaseUrl) throw new Error("DATABASE_URL ontbreekt.");
-if (!actorId || !isUuid(actorId)) {
+if (!actorId || !isPostgresUuid(actorId)) {
   throw new Error("KEYFLOW_IMPORT_ACTOR_ID ontbreekt of is geen geldige UUID.");
 }
 
@@ -411,8 +414,3 @@ main().catch((error: unknown) => {
   console.error(error instanceof Error ? error.message : error);
   process.exitCode = 1;
 });
-
-function isUuid(value: string) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-    .test(value);
-}
