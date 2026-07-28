@@ -94,6 +94,9 @@ jobs:
       - name: Smoke-test recovery registration
         run: npm run db:recovery:smoke
 
+      - name: Exercise central runtime readiness
+        run: npm run test -- --run src/server/operations-readiness-service.integration.test.ts
+
       - name: Check operational readiness
         run: npm run db:operations:check
 
