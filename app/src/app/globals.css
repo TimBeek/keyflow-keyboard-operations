@@ -967,6 +967,7 @@ td b.zero { color: var(--red); }
 .recovery-drill-form > small { display: block; margin-top: 9px; color: #7d8a93; font-size: 7px; line-height: 1.4; }
 .recovery-history .table-wrap { margin-top: 12px; }
 .release-center { display: grid; gap: 16px; background: #f8fafb; }
+.release-print-header { display: none; }
 .release-sync-banner, .release-decision-banner { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 14px 16px; border: 1px solid #d9e4e7; border-radius: 10px; background: white; }
 .release-sync-banner > div > span, .release-sync-banner strong, .release-sync-banner small, .release-decision-banner span, .release-decision-banner strong, .release-decision-banner small { display: block; }
 .release-sync-banner > div > span, .release-decision-banner span { color: #75848e; font-size: 7px; font-weight: 900; letter-spacing: .6px; }
@@ -974,17 +975,31 @@ td b.zero { color: var(--red); }
 .release-sync-banner small, .release-decision-banner small { margin-top: 4px; color: #71818b; font-size: 8px; line-height: 1.45; }
 .release-sync-banner.ready, .release-sync-banner.saving { border-color: #b9ddd1; background: #f4fbf8; }
 .release-sync-banner.error { border-color: #e7bcbc; background: #fff6f6; }
+.release-sync-banner .continuity-sync-actions { flex-wrap: wrap; justify-content: flex-end; }
+.release-export-note { padding: 9px 12px; border: 1px solid #c9ddd7; border-radius: 8px; background: #f5faf8; color: #496c62; font-size: 8px; }
 .release-decision-banner.blocked { border-color: #efcb9c; background: #fff9ed; }
 .release-decision-banner.approved { border-color: #a9d8c9; background: #f1faf6; }
 .release-decision-banner > b { color: #a45a1d; font-size: 25px; }
 .release-decision-banner.approved > b { color: #18705d; }
+.release-open-actions { display: grid; grid-template-columns: minmax(180px, .38fr) minmax(0, 1fr); gap: 14px; padding: 14px 16px; border: 1px solid #efd2a7; border-radius: 10px; background: #fffaf1; }
+.release-open-actions.approved { border-color: #b9ddd1; background: #f4fbf8; }
+.release-open-actions > div > span, .release-open-actions > div > strong { display: block; }
+.release-open-actions > div > span { color: #a36a2a; font-size: 7px; font-weight: 900; letter-spacing: .5px; }
+.release-open-actions > div > strong { margin-top: 6px; color: #465c68; font-size: 10px; line-height: 1.4; }
+.release-open-actions ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; margin: 0; padding: 0; list-style: none; }
+.release-open-actions li { padding: 8px 9px; border: 1px solid #eadfcf; border-radius: 7px; background: white; }
+.release-open-actions li strong, .release-open-actions li span { display: block; }
+.release-open-actions li strong { color: #425966; font-size: 8px; }
+.release-open-actions li span, .release-open-actions > p { margin: 4px 0 0; color: #7b878e; font-size: 7px; line-height: 1.45; }
 .release-gate-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 9px; }
 .release-gate-grid article { min-height: 152px; padding: 12px; border: 1px solid #e0e7ea; border-radius: 9px; background: white; }
 .release-gate-grid article.approved { border-color: #b8ddd1; background: #f5fbf8; }
 .release-gate-grid article.rejected { border-color: #ebc0c0; background: #fff7f7; }
 .release-gate-grid h3 { margin: 11px 0 6px; color: #344b5a; font-size: 10px; }
 .release-gate-grid p { margin: 0; color: #74848e; font-size: 8px; line-height: 1.5; }
+.release-gate-grid article > b { display: block; margin-top: 8px; color: #526b77; font-size: 7px; }
 .release-gate-grid small { display: block; margin-top: 10px; color: #89959d; font-size: 7px; line-height: 1.4; }
+.release-gate-select { margin-top: 9px; padding: 0; border: 0; background: none; color: var(--teal); font-size: 7px; font-weight: 800; cursor: pointer; }
 .release-workspace { display: grid; grid-template-columns: minmax(320px, .8fr) minmax(0, 1.2fr); gap: 16px; align-items: start; }
 .release-form, .release-history { padding: 16px; border: 1px solid #dce5e8; border-radius: 10px; background: white; }
 .release-form > label { display: block; margin-top: 11px; }
@@ -993,6 +1008,11 @@ td b.zero { color: var(--red); }
 .release-form textarea { resize: vertical; }
 .release-form label > small, .release-form > small { display: block; margin-top: 6px; color: #7d8a93; font-size: 7px; line-height: 1.45; }
 .release-field-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 11px; }
+.release-requirements { margin-top: 12px; padding: 11px 12px; border: 1px solid #dce6e8; border-radius: 8px; background: #f8fbfb; }
+.release-requirements > span, .release-requirements > strong { display: block; }
+.release-requirements > span { color: var(--teal); font-size: 7px; font-weight: 900; letter-spacing: .5px; text-transform: uppercase; }
+.release-requirements > strong { margin-top: 5px; color: #4b616d; font-size: 8px; }
+.release-requirements ol { margin: 8px 0 0; padding-left: 17px; color: #71818b; font-size: 7px; line-height: 1.65; }
 .release-checks { display: grid; gap: 6px; margin: 13px 0 0; padding: 0; border: 0; }
 .release-checks label { display: flex; align-items: center; gap: 8px; padding: 8px 9px; border: 1px solid #e1e7e9; border-radius: 7px; }
 .release-checks label > span { margin: 0; font-weight: 600; }
@@ -1023,6 +1043,7 @@ td b.zero { color: var(--red); }
   .readiness-summary, .central-readiness-checks { grid-template-columns: repeat(2, 1fr); }
   .recovery-drill-grid { grid-template-columns: 1fr; }
   .release-gate-grid { grid-template-columns: repeat(2, 1fr); }
+  .release-open-actions { grid-template-columns: 1fr; }
   .release-workspace { grid-template-columns: 1fr; }
   .verification-reference { grid-template-columns: 1fr 1fr; }
   .verification-reference div:nth-child(3) { border-left: 0; }
@@ -1101,7 +1122,7 @@ td b.zero { color: var(--red); }
   .continuity-sync-actions { width: 100%; justify-content: space-between; }
   .readiness-summary, .readiness-gate-grid, .central-readiness-checks, .recovery-field-pair { grid-template-columns: 1fr; }
   .release-sync-banner, .release-decision-banner { align-items: flex-start; flex-direction: column; }
-  .release-gate-grid, .release-field-pair { grid-template-columns: 1fr; }
+  .release-gate-grid, .release-field-pair, .release-open-actions ul { grid-template-columns: 1fr; }
   .order-heading { align-items: flex-start; flex-direction: column; }
   .forecast-horizons { grid-template-columns: 1fr; }
   .top-actions { align-items: stretch; }
@@ -1137,4 +1158,25 @@ td b.zero { color: var(--red); }
   .severity-mark { grid-row: 1; }
   .issue-action { justify-self: start; }
   .review-footer > span { display: none; }
+}
+
+@media print {
+  @page { size: A4 landscape; margin: 12mm; }
+  body { background: white !important; color: #253b47; }
+  .app-shell { display: block; min-height: 0; background: white; }
+  .sidebar, .topbar, .workspace-stats, .operations-panel > .order-heading, .operations-tabs, .app-footer, .release-form, .release-export-note, .release-sync-banner .continuity-sync-actions, .release-gate-select { display: none !important; }
+  .main { padding: 0; overflow: visible; }
+  .operations-workspace, .operations-panel, .release-center { display: block; margin: 0; padding: 0; border: 0; box-shadow: none; background: white; }
+  .release-print-header { display: block; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 2px solid #19705c; }
+  .release-print-header span { color: #19705c; font-size: 8pt; font-weight: 900; letter-spacing: .8pt; }
+  .release-print-header h1 { margin: 5px 0 3px; font-size: 20pt; }
+  .release-print-header p { margin: 0; color: #60717b; font-size: 8pt; }
+  .release-sync-banner, .release-decision-banner, .release-open-actions { margin-bottom: 10px; break-inside: avoid; }
+  .release-gate-grid { grid-template-columns: repeat(5, 1fr); margin-bottom: 12px; break-inside: avoid; }
+  .release-gate-grid article { min-height: 0; }
+  .release-workspace { display: block; }
+  .release-history { padding: 0; border: 0; }
+  .release-history .table-wrap { overflow: visible; }
+  .release-history table { font-size: 7pt; }
+  .release-history tr { break-inside: avoid; }
 }

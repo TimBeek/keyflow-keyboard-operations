@@ -3,6 +3,7 @@ import {
   listGoLiveAcceptanceRecords,
   recordGoLiveAcceptance,
 } from "./go-live-acceptance-service";
+import { GET } from "@/app/api/operations/go-live-acceptance/route";
 
 const databaseConfigured = Boolean(process.env.DATABASE_URL);
 
@@ -32,6 +33,10 @@ describe.skipIf(!databaseConfigured)("centraal go-live-acceptatiedossier", () =>
     const first = await recordGoLiveAcceptance(input);
     const duplicate = await recordGoLiveAcceptance(input);
     const history = await listGoLiveAcceptanceRecords(actorId);
+    const statusResponse = await GET(new Request(
+      `http://localhost/api/operations/go-live-acceptance?actorId=${actorId}`,
+    ));
+    const status = await statusResponse.json();
 
     expect(first.duplicate).toBe(false);
     expect(first.record).toMatchObject({
@@ -50,5 +55,12 @@ describe.skipIf(!databaseConfigured)("centraal go-live-acceptatiedossier", () =>
       duplicate: true,
     });
     expect(history).toContainEqual(first.record);
+    expect(statusResponse.status).toBe(200);
+    expect(status).toMatchObject({
+      summary: {
+        total: 5,
+        canRelease: false,
+      },
+    });
   });
 });

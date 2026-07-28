@@ -77,6 +77,7 @@ import {
   createGoLiveAcceptanceRecord,
   type GoLiveAcceptanceInput,
   type GoLiveAcceptanceRecord,
+  type GoLiveAcceptanceSummary,
 } from "@/domain/go-live-acceptance";
 
 type IconName =
@@ -333,14 +334,17 @@ export function Dashboard({
     fetch("/api/operations/go-live-acceptance", { signal: controller.signal })
       .then(async (response) => {
         if (!response.ok) throw new Error(await responseErrorMessage(response));
-        return response.json() as Promise<{ records: GoLiveAcceptanceRecord[] }>;
+        return response.json() as Promise<{
+          records: GoLiveAcceptanceRecord[];
+          summary: GoLiveAcceptanceSummary;
+        }>;
       })
-      .then(({ records }) => {
+      .then(({ records, summary }) => {
         setGoLiveAcceptanceRecords(records);
         setAcceptanceSync({
           mode: "central",
           status: "ready",
-          message: "Besluiten komen uit PostgreSQL en zijn aan de persoonlijke sessie gekoppeld.",
+          message: `${summary.approved}/5 poorten centraal goedgekeurd · besluiten zijn aan de persoonlijke sessie gekoppeld.`,
         });
       })
       .catch((error: unknown) => {

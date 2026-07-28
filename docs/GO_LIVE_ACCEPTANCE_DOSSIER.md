@@ -39,12 +39,28 @@ Open `Beheer & analyse` en daarna `Vrijgave`.
 
 Pilotmodus bewaart besluiten in de lokale KeyFlow-back-up en heeft geen productie-effect. Entra-modus leest en schrijft met de persoonlijke sessie naar PostgreSQL.
 
+## Poortspecifieke bewijschecklists
+
+Na het kiezen van een poort toont KeyFlow vier concrete controlepunten voor precies die aansluiting. Voorbeelden zijn een providerrestore met gemeten RPO/RTO, een roltest met MFA, foutscenario's voor dubbele orderscans, een fysieke droge pastest en een scannerproef tegen de echte hangmappenwagen. Deze checklist helpt bij de uitvoering, maar vinkt zichzelf nooit af.
+
+Onder `Open acties` staan automatisch alle poorten waarvan het nieuwste besluit nog niet is goedgekeurd. Een afwijzing toont tevens de geregistreerde oorzaak en vervolgactie.
+
+## Export en PDF
+
+Management kan op ieder moment:
+
+- `JSON-dossier` kiezen voor een overdraagbare versie-1-export met bronmodus, opsteller, gegenereerd tijdstip, actuele status per poort, alle bewijseisen en volledige historie;
+- `Afdrukken / PDF` kiezen en in het browservenster `Opslaan als PDF` gebruiken voor een leesbaar acceptatierapport.
+
+De PDF-weergave verbergt het invoerformulier en de applicatienavigatie. Het rapport bevat alleen de centrale samenvatting, open acties, vijf actuele poorten en besluithistorie.
+
 ## Centrale opslag en autorisatie
 
 Migratie `0015_go_live_acceptance.sql` voegt de idempotente auditregistratie toe.
 
 - `GET /api/operations/go-live-acceptance` vereist `reports.view`.
 - `POST /api/operations/go-live-acceptance` vereist `policies.manage`.
+- De `GET`-response bevat naast de historie een centraal berekende `5/5`-samenvatting.
 - In productiemodus komt de actor uit de persoonlijke Entra-sessie.
 - Iedere mutatie schrijft tevens `operations.go_live_acceptance_recorded` naar de auditlog.
 

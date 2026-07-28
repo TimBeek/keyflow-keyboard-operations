@@ -1,4 +1,5 @@
 import { DatabaseConfigurationError } from "@/server/database";
+import { goLiveAcceptanceSummary } from "@/domain/go-live-acceptance";
 import {
   goLiveAcceptanceErrorResponse,
   listGoLiveAcceptanceRecords,
@@ -18,8 +19,10 @@ export async function GET(request: Request) {
       new URL(request.url).searchParams.get("actorId"),
       process.env.KEYFLOW_IMPORT_ACTOR_ID,
     );
+    const records = await listGoLiveAcceptanceRecords(actorId);
     return Response.json({
-      records: await listGoLiveAcceptanceRecords(actorId),
+      records,
+      summary: goLiveAcceptanceSummary(records),
     });
   } catch (error) {
     return routeErrorResponse(error);
