@@ -23,6 +23,8 @@ Bij de methode `Oude Noviply-voorraadvel` toont KeyFlow eerst de exacte hangmap 
 
 De aanbrenginstructies blijven verborgen totdat alle vijf punten zijn bevestigd. De normale voorraadmutatie van −1 vindt pas plaats nadat ook de volledige uitvoering is afgetekend.
 
+De werknemer kan vanuit deze controle de visuele E1/E2- en pasvormgids openen. Die gids markeert onder meer Enter, beide Shift-toetsen, pijltjes, functierij, numpad en pointing-stickuitsparing. De illustratie is trainingsmateriaal; het exacte SKU-label, een goedgekeurde modelreferentie en de fysieke droge uitlijning blijven leidend.
+
 ## Afwijkingen
 
 Als iets niet klopt, kiest de medewerker de reden en één van twee uitkomsten:

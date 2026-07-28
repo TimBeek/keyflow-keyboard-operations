@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { inventoryCatalog } from "@/data/inventory-demo";
 import { calculateForecastAdvice } from "@/domain/forecasting";
+import { scandinavianLayoutReferences } from "@/domain/keyboard-layouts";
 
 const plannedItems = inventoryCatalog
   .map((item) => ({
@@ -170,6 +171,28 @@ export function ModelsWorkspace() {
             <button className="secondary-button" onClick={() => setSelectedFamily(null)}>Sluiten</button>
           </div>
         )}
+      </section>
+      <section className="panel reference-library-panel">
+        <div className="order-heading">
+          <div><span className="workspace-kicker">REFERENTIEBIBLIOTHEEK</span><h2>Keyboardlayouts en E1/E2-bewijs</h2><p>Trainingshulp is beschikbaar; compatibiliteitsbewijs wordt pas actief na managementgoedkeuring.</p></div>
+          <span className="data-badge">0 goedgekeurde modelfoto&apos;s</span>
+        </div>
+        <div className="reference-library-summary">
+          <article><span>Trainingsillustratie</span><strong>Beschikbaar</strong><small>Algemene toetsvorm- en pasvormcontrole</small></article>
+          <article><span>Scandinavische regels</span><strong>{scandinavianLayoutReferences.length} actief</strong><small>SE/FI, NO en DK afzonderlijk</small></article>
+          <article className="attention"><span>E1/E2-bewijs</span><strong>Nog verzamelen</strong><small>Exacte SKU, model, foto en fysieke pastest</small></article>
+        </div>
+        <div className="reference-layout-table">
+          {scandinavianLayoutReferences.map((reference) => (
+            <div key={reference.value}>
+              <span className="reference-layout-code">{reference.value}</span>
+              <strong>{reference.shortLabel}</strong>
+              <b>{reference.keySymbols}</b>
+              <small>Herkenningsregel actief</small>
+            </div>
+          ))}
+        </div>
+        <p className="reference-library-note">Databasefundament staat klaar voor status <strong>concept</strong>, <strong>goedgekeurd</strong> of <strong>afgekeurd</strong>. Upload en formele goedkeuring worden aangesloten op de centrale database en persoonlijke managementlogin.</p>
       </section>
     </div>
   );

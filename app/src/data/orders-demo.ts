@@ -6,7 +6,7 @@ export const demoWorkOrders: WorkOrderSnapshot[] = [
     aliases: ["ORD-1859", "1859"],
     model: "Dell Latitude 5420",
     saleValueBandId: "200_299",
-    currentLayout: "QWERTY UK",
+    currentLayout: "QWERTY SE/FI",
     targetLayout: "QWERTY US",
     status: "ready",
   },

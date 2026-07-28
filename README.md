@@ -37,6 +37,10 @@ De eerste applicatiebasis bevat:
 - vaste verkoopwaardeklassen in plaats van handmatige bedragen;
 - een managementwerkruimte voor transacties, ABC-classificatie en configureerbaar conversiebeleid;
 - een managementoverzicht van geslaagde en mislukte hangmap-, E1/E2- en positioneringscontroles;
+- een werknemersgids met eigen trainingsillustratie voor E1/E2, toetsvorm en droge pascontrole;
+- een Dell Latitude-stijl E1/E2-trainingsbeeld en een aparte vergelijking Nederlands versus US International;
+- Scandinavische invoer als gebruikelijke startkeuze, met verplichte specificatie naar Zweeds/Fins, Noors of Deens;
+- een databasestructuur voor door management goedgekeurde layout-, model- en variantreferenties;
 - versiegebonden en gevalideerde lokale pilotopslag die boekingen en beleid na een herstart van de browser herstelt;
 - JSON-back-up, gecontroleerd herstel en een tweestapsreset voor management;
 - een productiebuild zonder lint- of TypeScriptfouten;
@@ -115,6 +119,8 @@ De huidige bron levert 148 regels en 3.218 stuks op. De validator vindt 3 harde 
 - `docs/EMPLOYEE_WORKFLOW.md` — scanner-, modelnummer- en waardeklasseflow voor werknemers;
 - `docs/PILOT_PERSISTENCE_AND_ORDER_LOOKUP.md` — orderlookup, lokale pilotopslag, back-up en productiegrenzen;
 - `docs/HANGING_FILE_VERIFICATION.md` — hangmaplocaties en de verplichte controle vóór Noviply-afboeking;
+- `docs/KEYBOARD_LAYOUT_REFERENCE.md` — Scandinavische herkenning, E1/E2-pasvormcontrole en referentiebeheer;
+- `docs/GO_LIVE_INPUTS.md` — exacte toegangen, gegevens en acceptatiebewijzen die nog nodig zijn voor 100%;
 - `docs/AI_MODEL_GROUP_DATA_REQUIREMENTS.md` — vereiste bron- en validatiedata voor veilige AI-modelgroepvoorstellen;
 - `ONDERZOEKSRAPPORT_FASE_1.pdf` — goedgekeurde onderzoeksbasis;
 - `docs/DEPLOYMENT.md` — voorgestelde GitHub- en productie-uitrol;
