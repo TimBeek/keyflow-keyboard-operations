@@ -35,8 +35,17 @@ import {
   type StickerVerificationFailureReason,
   type StickerVerificationReportInput,
 } from "@/domain/sticker-verification";
-
-const layouts = ["QWERTY US", "AZERTY FR", "QWERTZ DE", "QWERTY UK", "QWERTY ES", "QWERTY IT"];
+import {
+  currentLayoutOptions,
+  genericNordicLayout,
+  requiresExactLayoutChoice,
+  targetLayoutOptions,
+  type KeyboardLayoutOption,
+} from "@/domain/keyboard-layouts";
+import {
+  KeyboardReferenceDialog,
+  type KeyboardReferenceTopic,
+} from "@/components/keyboard-reference-dialog";
 
 const instructions: Record<ConversionMethodId, string[]> = {
   none: ["Controleer de aanwezige layout.", "Registreer dat geen conversie nodig is.", "Zet de laptop door naar de volgende processtap."],
@@ -75,8 +84,10 @@ export function EmployeeWorkspace({
   const [modelQuery, setModelQuery] = useState("5420");
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [saleBandId, setSaleBandId] = useState<SaleValueBandId>("200_299");
-  const [currentLayout, setCurrentLayout] = useState("QWERTY UK");
+  const [currentLayout, setCurrentLayout] = useState(genericNordicLayout);
   const [targetLayout, setTargetLayout] = useState("QWERTY US");
+  const [referenceOpen, setReferenceOpen] = useState(false);
+  const [referenceTopic, setReferenceTopic] = useState<KeyboardReferenceTopic>("scandinavian");
   const [step, setStep] = useState<WorkStep>("input");
   const [checks, setChecks] = useState<boolean[]>([]);
   const [stockMode, setStockMode] = useState<StockMode>("receipt");
@@ -133,6 +144,12 @@ export function EmployeeWorkspace({
   const methodInstructions = instructions[recommendation.primary];
   const matchedSticker = noviplyMatch.status === "matched" ? noviplyMatch : null;
   const selectedStockItem = catalog.find((item) => item.sku.toUpperCase() === scanSku.trim().toUpperCase()) ?? null;
+  const currentLayoutNeedsSpecification = requiresExactLayoutChoice(currentLayout);
+
+  function openReference(topic: KeyboardReferenceTopic) {
+    setReferenceTopic(topic);
+    setReferenceOpen(true);
+  }
 
   function startExecution() {
     setChecks(methodInstructions.map(() => false));
@@ -426,12 +443,24 @@ export function EmployeeWorkspace({
                     ))}
                   </div>
                 </fieldset>
-                <label><span>Huidige layout</span><select value={currentLayout} onChange={(event) => setCurrentLayout(event.target.value)}>{layouts.map((layout) => <option key={layout}>{layout}</option>)}</select></label>
-                <label><span>Gewenste klantlayout</span><select value={targetLayout} onChange={(event) => setTargetLayout(event.target.value)}>{layouts.map((layout) => <option key={layout}>{layout}</option>)}</select></label>
+                <div className="layout-field">
+                  <label><span>4. Huidige layout</span><select value={currentLayout} onChange={(event) => setCurrentLayout(event.target.value)}><LayoutSelectOptions options={currentLayoutOptions} /></select></label>
+                  <button type="button" className="layout-reference-link" onClick={() => openReference("scandinavian")}>Twijfel? Vergelijk Scandinavische layouts</button>
+                </div>
+                <div className="layout-field">
+                  <label><span>5. Gewenste klantlayout</span><select value={targetLayout} onChange={(event) => setTargetLayout(event.target.value)}><LayoutSelectOptions options={targetLayoutOptions} /></select></label>
+                  <button type="button" className="layout-reference-link" onClick={() => openReference("dutch-us")}>Vergelijk Nederlands met US International</button>
+                </div>
               </div>
+              {currentLayoutNeedsSpecification && (
+                <div className="layout-identification-warning">
+                  <div><strong>Welke Scandinavische layout ligt er voor je?</strong><span>Kies eerst Zweeds/Fins, Noors of Deens. “Nordic” is alleen een startkeuze en wordt niet definitief opgeslagen.</span></div>
+                  <button type="button" onClick={() => openReference("scandinavian")}>Open herkenningsgids</button>
+                </div>
+              )}
               {valueBandClassification === "overlap" && <div className="value-band-warning">De managementgrens van €{policy.thresholdEur} valt midden in {saleBand.label}. Laat management de grens op een klassengrens zetten of controleer het exacte bedrag.</div>}
               <LiveAdvice recommendation={recommendation} match={noviplyMatch} />
-              <button ref={continueButtonRef} className="employee-primary employee-continue" disabled={!orderConfirmed || !model || recommendation.primary === "none" || valueBandClassification === "overlap"} onClick={() => setStep("advice")}>Open advies voor {model || "gekozen model"} →</button>
+              <button ref={continueButtonRef} className="employee-primary employee-continue" disabled={!orderConfirmed || !model || currentLayoutNeedsSpecification || recommendation.primary === "none" || valueBandClassification === "overlap"} onClick={() => setStep("advice")}>Open advies voor {model || "gekozen model"} →</button>
             </div>
           )}
 
@@ -474,6 +503,7 @@ export function EmployeeWorkspace({
                     <div><span>VERPLICHTE CONTROLE VÓÓR AANBRENGEN</span><h3>Klopt het vel uit hangmap {matchedSticker.item.storageNumber}?</h3><p>Er wordt nog niets afgeboekt. Bevestig eerst elk controlepunt.</p></div>
                     <strong>{pickCheckConfirmed ? "✓ Goedgekeurd" : "Nog controleren"}</strong>
                   </div>
+                  <button type="button" className="verification-reference-button" onClick={() => openReference("fit")}>Open E1/E2- en pasvormgids vóór je controleert</button>
                   <div className="verification-reference">
                     <div><span>Locatie</span><strong>Hangmappenwagen · nr. {matchedSticker.item.storageNumber}</strong></div>
                     <div><span>Artikel</span><strong>{matchedSticker.item.sku}</strong></div>
@@ -564,12 +594,35 @@ export function EmployeeWorkspace({
             ))}
           </section>
           <section className="employee-help">
-            <strong>Twijfel over E1/E2 of pasvorm?</strong><p>Niet gokken. Boek een mislukte pastest apart en vraag een teamleider; zo verbetert de compatibiliteitsdata.</p>
+            <strong>Twijfel over E1/E2, layout of pasvorm?</strong><p>Vergelijk de visuele kenmerken, het SKU-label en de droge positionering. Bij resterende twijfel stop je zonder afboeken.</p>
+            <div><button type="button" onClick={() => openReference("scandinavian")}>Nordic</button><button type="button" onClick={() => openReference("dutch-us")}>NL / US</button><button type="button" onClick={() => openReference("fit")}>E1/E2</button></div>
           </section>
         </aside>
       </div>
+      <KeyboardReferenceDialog
+        open={referenceOpen}
+        topic={referenceTopic}
+        currentLayout={currentLayout}
+        targetLayout={targetLayout}
+        onClose={() => setReferenceOpen(false)}
+        onTopicChange={setReferenceTopic}
+        onChooseCurrentLayout={setCurrentLayout}
+      />
     </div>
   );
+}
+
+function LayoutSelectOptions({ options }: { options: KeyboardLayoutOption[] }) {
+  const groups: KeyboardLayoutOption["group"][] = ["Scandinavisch", "Veelgebruikt", "Overig"];
+  return groups.map((group) => {
+    const groupOptions = options.filter((option) => option.group === group);
+    if (groupOptions.length === 0) return null;
+    return (
+      <optgroup label={group} key={group}>
+        {groupOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}
+      </optgroup>
+    );
+  });
 }
 
 function ModelResolver({

@@ -20,6 +20,7 @@ export const transactionType = pgEnum("inventory_transaction_type", ["opening", 
 export const conversionJobStatus = pgEnum("conversion_job_status", ["draft", "advised", "released", "in_progress", "quality_check", "completed", "blocked", "cancelled"]);
 export const qualityResult = pgEnum("quality_result", ["passed", "rework", "scrap", "blocked"]);
 export const stickerVerificationOutcome = pgEnum("sticker_verification_outcome", ["passed", "blocked_unused", "scrapped"]);
+export const keyboardReferenceStatus = pgEnum("keyboard_reference_status", ["draft", "approved", "rejected"]);
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -61,8 +62,26 @@ export const keyboardLayouts = pgTable("keyboard_layouts", {
   code: text("code").notNull(),
   name: text("name").notNull(),
   languageCode: text("language_code").notNull(),
+  family: text("family"),
+  exact: boolean("exact").notNull().default(true),
+  identificationNotes: text("identification_notes"),
   active: boolean("active").notNull().default(true),
 }, (table) => [uniqueIndex("keyboard_layouts_code_uq").on(table.code)]);
+
+export const keyboardLayoutReferences = pgTable("keyboard_layout_references", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  layoutId: uuid("layout_id").references(() => keyboardLayouts.id),
+  modelId: uuid("model_id").references(() => laptopModels.id),
+  variantCode: text("variant_code"),
+  referenceType: text("reference_type").notNull(),
+  assetUrl: text("asset_url"),
+  sourceUrl: text("source_url"),
+  notes: text("notes"),
+  status: keyboardReferenceStatus("status").notNull().default("draft"),
+  approvedBy: uuid("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 export const stickerSkus = pgTable("sticker_skus", {
   id: uuid("id").primaryKey().defaultRandom(),
