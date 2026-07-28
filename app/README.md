@@ -1,36 +1,33 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# KeyFlow webapp
 
-## Getting Started
+Next.js 16-app voor de werknemers- en managementflow van KeyFlow Keyboard Operations.
 
-First, run the development server:
+## Starten
 
-```bash
+```text
+npm ci
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Verplichte controles
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```text
+npm audit --audit-level=high
+npm run test
+npm run lint
+npm run build
+```
 
-## Learn More
+## Excelbron opnieuw genereren
 
-To learn more about Next.js, take a look at the following resources:
+```text
+npm run inventory:seed -- "C:\pad\naar\Toetsenbordstickers voorraad.xlsx"
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+De generator accepteert alleen de gecontroleerde momentopname met 148 unieke hangmappen en 3.218 vellen en schrijft een checksum-gebonden TypeScriptseed. Regels met ontbrekende of dubbele artikelnummers blijven zichtbaar voor management, maar zijn geblokkeerd voor operationele boekingen.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Centrale productie
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+De server-API en migraties gebruiken PostgreSQL zodra `DATABASE_URL` is ingesteld. Zonder centrale database draait de live werknemersflow bewust in lokale pilotmodus; persoonlijke SSO, de echte order-API en formele fysieke acceptatie zijn aparte go-livevoorwaarden. Zie `../docs/GO_LIVE_INPUTS.md` en `../docs/PRODUCTION_COMPLETION_AUDIT.md`.

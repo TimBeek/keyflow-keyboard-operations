@@ -22,6 +22,11 @@ De eerste applicatiebasis bevat:
 - gevalideerde correctieacties: waarde corrigeren, waarschuwing accepteren, dubbele regel apart behouden of een bronrij uitsluiten;
 - functionele hoofdnavigatie voor voorraad, conversies, bestellingen, modellen en rapportages;
 - een filterbare voorraadcatalogus met dekking, reserveringen, levertijd en planstatus;
+- de volledige checksum-gebonden Excelcatalogus met alle 148 hangmaplocaties en 3.218 vellen;
+- veilige blokkering van 9 regels met ontbrekende of dubbele artikelnummers;
+- zoeken via alle bruikbare gekoppelde modellen uit Excel, niet alleen via het hoofdmodel;
+- een managementwachtrij voor model-layoutcombinaties die naar meerdere kandidaat-SKU's verwijzen;
+- een formuleveilige CSV-export van de volledige voorraadcatalogus;
 - automatisch besteladvies op basis van verbruik, levertijd, veiligheidsvoorraad en open bestellingen;
 - een interne conceptbestelling, modelgroepenoverzicht en 1/3/6-maandsrapportage;
 - gescheiden management- en werknemersweergaven;
@@ -113,6 +118,15 @@ npm run import:analyze -- "C:\pad\naar\Toetsenbordstickers voorraad.xlsx"
 
 De huidige bron levert 148 regels en 3.218 stuks op. De validator vindt 3 harde artikelnummervouten, 31 compatibiliteitswaarschuwingen en 9 mogelijke dubbele SKU/modelgroepen die vóór definitieve import moeten worden beoordeeld.
 
+De gecontroleerde applicatieseed opnieuw genereren:
+
+```text
+cd app
+npm run inventory:seed -- "C:\pad\naar\Toetsenbordstickers voorraad.xlsx"
+```
+
+De generator weigert een bron die niet exact 148 unieke hangmappen en 3.218 vellen bevat. De resulterende seed bewaart ook de SHA-256 van het bronbestand.
+
 ## Documentatie
 
 - `docs/PRODUCT_ROADMAP.md` — gewogen voortgang naar de volledige productieversie;
@@ -121,6 +135,7 @@ De huidige bron levert 148 regels en 3.218 stuks op. De validator vindt 3 harde 
 - `docs/HANGING_FILE_VERIFICATION.md` — hangmaplocaties en de verplichte controle vóór Noviply-afboeking;
 - `docs/KEYBOARD_LAYOUT_REFERENCE.md` — Scandinavische herkenning, E1/E2-pasvormcontrole en referentiebeheer;
 - `docs/GO_LIVE_INPUTS.md` — exacte toegangen, gegevens en acceptatiebewijzen die nog nodig zijn voor 100%;
+- `docs/PRODUCTION_COMPLETION_AUDIT.md` — requirementmatrix met bewijs, ontbrekende aansluitingen en actuele status;
 - `docs/AI_MODEL_GROUP_DATA_REQUIREMENTS.md` — vereiste bron- en validatiedata voor veilige AI-modelgroepvoorstellen;
 - `ONDERZOEKSRAPPORT_FASE_1.pdf` — goedgekeurde onderzoeksbasis;
 - `docs/DEPLOYMENT.md` — voorgestelde GitHub- en productie-uitrol;

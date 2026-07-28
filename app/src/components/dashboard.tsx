@@ -15,11 +15,16 @@ import {
   OrdersWorkspace,
   ReportsWorkspace,
 } from "@/components/planning-workspaces";
-import { inventoryCatalog } from "@/data/inventory-demo";
+import {
+  inventoryCatalog,
+  inventoryCatalogSummary,
+  planningCatalog,
+} from "@/data/inventory-catalog";
 import { initialInventoryTransactions } from "@/data/operations-demo";
 import { demoWorkOrders } from "@/data/orders-demo";
 import type { UserRole } from "@/domain/access-control";
 import { calculateInventoryMutation } from "@/domain/inventory";
+import { calculateForecastAdvice } from "@/domain/forecasting";
 import {
   defaultOperationsPolicy,
   type InventoryMutationRequest,
@@ -108,7 +113,7 @@ const initialLowStock: InventoryItem[] = [
 
 const methods = [
   { id: 1, name: "Losse stickers", detail: "Wordt uitgefaseerd", tone: "muted", status: "Fallback" },
-  { id: 2, name: "Noviply voorraadvel", detail: "Onder €300 · vooral QWERTY US", tone: "blue", status: "148 SKU’s" },
+  { id: 2, name: "Noviply voorraadvel", detail: "Onder €300 · vooral QWERTY US", tone: "blue", status: "148 hangmappen" },
   { id: 3, name: "Sterke printsticker", detail: "Buitenlandse layouts · onder €300", tone: "violet", status: "Actief" },
   { id: 4, name: "Directe keyboardprint", detail: "Vanaf €300 · premium resultaat", tone: "green", status: "Voorkeur" },
 ];
@@ -141,9 +146,24 @@ export function Dashboard() {
     [query, stockItems],
   );
   const defaultItem = stockItems.find((item) => item.stock > 0) ?? stockItems[0];
+  const today = new Date().toISOString().slice(0, 10);
   const todayIssued = transactions
-    .filter((entry) => entry.occurredAt.startsWith("2026-07-27") && entry.quantityDelta < 0)
+    .filter((entry) => entry.occurredAt.startsWith(today) && entry.quantityDelta < 0)
     .reduce((sum, entry) => sum + Math.abs(entry.quantityDelta), 0);
+  const currentCatalogStock = inventoryCatalog.reduce(
+    (sum, item) => sum + (catalogQuantities[item.sku] ?? item.stock),
+    0,
+  );
+  const planningActionCount = planningCatalog.filter((item) => {
+    const advice = calculateForecastAdvice({
+      onHand: catalogQuantities[item.sku] ?? item.stock,
+      reserved: item.reserved,
+      averageWeeklyDemand: item.averageWeeklyDemand,
+      leadTimeDays: item.leadTimeDays,
+      safetyStockWeeks: item.safetyStockWeeks,
+    });
+    return advice.status === "out" || advice.status === "critical" || advice.status === "order";
+  }).length;
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -213,8 +233,15 @@ export function Dashboard() {
   }
 
   function recordEmployeeInventoryMutation(request: InventoryMutationRequest) {
-    const item = inventoryCatalog.find((candidate) => candidate.sku === request.sku);
-    if (!item) throw new Error(`Onbekend sticker-SKU: ${request.sku}.`);
+    const matchingItems = inventoryCatalog.filter(
+      (candidate) =>
+        candidate.dataQuality === "ready"
+        && candidate.sku === request.sku,
+    );
+    if (matchingItems.length !== 1) {
+      throw new Error(`Sticker-SKU ${request.sku} is onbekend, dubbel of geblokkeerd voor boeken.`);
+    }
+    const item = matchingItems[0];
     const currentQuantity = catalogQuantities[item.sku] ?? item.stock;
     const result = calculateInventoryMutation({
       sku: request.sku,
@@ -410,11 +437,11 @@ export function Dashboard() {
 
         <section className="stats-grid">
           <article className="stat-card">
-            <div><span>Totale voorraad</span><strong>3.218</strong><small>stickervellen in 148 genummerde hangmappen</small></div>
+            <div><span>Totale voorraad</span><strong>{currentCatalogStock.toLocaleString("nl-NL")}</strong><small>stickervellen in {inventoryCatalogSummary.rowCount} genummerde hangmappen</small></div>
             <div className="stat-glyph stock"><Icon name="stock" size={27} /></div>
           </article>
           <article className="stat-card urgent">
-            <div><span>Lage voorraad</span><strong>15</strong><small><b>3 kritiek</b> · directe actie nodig</small></div>
+            <div><span>Bestelactie</span><strong>{planningActionCount}</strong><small><b>{inventoryCatalogSummary.planningRows} regels</b> met voorbeeldplanning</small></div>
             <div className="stat-glyph"><Icon name="alert" size={27} /></div>
           </article>
           <article className="stat-card">
@@ -431,7 +458,7 @@ export function Dashboard() {
           <section className="panel stock-panel">
             <div className="panel-heading">
               <div><h2>Voorraad vraagt aandacht</h2><p>Gesorteerd op urgentie</p></div>
-              <button>Bekijk alle 15 <Icon name="arrow" size={16} /></button>
+              <button onClick={() => setActiveView("inventory")}>Bekijk volledige catalogus <Icon name="arrow" size={16} /></button>
             </div>
             <div className="table-wrap">
               <table>
@@ -473,8 +500,8 @@ export function Dashboard() {
           </section>
         </div>
         <section className="roadmap-panel">
-          <div className="roadmap-heading"><div><span className="workspace-kicker">PRODUCTIEROADMAP</span><h2>KeyFlow is 86% compleet</h2><p>Voortgang naar de volledige live productieversie.</p></div><strong>86%</strong></div>
-          <div className="roadmap-track"><span style={{ width: "86%" }} /></div>
+          <div className="roadmap-heading"><div><span className="workspace-kicker">PRODUCTIEROADMAP</span><h2>KeyFlow is 87% compleet</h2><p>Voortgang naar de volledige live productieversie.</p></div><strong>87%</strong></div>
+          <div className="roadmap-track"><span style={{ width: "87%" }} /></div>
           <div className="roadmap-steps">
             <span className="done">Basis & UX</span><span className="done">Excel-import</span><span className="done">Voorraad & planning</span><span className="current">Rollen & uitvoering</span><span>Database live</span><span>SSO & integraties</span><span>Productieacceptatie</span>
           </div>
@@ -529,7 +556,7 @@ export function Dashboard() {
 
         <footer className="app-footer">
           <span><i /> {persistenceReady ? `Lokaal bewaard${lastSavedAt ? ` · ${formatPersistenceTime(lastSavedAt)}` : ""}` : "Opslag laden…"}</span>
-          <span>{lastAction || `Productieroadmap 86% · ${role === "management" ? "managementweergave" : "werknemersuitvoering"}`}</span>
+          <span>{lastAction || `Productieroadmap 87% · ${role === "management" ? "managementweergave" : "werknemersuitvoering"}`}</span>
         </footer>
         <ConversionAdvisor open={advisorOpen} onClose={() => setAdvisorOpen(false)} />
         <AccessManagementDialog open={accessOpen} onClose={() => setAccessOpen(false)} />

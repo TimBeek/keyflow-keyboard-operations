@@ -13,6 +13,14 @@ Nodig:
 - goedgekeurde afhandeling van de drie harde Excel-fouten en negen mogelijke dubbele groepen;
 - fysieke begintelling per hangmap vóór live-import.
 
+Al aantoonbaar voorbereid:
+
+- de Excelbron is als reproduceerbare seed met SHA-256-herkomst vastgelegd;
+- alle 148 hangmapnummers zijn uniek en de bron telt 3.218 vellen;
+- 139 regels zijn operationeel bruikbaar;
+- 9 regels met ontbrekende of dubbele artikelnummers worden veilig tegen boeken geblokkeerd;
+- gekoppelde modellen, bronnotities en conflicterende kandidaat-SKU's zijn zichtbaar voor management.
+
 Acceptatiebewijs:
 
 - migraties zonder fout uitgevoerd;

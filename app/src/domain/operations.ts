@@ -1,5 +1,6 @@
-import type { InventoryCatalogItem } from "@/data/inventory-demo";
+import type { InventoryCatalogItem } from "@/data/inventory-catalog";
 import type { ConversionMethodId } from "@/domain/conversion-policy";
+import { modelMatchesCatalogItem } from "./model-catalog";
 
 export type OperationalMethodId = Exclude<ConversionMethodId, "none">;
 
@@ -87,7 +88,8 @@ export function findNoviplySku(
 ): NoviplySkuMatch {
   const candidates = catalog.filter(
     (item) =>
-      normalizeModel(item.model) === normalizeModel(model)
+      item.dataQuality === "ready"
+      && modelMatchesCatalogItem(model, item)
       && normalizeLayout(item.layout) === normalizeLayout(targetLayout),
   );
 
@@ -174,10 +176,6 @@ export function calculateAbcAnalysis(
       velocity: abcClass === "A" ? "Hardloper" : abcClass === "B" ? "Middenloper" : "Zachtloper",
     };
   });
-}
-
-function normalizeModel(value: string) {
-  return value.trim().toLowerCase().replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ");
 }
 
 function normalizeLayout(value: string) {

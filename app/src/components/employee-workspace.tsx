@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import type { InventoryCatalogItem } from "@/data/inventory-demo";
+import type { InventoryCatalogItem } from "@/data/inventory-catalog";
 import {
   lookupWorkOrder,
   type WorkOrderSnapshot,
@@ -42,6 +42,7 @@ import {
   targetLayoutOptions,
   type KeyboardLayoutOption,
 } from "@/domain/keyboard-layouts";
+import { catalogModelOptions } from "@/domain/model-catalog";
 import {
   KeyboardReferenceDialog,
   type KeyboardReferenceTopic,
@@ -104,7 +105,7 @@ export function EmployeeWorkspace({
   const [verificationFailureReason, setVerificationFailureReason] = useState<StickerVerificationFailureReason>("position_mismatch");
 
   const modelOptions = useMemo(
-    () => [...new Set(catalog.map((item) => item.model))].sort(),
+    () => catalogModelOptions(catalog),
     [catalog],
   );
   const modelResolution = useMemo(
@@ -143,7 +144,11 @@ export function EmployeeWorkspace({
 
   const methodInstructions = instructions[recommendation.primary];
   const matchedSticker = noviplyMatch.status === "matched" ? noviplyMatch : null;
-  const selectedStockItem = catalog.find((item) => item.sku.toUpperCase() === scanSku.trim().toUpperCase()) ?? null;
+  const selectedStockItem = catalog.find(
+    (item) =>
+      item.dataQuality === "ready"
+      && item.sku.toUpperCase() === scanSku.trim().toUpperCase(),
+  ) ?? null;
   const currentLayoutNeedsSpecification = requiresExactLayoutChoice(currentLayout);
 
   function openReference(topic: KeyboardReferenceTopic) {
@@ -573,7 +578,7 @@ export function EmployeeWorkspace({
               <button className={stockMode === "receipt" ? "active" : ""} onClick={() => { setStockMode("receipt"); setStockMessage(""); setStockMismatchConfirmed(false); }}>Nieuwe levering</button>
               <button className={stockMode === "mismatch" ? "active" : ""} onClick={() => { setStockMode("mismatch"); setStockMessage(""); setStockMismatchConfirmed(false); }}>Past niet</button>
             </div>
-            <label><span>Sticker-SKU</span><input list="employee-skus" value={scanSku} onChange={(event) => { setScanSku(event.target.value); setStockMessage(""); }} placeholder="Scan of vul SKU in…" /><datalist id="employee-skus">{catalog.map((item) => <option key={item.sku} value={item.sku}>{item.model}</option>)}</datalist></label>
+            <label><span>Sticker-SKU</span><input list="employee-skus" value={scanSku} onChange={(event) => { setScanSku(event.target.value); setStockMessage(""); }} placeholder="Scan of vul SKU in…" /><datalist id="employee-skus">{catalog.filter(({ dataQuality }) => dataQuality === "ready").map((item) => <option key={item.catalogKey} value={item.sku}>{item.model}</option>)}</datalist></label>
             {selectedStockItem && <div className="quick-storage-reference"><strong>Hangmap {selectedStockItem.storageNumber}</strong><span>{extractStickerVariant(selectedStockItem.sku)} · {selectedStockItem.layout} · {selectedStockItem.model}</span></div>}
             <label><span>Aantal</span><input type="number" min="1" value={stockQuantity} onChange={(event) => setStockQuantity(Math.max(1, Number(event.target.value)))} /></label>
             {stockMode === "mismatch" && <label><span>Reden van uitval</span><select value={stockMismatchReason} onChange={(event) => setStockMismatchReason(event.target.value as StickerVerificationFailureReason)}>{verificationFailureOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select></label>}
