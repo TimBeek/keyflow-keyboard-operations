@@ -35,10 +35,18 @@ import {
   ProductionReadinessCenter,
   type ContinuitySyncState,
 } from "@/components/production-readiness-center";
+import {
+  GoLiveAcceptanceCenter,
+  type AcceptanceSyncState,
+} from "@/components/go-live-acceptance-center";
 import type {
   RecoveryDrillInput,
   RecoveryDrillRecord,
 } from "@/domain/production-readiness";
+import type {
+  GoLiveAcceptanceInput,
+  GoLiveAcceptanceRecord,
+} from "@/domain/go-live-acceptance";
 
 type Props = {
   quantities: Record<string, number>;
@@ -49,9 +57,12 @@ type Props = {
   modelGroupDecisions: ModelGroupDecision[];
   compatibilityEvidenceRecords: CompatibilityEvidenceRecord[];
   recoveryDrills: RecoveryDrillRecord[];
+  goLiveAcceptanceRecords: GoLiveAcceptanceRecord[];
   actorName: string;
   continuitySync: ContinuitySyncState;
+  acceptanceSync: AcceptanceSyncState;
   onRefreshContinuity: () => void;
+  onRefreshAcceptance: () => void;
   onRecordStockCount: (input: StockCountInput) => StockCountRecord;
   onReviewModelGroup: (
     proposal: ModelGroupProposal,
@@ -61,6 +72,9 @@ type Props = {
     input: CompatibilityEvidenceInput,
   ) => CompatibilityEvidenceRecord;
   onRecordRecoveryDrill: (input: RecoveryDrillInput) => Promise<RecoveryDrillRecord>;
+  onRecordGoLiveAcceptance: (
+    input: GoLiveAcceptanceInput,
+  ) => Promise<GoLiveAcceptanceRecord>;
   onPolicyChange: (policy: OperationsPolicy) => void;
   persistence: {
     ready: boolean;
@@ -80,6 +94,7 @@ type Tab =
   | "model_groups"
   | "evidence"
   | "continuity"
+  | "release"
   | "policy";
 
 type ModelGroupFilter = "pending" | "approved" | "rejected" | "all";
@@ -107,13 +122,17 @@ export function OperationsManagement({
   modelGroupDecisions,
   compatibilityEvidenceRecords,
   recoveryDrills,
+  goLiveAcceptanceRecords,
   actorName,
   continuitySync,
+  acceptanceSync,
   onRefreshContinuity,
+  onRefreshAcceptance,
   onRecordStockCount,
   onReviewModelGroup,
   onRecordCompatibilityEvidence,
   onRecordRecoveryDrill,
+  onRecordGoLiveAcceptance,
   onPolicyChange,
   persistence,
   onExportBackup,
@@ -432,6 +451,12 @@ export function OperationsManagement({
           <button className={tab === "continuity" ? "active" : ""} onClick={() => setTab("continuity")}>
             Continuïteit
             {recoveryDrills.length > 0 && <span className="tab-count">{recoveryDrills.length}</span>}
+          </button>
+          <button className={tab === "release" ? "active" : ""} onClick={() => setTab("release")}>
+            Vrijgave
+            {goLiveAcceptanceRecords.length > 0 && (
+              <span className="tab-count">{goLiveAcceptanceRecords.length}</span>
+            )}
           </button>
           <button className={tab === "policy" ? "active" : ""} onClick={() => setTab("policy")}>Configuratie</button>
         </div>
@@ -1169,6 +1194,16 @@ export function OperationsManagement({
             sync={continuitySync}
             onRefresh={onRefreshContinuity}
             onRecord={onRecordRecoveryDrill}
+          />
+        )}
+
+        {tab === "release" && (
+          <GoLiveAcceptanceCenter
+            records={goLiveAcceptanceRecords}
+            actorName={actorName}
+            sync={acceptanceSync}
+            onRefresh={onRefreshAcceptance}
+            onRecord={onRecordGoLiveAcceptance}
           />
         )}
 

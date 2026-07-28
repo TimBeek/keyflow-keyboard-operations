@@ -25,6 +25,18 @@ export const stockCountStatus = pgEnum("stock_count_status", ["open", "completed
 export const modelGroupProposalStatus = pgEnum("model_group_proposal_status", ["pending", "approved", "rejected", "superseded"]);
 export const modelGroupReviewDecision = pgEnum("model_group_review_decision", ["approved", "rejected"]);
 export const recoveryDrillResult = pgEnum("recovery_drill_result", ["passed", "failed"]);
+export const goLiveAcceptanceGate = pgEnum("go_live_acceptance_gate", [
+  "database_recovery",
+  "identity_access",
+  "order_integration",
+  "compatibility_evidence",
+  "workfloor_acceptance",
+]);
+export const goLiveAcceptanceDecision = pgEnum("go_live_acceptance_decision", [
+  "pending",
+  "approved",
+  "rejected",
+]);
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -432,4 +444,40 @@ export const recoveryDrills = pgTable("recovery_drills", {
   check("recovery_drills_rpo_nonnegative", sql`${table.rpoMinutes} >= 0`),
   check("recovery_drills_rto_nonnegative", sql`${table.rtoMinutes} >= 0`),
   check("recovery_drills_checks_object", sql`jsonb_typeof(${table.checks}) = 'object'`),
+]);
+
+export const goLiveAcceptanceRecords = pgTable("go_live_acceptance_records", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  idempotencyKey: text("idempotency_key").notNull(),
+  gate: goLiveAcceptanceGate("gate").notNull(),
+  ownerName: text("owner_name").notNull(),
+  evidenceReference: text("evidence_reference").notNull().default(""),
+  evidenceDate: timestamp("evidence_date", { withTimezone: true }),
+  checks: jsonb("checks").notNull(),
+  decision: goLiveAcceptanceDecision("decision").notNull(),
+  notes: text("notes"),
+  reviewedBy: uuid("reviewed_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("go_live_acceptance_idempotency_uq").on(table.idempotencyKey),
+  check(
+    "go_live_acceptance_owner_name",
+    sql`length(trim(${table.ownerName})) >= 2`,
+  ),
+  check(
+    "go_live_acceptance_checks_object",
+    sql`jsonb_typeof(${table.checks}) = 'object'`,
+  ),
+  check(
+    "go_live_acceptance_approval_requirements",
+    sql`${table.decision} <> 'approved' or (
+      length(trim(${table.evidenceReference})) >= 5
+      and ${table.evidenceDate} is not null
+      and ${table.checks} @> '{"scopeConfirmed":true,"testCompleted":true,"evidenceAttached":true,"ownerApproved":true}'::jsonb
+    )`,
+  ),
+  check(
+    "go_live_acceptance_rejection_notes",
+    sql`${table.decision} <> 'rejected' or length(trim(coalesce(${table.notes}, ''))) >= 10`,
+  ),
 ]);

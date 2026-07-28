@@ -9,7 +9,7 @@ Nodig:
 - beheerde PostgreSQL-server en database;
 - `DATABASE_URL`, SSL-beleid en netwerktoegang;
 - bewaartermijn, back-upfrequentie en hersteltijddoel;
-- goedkeuring voor het uitvoeren van migraties `0001` tot en met `0014`;
+- goedkeuring voor het uitvoeren van migraties `0001` tot en met `0015`;
 - goedgekeurde afhandeling van de drie harde Excel-fouten en negen mogelijke dubbele groepen;
 - fysieke begintelling per hangmap vóór live-import.
 
@@ -113,5 +113,7 @@ Acceptatiebewijs:
 - doorlooptijd en fouten worden voor en na invoering gemeten.
 
 ## Vrijgave
+
+Management registreert ieder echt besluit onder `Beheer & analyse` → `Vrijgave`. Een goedkeuring vereist vier expliciete controles, een herleidbare bewijsreferentie en bewijsdatum. Zolang één van de vijf poorten open of afgewezen is, blijft productievrijgave geblokkeerd. Zie `GO_LIVE_ACCEPTANCE_DOSSIER.md`.
 
 KeyFlow bereikt pas 100% nadat bovenstaande vijf onderdelen door de aangewezen eigenaar zijn afgetekend, de productieomgeving de volledige regressieset doorstaat en de vrijgaveversie via GitHub naar de gekozen private host is uitgerold.

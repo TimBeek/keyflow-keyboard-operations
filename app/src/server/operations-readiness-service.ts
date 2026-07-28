@@ -31,7 +31,7 @@ export async function operationsReadiness(
     sql<{ name: string }[]>`
       select name
       from schema_migrations
-      where name = '0014_recovery_drills.sql'
+      order by name desc
       limit 1
     `.then((rows) => rows[0] ?? null),
     sql<{
@@ -105,7 +105,7 @@ export async function operationsReadiness(
     mappedRecovery
       && Object.values(mappedRecovery.checks).every(Boolean),
   );
-  const migrationReady = migration?.name === "0014_recovery_drills.sql";
+  const migrationReady = migration?.name === "0015_go_live_acceptance.sql";
   const snapshotReady = Boolean(
     snapshot
       && snapshot.status === "applied"
@@ -129,8 +129,8 @@ export async function operationsReadiness(
       label: "Continuïteitsmigratie",
       ready: migrationReady,
       detail: migrationReady
-        ? "Migratie 0014 is toegepast."
-        : "Migratie 0014 ontbreekt.",
+        ? "Migratie 0015 is toegepast."
+        : "Migratie 0015 ontbreekt.",
     },
     {
       id: "source_snapshot",

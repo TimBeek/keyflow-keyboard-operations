@@ -16,7 +16,7 @@ describe.skipIf(!databaseConfigured)("centrale operationele readiness", () => {
     expect(report).toMatchObject({
       ready: true,
       databaseReady: true,
-      latestMigration: "0014_recovery_drills.sql",
+      latestMigration: "0015_go_live_acceptance.sql",
       snapshot: {
         status: "applied",
         rowCount: 148,

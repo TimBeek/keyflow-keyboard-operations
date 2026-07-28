@@ -40,7 +40,7 @@ npm run db:verify
 
 `db:operations:check` is alleen-lezen en blokkeert wanneer:
 
-- migratie `0014` niet de nieuwste migratie is;
+- migratie `0015` niet de nieuwste migratie is;
 - de checksum-gebonden inventarissnapshot ontbreekt of afwijkt;
 - voorraadbalansen en transactielog niet sluiten;
 - de nieuwste herstelproef ontbreekt, is mislukt, controles mist of te oud is.

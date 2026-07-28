@@ -33,8 +33,8 @@ async function main() {
       limit 1
     `;
     check(
-      migration?.name === "0014_recovery_drills.sql",
-      "De nieuwste operationele migratie 0014 is niet toegepast.",
+      migration?.name === "0015_go_live_acceptance.sql",
+      "De nieuwste operationele migratie 0015 is niet toegepast.",
     );
 
     const [snapshot] = await sql<{
