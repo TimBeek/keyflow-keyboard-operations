@@ -9,7 +9,7 @@ Nodig:
 - beheerde PostgreSQL-server en database;
 - `DATABASE_URL`, SSL-beleid en netwerktoegang;
 - bewaartermijn, back-upfrequentie en hersteltijddoel;
-- goedkeuring voor het uitvoeren van migraties `0001` tot en met `0015`;
+- goedkeuring voor het uitvoeren van migraties `0001` tot en met `0016`;
 - goedgekeurde afhandeling van de drie harde Excel-fouten en negen mogelijke dubbele groepen;
 - fysieke begintelling per hangmap vóór live-import.
 
@@ -111,6 +111,12 @@ Acceptatiebewijs:
 - Nordic, NL/US en E1/E2-gids zijn leesbaar op het gebruikte scherm;
 - afboeken gebeurt pas na de verplichte controle;
 - doorlooptijd en fouten worden voor en na invoering gemeten.
+
+Uitvoering:
+
+- plan en registreer de proef onder `Beheer & analyse` → `Werkvloerproef`;
+- een geslaagd resultaat vereist minimaal vijf orders, alle vier methoden, een foutscenario, doorlooptijd, zes bevestigde controles en een bewijsreferentie;
+- neem het proefbewijs daarna afzonderlijk over in `Vrijgave` → `Werkvloeracceptatie`; de proef verleent zelf geen go-livegoedkeuring.
 
 ## Vrijgave
 

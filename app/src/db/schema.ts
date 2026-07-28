@@ -37,6 +37,11 @@ export const goLiveAcceptanceDecision = pgEnum("go_live_acceptance_decision", [
   "approved",
   "rejected",
 ]);
+export const workfloorTrialResult = pgEnum("workfloor_trial_result", [
+  "open",
+  "passed",
+  "failed",
+]);
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -479,5 +484,73 @@ export const goLiveAcceptanceRecords = pgTable("go_live_acceptance_records", {
   check(
     "go_live_acceptance_rejection_notes",
     sql`${table.decision} <> 'rejected' or length(trim(coalesce(${table.notes}, ''))) >= 10`,
+  ),
+]);
+
+export const workfloorAcceptanceTrials = pgTable("workfloor_acceptance_trials", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  idempotencyKey: text("idempotency_key").notNull(),
+  trialReference: text("trial_reference").notNull(),
+  location: text("location").notNull(),
+  deviceType: text("device_type").notNull(),
+  deviceName: text("device_name").notNull(),
+  scannerName: text("scanner_name").notNull(),
+  participants: integer("participants").notNull(),
+  ordersTested: integer("orders_tested").notNull(),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  averageHandlingSeconds: integer("average_handling_seconds"),
+  methods: jsonb("methods").notNull(),
+  errorScenarioTested: boolean("error_scenario_tested").notNull(),
+  checks: jsonb("checks").notNull(),
+  result: workfloorTrialResult("result").notNull(),
+  evidenceReference: text("evidence_reference").notNull().default(""),
+  notes: text("notes"),
+  recordedBy: uuid("recorded_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("workfloor_trials_idempotency_uq").on(table.idempotencyKey),
+  check(
+    "workfloor_trials_device_type",
+    sql`${table.deviceType} in ('desktop', 'tablet')`,
+  ),
+  check(
+    "workfloor_trials_participants",
+    sql`${table.participants} between 1 and 50`,
+  ),
+  check(
+    "workfloor_trials_orders",
+    sql`${table.ordersTested} between 0 and 500`,
+  ),
+  check(
+    "workfloor_trials_average",
+    sql`${table.averageHandlingSeconds} is null or ${table.averageHandlingSeconds} between 1 and 7200`,
+  ),
+  check(
+    "workfloor_trials_timeline",
+    sql`${table.completedAt} is null or ${table.completedAt} > ${table.startedAt}`,
+  ),
+  check(
+    "workfloor_trials_json_objects",
+    sql`jsonb_typeof(${table.methods}) = 'object' and jsonb_typeof(${table.checks}) = 'object'`,
+  ),
+  check(
+    "workfloor_trials_passed_requirements",
+    sql`${table.result} <> 'passed' or (
+      ${table.completedAt} is not null
+      and ${table.averageHandlingSeconds} is not null
+      and ${table.ordersTested} >= 5
+      and ${table.errorScenarioTested}
+      and length(trim(${table.evidenceReference})) >= 5
+      and ${table.methods} @> '{"loose_stickers":true,"noviply_sheet":true,"printed_sticker":true,"direct_reprint":true}'::jsonb
+      and ${table.checks} @> '{"orderScanWithoutMouse":true,"modelResolution":true,"hangingFileMatched":true,"keyboardGuideReadable":true,"deductionAfterVerification":true,"mismatchStopsDeduction":true}'::jsonb
+    )`,
+  ),
+  check(
+    "workfloor_trials_failed_requirements",
+    sql`${table.result} <> 'failed' or (
+      ${table.completedAt} is not null
+      and length(trim(coalesce(${table.notes}, ''))) >= 10
+    )`,
   ),
 ]);

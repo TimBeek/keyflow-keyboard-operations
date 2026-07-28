@@ -45,6 +45,8 @@ Na het kiezen van een poort toont KeyFlow vier concrete controlepunten voor prec
 
 Onder `Open acties` staan automatisch alle poorten waarvan het nieuwste besluit nog niet is goedgekeurd. Een afwijzing toont tevens de geregistreerde oorzaak en vervolgactie.
 
+Voor de poort `Werkvloeracceptatie` registreert management de feitelijke uitvoering eerst onder `Beheer & analyse` → `Werkvloerproef`. Een proef kan alleen slagen met minimaal vijf orders, alle vier methoden, een foutscenario, doorlooptijd en zes afzonderlijke controles. De verantwoordelijke eigenaar neemt de bewijsreferentie daarna bewust over in dit vrijgavedossier; de proef keurt de poort nooit automatisch goed. Zie `WORKFLOOR_ACCEPTANCE_TRIALS.md`.
+
 ## Export en PDF
 
 Management kan op ieder moment:

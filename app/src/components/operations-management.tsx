@@ -39,6 +39,10 @@ import {
   GoLiveAcceptanceCenter,
   type AcceptanceSyncState,
 } from "@/components/go-live-acceptance-center";
+import {
+  WorkfloorAcceptanceCenter,
+  type WorkfloorSyncState,
+} from "@/components/workfloor-acceptance-center";
 import type {
   RecoveryDrillInput,
   RecoveryDrillRecord,
@@ -47,6 +51,10 @@ import type {
   GoLiveAcceptanceInput,
   GoLiveAcceptanceRecord,
 } from "@/domain/go-live-acceptance";
+import type {
+  WorkfloorTrialInput,
+  WorkfloorTrialRecord,
+} from "@/domain/workfloor-acceptance";
 
 type Props = {
   quantities: Record<string, number>;
@@ -58,11 +66,14 @@ type Props = {
   compatibilityEvidenceRecords: CompatibilityEvidenceRecord[];
   recoveryDrills: RecoveryDrillRecord[];
   goLiveAcceptanceRecords: GoLiveAcceptanceRecord[];
+  workfloorTrials: WorkfloorTrialRecord[];
   actorName: string;
   continuitySync: ContinuitySyncState;
   acceptanceSync: AcceptanceSyncState;
+  workfloorSync: WorkfloorSyncState;
   onRefreshContinuity: () => void;
   onRefreshAcceptance: () => void;
+  onRefreshWorkfloor: () => void;
   onRecordStockCount: (input: StockCountInput) => StockCountRecord;
   onReviewModelGroup: (
     proposal: ModelGroupProposal,
@@ -75,6 +86,9 @@ type Props = {
   onRecordGoLiveAcceptance: (
     input: GoLiveAcceptanceInput,
   ) => Promise<GoLiveAcceptanceRecord>;
+  onRecordWorkfloorTrial: (
+    input: WorkfloorTrialInput,
+  ) => Promise<WorkfloorTrialRecord>;
   onPolicyChange: (policy: OperationsPolicy) => void;
   persistence: {
     ready: boolean;
@@ -95,6 +109,7 @@ type Tab =
   | "evidence"
   | "continuity"
   | "release"
+  | "workfloor"
   | "policy";
 
 type ModelGroupFilter = "pending" | "approved" | "rejected" | "all";
@@ -123,16 +138,20 @@ export function OperationsManagement({
   compatibilityEvidenceRecords,
   recoveryDrills,
   goLiveAcceptanceRecords,
+  workfloorTrials,
   actorName,
   continuitySync,
   acceptanceSync,
+  workfloorSync,
   onRefreshContinuity,
   onRefreshAcceptance,
+  onRefreshWorkfloor,
   onRecordStockCount,
   onReviewModelGroup,
   onRecordCompatibilityEvidence,
   onRecordRecoveryDrill,
   onRecordGoLiveAcceptance,
+  onRecordWorkfloorTrial,
   onPolicyChange,
   persistence,
   onExportBackup,
@@ -456,6 +475,12 @@ export function OperationsManagement({
             Vrijgave
             {goLiveAcceptanceRecords.length > 0 && (
               <span className="tab-count">{goLiveAcceptanceRecords.length}</span>
+            )}
+          </button>
+          <button className={tab === "workfloor" ? "active" : ""} onClick={() => setTab("workfloor")}>
+            Werkvloerproef
+            {workfloorTrials.length > 0 && (
+              <span className="tab-count">{workfloorTrials.length}</span>
             )}
           </button>
           <button className={tab === "policy" ? "active" : ""} onClick={() => setTab("policy")}>Configuratie</button>
@@ -1204,6 +1229,16 @@ export function OperationsManagement({
             sync={acceptanceSync}
             onRefresh={onRefreshAcceptance}
             onRecord={onRecordGoLiveAcceptance}
+          />
+        )}
+
+        {tab === "workfloor" && (
+          <WorkfloorAcceptanceCenter
+            records={workfloorTrials}
+            actorName={actorName}
+            sync={workfloorSync}
+            onRefresh={onRefreshWorkfloor}
+            onRecord={onRecordWorkfloorTrial}
           />
         )}
 

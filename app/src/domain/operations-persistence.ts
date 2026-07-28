@@ -9,6 +9,10 @@ import type { ModelGroupDecision } from "@/domain/model-grouping";
 import type { StickerVerificationReport } from "@/domain/sticker-verification";
 import type { RecoveryDrillRecord } from "@/domain/production-readiness";
 import type { GoLiveAcceptanceRecord } from "@/domain/go-live-acceptance";
+import {
+  workfloorTrialInputSchema,
+  type WorkfloorTrialRecord,
+} from "@/domain/workfloor-acceptance";
 
 export const OPERATIONS_STORAGE_KEY = "keyflow.operations-state.v1";
 
@@ -168,6 +172,12 @@ const goLiveAcceptanceRecordSchema = z.object({
   reviewedBy: z.string().min(1),
 });
 
+const workfloorTrialRecordSchema = workfloorTrialInputSchema.extend({
+  id: z.string().min(1),
+  recordedAt: z.string().datetime(),
+  recordedBy: z.string().min(1),
+});
+
 const persistedOperationsStateSchema = z.object({
   format: z.literal("keyflow-operations"),
   version: z.literal(1),
@@ -181,6 +191,7 @@ const persistedOperationsStateSchema = z.object({
   compatibilityEvidenceRecords: z.array(compatibilityEvidenceRecordSchema).max(2500).default([]),
   recoveryDrills: z.array(recoveryDrillRecordSchema).max(250).default([]),
   goLiveAcceptanceRecords: z.array(goLiveAcceptanceRecordSchema).max(500).default([]),
+  workfloorTrials: z.array(workfloorTrialRecordSchema).max(500).default([]),
 });
 
 export type PersistedOperationsState = {
@@ -196,14 +207,21 @@ export type PersistedOperationsState = {
   compatibilityEvidenceRecords: CompatibilityEvidenceRecord[];
   recoveryDrills: RecoveryDrillRecord[];
   goLiveAcceptanceRecords: GoLiveAcceptanceRecord[];
+  workfloorTrials: WorkfloorTrialRecord[];
 };
 
 export type OperationsStateInput = Omit<
   PersistedOperationsState,
-  "format" | "version" | "savedAt" | "recoveryDrills" | "goLiveAcceptanceRecords"
+  | "format"
+  | "version"
+  | "savedAt"
+  | "recoveryDrills"
+  | "goLiveAcceptanceRecords"
+  | "workfloorTrials"
 > & {
   recoveryDrills?: RecoveryDrillRecord[];
   goLiveAcceptanceRecords?: GoLiveAcceptanceRecord[];
+  workfloorTrials?: WorkfloorTrialRecord[];
 };
 
 type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem">;

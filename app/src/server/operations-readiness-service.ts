@@ -105,7 +105,8 @@ export async function operationsReadiness(
     mappedRecovery
       && Object.values(mappedRecovery.checks).every(Boolean),
   );
-  const migrationReady = migration?.name === "0015_go_live_acceptance.sql";
+  const migrationReady =
+    migration?.name === "0016_workfloor_acceptance_trials.sql";
   const snapshotReady = Boolean(
     snapshot
       && snapshot.status === "applied"
@@ -129,8 +130,8 @@ export async function operationsReadiness(
       label: "Continuïteitsmigratie",
       ready: migrationReady,
       detail: migrationReady
-        ? "Migratie 0015 is toegepast."
-        : "Migratie 0015 ontbreekt.",
+        ? "Migratie 0016 is toegepast."
+        : "Migratie 0016 ontbreekt.",
     },
     {
       id: "source_snapshot",
