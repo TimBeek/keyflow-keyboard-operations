@@ -112,6 +112,7 @@ De database-API's zijn daarna beschikbaar via:
 - `POST /api/compatibility/evidence` voor goedgekeurde of afgewezen model/SKU-pastesten;
 - `GET` en `POST /api/operations/recovery-drills` voor managementrapportage en herstelproefbewijs;
 - `GET /api/operations/readiness` voor een geautoriseerde runtimecontrole van migratie, bron, voorraadsluiting en herstelbewijs;
+- `GET` en `POST /api/operations/workfloor-trials` voor open, geslaagde of mislukte werkvloerproeven met harde bewijsregels;
 - `GET` en `POST /api/operations/go-live-acceptance` voor het persoonlijke, centrale `5/5`-vrijgavedossier met serverberekende status;
 - `POST /api/imports/inventory` voor een gecontroleerde `.xlsx`-upload;
 - `GET /api/imports/inventory/{batchId}` voor alle herleidbare bevindingen van een import;
@@ -158,6 +159,7 @@ De generator weigert een bron die niet exact 148 unieke hangmappen en 3.218 vell
 - `docs/KEYBOARD_LAYOUT_REFERENCE.md` — Scandinavische herkenning, E1/E2-pasvormcontrole en referentiebeheer;
 - `docs/GO_LIVE_INPUTS.md` — exacte toegangen, gegevens en acceptatiebewijzen die nog nodig zijn voor 100%;
 - `docs/GO_LIVE_ACCEPTANCE_DOSSIER.md` — vijf formele vrijgavepoorten, bewijsregels en centrale audit;
+- `docs/WORKFLOOR_ACCEPTANCE_TRIALS.md` — echte scanner-/apparaatproeven, harde slagingsregels en scheiding van go-livegoedkeuring;
 - `docs/PRODUCTION_COMPLETION_AUDIT.md` — requirementmatrix met bewijs, ontbrekende aansluitingen en actuele status;
 - `docs/AI_MODEL_GROUP_DATA_REQUIREMENTS.md` — vereiste bron- en validatiedata voor veilige AI-modelgroepvoorstellen;
 - `docs/MODEL_GROUP_REVIEW.md` — werkende managementwachtrij, bewijsvelden en goedkeuringsregels;

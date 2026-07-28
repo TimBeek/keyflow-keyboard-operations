@@ -109,6 +109,39 @@ describe("operationele pilotopslag", () => {
         recordedAt: "2026-07-28T13:00:00.000Z",
         reviewedBy: "Tim Beek",
       }],
+      workfloorTrials: [{
+        id: "workfloor-75",
+        trialReference: "WF-PILOT-2026-01",
+        location: "Productievloer A",
+        deviceType: "desktop",
+        deviceName: "Werkstation KBD-01",
+        scannerName: "Zebra DS2208",
+        participants: 2,
+        ordersTested: 0,
+        startedAt: "2026-07-28T14:00:00.000Z",
+        completedAt: null,
+        averageHandlingSeconds: null,
+        methods: {
+          loose_stickers: false,
+          noviply_sheet: false,
+          printed_sticker: false,
+          direct_reprint: false,
+        },
+        errorScenarioTested: false,
+        checks: {
+          orderScanWithoutMouse: false,
+          modelResolution: false,
+          hangingFileMatched: false,
+          keyboardGuideReadable: false,
+          deductionAfterVerification: false,
+          mismatchStopsDeduction: false,
+        },
+        result: "open",
+        evidenceReference: "",
+        notes: "Proef ingepland.",
+        recordedAt: "2026-07-28T13:00:00.000Z",
+        recordedBy: "Tim Beek",
+      }],
     }, "2026-07-27T18:00:00.000Z");
 
     const restored = parseOperationsSnapshot(serializeOperationsSnapshot(snapshot));
@@ -140,6 +173,10 @@ describe("operationele pilotopslag", () => {
         gate: "database_recovery",
         decision: "approved",
       });
+      expect(restored.state.workfloorTrials[0]).toMatchObject({
+        trialReference: "WF-PILOT-2026-01",
+        result: "open",
+      });
     }
   });
 
@@ -167,6 +204,7 @@ describe("operationele pilotopslag", () => {
       expect(restored.state.compatibilityEvidenceRecords).toEqual([]);
       expect(restored.state.recoveryDrills).toEqual([]);
       expect(restored.state.goLiveAcceptanceRecords).toEqual([]);
+      expect(restored.state.workfloorTrials).toEqual([]);
     }
   });
 

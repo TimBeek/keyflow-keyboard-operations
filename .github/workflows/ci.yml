@@ -95,7 +95,7 @@ jobs:
         run: npm run db:recovery:smoke
 
       - name: Exercise central runtime and acceptance paths
-        run: npm run test -- --run src/server/operations-readiness-service.integration.test.ts src/server/go-live-acceptance-service.integration.test.ts
+        run: npm run test -- --run src/server/operations-readiness-service.integration.test.ts src/server/go-live-acceptance-service.integration.test.ts src/server/workfloor-acceptance-service.integration.test.ts
 
       - name: Check operational readiness
         run: npm run db:operations:check

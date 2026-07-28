@@ -11,6 +11,7 @@ import { InventoryMutationDialog, type InventoryItem } from "@/components/invent
 import { OperationsManagement } from "@/components/operations-management";
 import type { AcceptanceSyncState } from "@/components/go-live-acceptance-center";
 import type { ContinuitySyncState } from "@/components/production-readiness-center";
+import type { WorkfloorSyncState } from "@/components/workfloor-acceptance-center";
 import {
   ConversionsWorkspace,
   ModelsWorkspace,
@@ -79,6 +80,11 @@ import {
   type GoLiveAcceptanceRecord,
   type GoLiveAcceptanceSummary,
 } from "@/domain/go-live-acceptance";
+import {
+  createWorkfloorTrialRecord,
+  type WorkfloorTrialInput,
+  type WorkfloorTrialRecord,
+} from "@/domain/workfloor-acceptance";
 
 type IconName =
   | "home"
@@ -190,6 +196,7 @@ export function Dashboard({
   const [compatibilityEvidenceRecords, setCompatibilityEvidenceRecords] = useState<CompatibilityEvidenceRecord[]>([]);
   const [recoveryDrills, setRecoveryDrills] = useState<RecoveryDrillRecord[]>([]);
   const [goLiveAcceptanceRecords, setGoLiveAcceptanceRecords] = useState<GoLiveAcceptanceRecord[]>([]);
+  const [workfloorTrials, setWorkfloorTrials] = useState<WorkfloorTrialRecord[]>([]);
   const [continuitySync, setContinuitySync] = useState<ContinuitySyncState>({
     mode: identity.mode === "entra" ? "central" : "local",
     status: identity.mode === "entra" ? "loading" : "local",
@@ -207,6 +214,14 @@ export function Dashboard({
       : "Acceptatiebesluiten worden opgenomen in de lokale pilotback-up.",
   });
   const [acceptanceRefreshToken, setAcceptanceRefreshToken] = useState(0);
+  const [workfloorSync, setWorkfloorSync] = useState<WorkfloorSyncState>({
+    mode: identity.mode === "entra" ? "central" : "local",
+    status: identity.mode === "entra" ? "loading" : "local",
+    message: identity.mode === "entra"
+      ? "Persoonlijke sessie wordt met de centrale werkvloerproeven verbonden."
+      : "Werkvloerproeven worden opgenomen in de lokale pilotback-up.",
+  });
+  const [workfloorRefreshToken, setWorkfloorRefreshToken] = useState(0);
   const [persistenceReady, setPersistenceReady] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [persistenceMessage, setPersistenceMessage] = useState("Lokale pilotopslag laden…");
@@ -266,6 +281,7 @@ export function Dashboard({
         if (identity.mode === "pilot") {
           setRecoveryDrills(restored.state.recoveryDrills);
           setGoLiveAcceptanceRecords(restored.state.goLiveAcceptanceRecords);
+          setWorkfloorTrials(restored.state.workfloorTrials);
         }
         setStockItems((items) => items.map((item) => ({
           ...item,
@@ -361,6 +377,48 @@ export function Dashboard({
   }, [acceptanceRefreshToken, identity.mode, identity.role]);
 
   useEffect(() => {
+    if (identity.mode !== "entra" || identity.role !== "management") return;
+    const controller = new AbortController();
+    setWorkfloorSync({
+      mode: "central",
+      status: "loading",
+      message: "De centrale werkvloerproeven worden geladen.",
+    });
+    fetch("/api/operations/workfloor-trials", { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(await responseErrorMessage(response));
+        return response.json() as Promise<{
+          records: WorkfloorTrialRecord[];
+          summary: {
+            total: number;
+            passed: number;
+            failed: number;
+            open: number;
+          };
+        }>;
+      })
+      .then(({ records, summary }) => {
+        setWorkfloorTrials(records);
+        setWorkfloorSync({
+          mode: "central",
+          status: "ready",
+          message: `${summary.total} proef/proeven centraal · ${summary.passed} geslaagd · ${summary.open} open.`,
+        });
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        setWorkfloorSync({
+          mode: "central",
+          status: "error",
+          message: error instanceof Error
+            ? error.message
+            : "De centrale werkvloerproeven konden niet worden geladen.",
+        });
+      });
+    return () => controller.abort();
+  }, [identity.mode, identity.role, workfloorRefreshToken]);
+
+  useEffect(() => {
     if (!persistenceReady) return;
     let savedAt: string | null = null;
     let message = "Lokale opslag is niet gelukt. Download een back-up via Beheer & analyse.";
@@ -376,6 +434,10 @@ export function Dashboard({
         existingLocalState?.success && existingLocalState.state
           ? existingLocalState.state.goLiveAcceptanceRecords
           : [];
+      const locallyStoredWorkfloorTrials =
+        existingLocalState?.success && existingLocalState.state
+          ? existingLocalState.state.workfloorTrials
+          : [];
       const snapshot = createOperationsSnapshot({
         catalogQuantities,
         transactions,
@@ -390,6 +452,9 @@ export function Dashboard({
         goLiveAcceptanceRecords: identity.mode === "pilot"
           ? goLiveAcceptanceRecords
           : locallyStoredGoLiveAcceptanceRecords,
+        workfloorTrials: identity.mode === "pilot"
+          ? workfloorTrials
+          : locallyStoredWorkfloorTrials,
       });
       writeOperationsState(window.localStorage, snapshot);
       savedAt = snapshot.savedAt;
@@ -413,6 +478,7 @@ export function Dashboard({
     verificationReports,
     recoveryDrills,
     goLiveAcceptanceRecords,
+    workfloorTrials,
     identity.mode,
   ]);
 
@@ -740,6 +806,64 @@ export function Dashboard({
     }
   }
 
+  async function recordWorkfloorTrial(input: WorkfloorTrialInput) {
+    if (identity.mode === "pilot") {
+      const record = createWorkfloorTrialRecord(input, {
+        id: crypto.randomUUID(),
+        recordedAt: new Date().toISOString(),
+        recordedBy: actorName,
+      });
+      setWorkfloorTrials((current) => [...current, record]);
+      setLastAction(
+        `Werkvloerproef ${record.trialReference} als ${record.result} lokaal vastgelegd.`,
+      );
+      return record;
+    }
+
+    setWorkfloorSync((current) => ({
+      ...current,
+      status: "saving",
+      message: "Werkvloerproef wordt met de persoonlijke sessie centraal opgeslagen.",
+    }));
+    try {
+      const response = await fetch("/api/operations/workfloor-trials", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          ...input,
+          idempotencyKey: `workfloor-trial:${crypto.randomUUID()}`,
+        }),
+      });
+      if (!response.ok) throw new Error(await responseErrorMessage(response));
+      const result = await response.json() as {
+        record: WorkfloorTrialRecord;
+        duplicate: boolean;
+      };
+      setWorkfloorTrials((current) => [
+        result.record,
+        ...current.filter(({ id }) => id !== result.record.id),
+      ]);
+      setWorkfloorSync({
+        mode: "central",
+        status: "ready",
+        message: "Werkvloerproef is centraal en persoonlijk auditbaar opgeslagen.",
+      });
+      setLastAction(
+        `Werkvloerproef ${result.record.trialReference} centraal vastgelegd door ${actorName}.`,
+      );
+      return result.record;
+    } catch (error) {
+      setWorkfloorSync((current) => ({
+        ...current,
+        status: "error",
+        message: error instanceof Error
+          ? error.message
+          : "Centrale registratie van de werkvloerproef is mislukt.",
+      }));
+      throw error;
+    }
+  }
+
   function switchRole(nextRole: UserRole) {
     if (!demoAccess) return;
     setRole(nextRole);
@@ -760,6 +884,10 @@ export function Dashboard({
       existingLocalState?.success && existingLocalState.state
         ? existingLocalState.state.goLiveAcceptanceRecords
         : [];
+    const locallyStoredWorkfloorTrials =
+      existingLocalState?.success && existingLocalState.state
+        ? existingLocalState.state.workfloorTrials
+        : [];
     const snapshot = createOperationsSnapshot({
       catalogQuantities,
       transactions,
@@ -774,6 +902,9 @@ export function Dashboard({
       goLiveAcceptanceRecords: identity.mode === "pilot"
         ? goLiveAcceptanceRecords
         : locallyStoredGoLiveAcceptanceRecords,
+      workfloorTrials: identity.mode === "pilot"
+        ? workfloorTrials
+        : locallyStoredWorkfloorTrials,
     });
     const blob = new Blob([serializeOperationsSnapshot(snapshot)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -802,6 +933,7 @@ export function Dashboard({
     if (identity.mode === "pilot") {
       setRecoveryDrills(restored.state.recoveryDrills);
       setGoLiveAcceptanceRecords(restored.state.goLiveAcceptanceRecords);
+      setWorkfloorTrials(restored.state.workfloorTrials);
     }
     setStockItems((items) => items.map((item) => ({
       ...item,
@@ -824,6 +956,7 @@ export function Dashboard({
     if (identity.mode === "pilot") {
       setRecoveryDrills([]);
       setGoLiveAcceptanceRecords([]);
+      setWorkfloorTrials([]);
     }
     setStockItems(initialLowStock);
     setLastSavedAt(null);
@@ -1050,16 +1183,20 @@ export function Dashboard({
             compatibilityEvidenceRecords={compatibilityEvidenceRecords}
             recoveryDrills={recoveryDrills}
             goLiveAcceptanceRecords={goLiveAcceptanceRecords}
+            workfloorTrials={workfloorTrials}
             actorName={actorName}
             continuitySync={continuitySync}
             acceptanceSync={acceptanceSync}
+            workfloorSync={workfloorSync}
             onRefreshContinuity={() => setContinuityRefreshToken((current) => current + 1)}
             onRefreshAcceptance={() => setAcceptanceRefreshToken((current) => current + 1)}
+            onRefreshWorkfloor={() => setWorkfloorRefreshToken((current) => current + 1)}
             onRecordStockCount={recordStockCount}
             onReviewModelGroup={reviewModelGroup}
             onRecordCompatibilityEvidence={recordCompatibilityEvidence}
             onRecordRecoveryDrill={recordRecoveryDrill}
             onRecordGoLiveAcceptance={recordGoLiveAcceptance}
+            onRecordWorkfloorTrial={recordWorkfloorTrial}
             onPolicyChange={(nextPolicy) => {
               setOperationsPolicy(nextPolicy);
               setLastAction(`Conversiebeleid bijgewerkt · grens €${nextPolicy.thresholdEur}`);
