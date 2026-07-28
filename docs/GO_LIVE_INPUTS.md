@@ -9,7 +9,7 @@ Nodig:
 - beheerde PostgreSQL-server en database;
 - `DATABASE_URL`, SSL-beleid en netwerktoegang;
 - bewaartermijn, back-upfrequentie en hersteltijddoel;
-- goedkeuring voor het uitvoeren van migraties `0001` tot en met `0013`;
+- goedkeuring voor het uitvoeren van migraties `0001` tot en met `0014`;
 - goedgekeurde afhandeling van de drie harde Excel-fouten en negen mogelijke dubbele groepen;
 - fysieke begintelling per hangmap vóór live-import.
 
@@ -23,6 +23,8 @@ Al aantoonbaar voorbereid:
 - fysieke tellingen zijn per hangmap ontworpen, inclusief verplichte verschilreden, idempotente correctie en auditregel voor een kloppende telling;
 - een alleen-lezen databasepreflight, transactionele eenmalige bootstrap en volledige verificatie achteraf zijn beschikbaar;
 - alle 148 regels worden als bronbewijs bewaard, terwijl alleen 139 regels en 3.017 vellen operationele voorraad worden;
+- management kan herstelproeven met RPO/RTO en vijf integriteitscontroles registreren;
+- de centrale API, audittrail en alleen-lezen readinesscheck blokkeren een ontbrekende, mislukte, onvolledige of verlopen herstelproef;
 
 Acceptatiebewijs:
 
@@ -31,7 +33,7 @@ Acceptatiebewijs:
 - openingsvoorraad sluit aan op de ondertekende telling;
 - de geregistreerde begintellingen zijn per hangmap terug te vinden en ieder verschil verwijst naar exact één correctietransactie;
 - twee gelijktijdige apparaten zien dezelfde boeking;
-- hersteltest van een back-up is vastgelegd.
+- een echte providerback-up is buiten productie hersteld en in KeyFlow als geslaagde herstelproef vastgelegd.
 
 ## 2. Persoonlijke login en rollen
 

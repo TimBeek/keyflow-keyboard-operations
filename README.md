@@ -53,6 +53,8 @@ De eerste applicatiebasis bevat:
 - een tenantgebonden Microsoft Entra ID-loginbasis met persoonlijke app-rollen, databasesynchronisatie en afgeschermde productie-API's;
 - een checksum-gebonden productiepreflight, transactionele beginimport en verificatie voor alle 148 Excelbronregels;
 - productie-health- en readinesscontroles die ontbrekende configuratie melden zonder secrets te lekken;
+- een management-continuïteitsdashboard met RPO/RTO, vijf herstelcontroles en expliciete externe go-livepoorten;
+- geautoriseerde, idempotente PostgreSQL-opslag van herstelproeven plus een alleen-lezen operationele readinesscheck;
 - versiegebonden en gevalideerde lokale pilotopslag die boekingen en beleid na een herstart van de browser herstelt;
 - JSON-back-up, gecontroleerd herstel en een tweestapsreset voor management;
 - een productiebuild zonder lint- of TypeScriptfouten;
@@ -96,6 +98,8 @@ npm run build
 npm run db:migrate
 npm run db:preflight
 npm run db:bootstrap:apply
+npm run db:recovery:smoke
+npm run db:operations:check
 npm run db:verify
 ```
 
@@ -105,6 +109,7 @@ De database-API's zijn daarna beschikbaar via:
 - `POST /api/inventory/counts` voor een idempotente fysieke hangmaptelling en eventuele correctie;
 - `POST /api/model-groups/reviews` voor een geautoriseerde, idempotente managementbeoordeling met verplicht fysiek bewijs;
 - `POST /api/compatibility/evidence` voor goedgekeurde of afgewezen model/SKU-pastesten;
+- `GET` en `POST /api/operations/recovery-drills` voor managementrapportage en herstelproefbewijs;
 - `POST /api/imports/inventory` voor een gecontroleerde `.xlsx`-upload;
 - `GET /api/imports/inventory/{batchId}` voor alle herleidbare bevindingen van een import;
 - `PATCH /api/imports/inventory/{batchId}/issues/{issueId}` voor auditbare afhandeling;

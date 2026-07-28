@@ -7,6 +7,7 @@ import type {
 import type { StockCountRecord } from "@/domain/cycle-count";
 import type { ModelGroupDecision } from "@/domain/model-grouping";
 import type { StickerVerificationReport } from "@/domain/sticker-verification";
+import type { RecoveryDrillRecord } from "@/domain/production-readiness";
 
 export const OPERATIONS_STORAGE_KEY = "keyflow.operations-state.v1";
 
@@ -121,6 +122,27 @@ const compatibilityEvidenceRecordSchema = z.object({
   notes: z.string(),
 });
 
+const recoveryDrillRecordSchema = z.object({
+  id: z.string().min(1),
+  backupReference: z.string().min(3).max(200),
+  targetEnvironment: z.enum(["staging", "recovery"]),
+  startedAt: z.string().datetime(),
+  completedAt: z.string().datetime(),
+  rpoMinutes: z.number().int().nonnegative().max(43_200),
+  rtoMinutes: z.number().int().nonnegative().max(10_080),
+  checks: z.object({
+    migrations: z.boolean(),
+    sourceSnapshot: z.boolean(),
+    inventoryBalances: z.boolean(),
+    transactionLedger: z.boolean(),
+    accessControl: z.boolean(),
+  }),
+  result: z.enum(["passed", "failed"]),
+  notes: z.string().max(1000),
+  recordedAt: z.string().datetime(),
+  recordedBy: z.string().min(1),
+});
+
 const persistedOperationsStateSchema = z.object({
   format: z.literal("keyflow-operations"),
   version: z.literal(1),
@@ -132,6 +154,7 @@ const persistedOperationsStateSchema = z.object({
   stockCounts: z.array(stockCountRecordSchema).max(2500).default([]),
   modelGroupDecisions: z.array(modelGroupDecisionSchema).max(2500).default([]),
   compatibilityEvidenceRecords: z.array(compatibilityEvidenceRecordSchema).max(2500).default([]),
+  recoveryDrills: z.array(recoveryDrillRecordSchema).max(250).default([]),
 });
 
 export type PersistedOperationsState = {
@@ -145,12 +168,15 @@ export type PersistedOperationsState = {
   stockCounts: StockCountRecord[];
   modelGroupDecisions: ModelGroupDecision[];
   compatibilityEvidenceRecords: CompatibilityEvidenceRecord[];
+  recoveryDrills: RecoveryDrillRecord[];
 };
 
 export type OperationsStateInput = Omit<
   PersistedOperationsState,
-  "format" | "version" | "savedAt"
->;
+  "format" | "version" | "savedAt" | "recoveryDrills"
+> & {
+  recoveryDrills?: RecoveryDrillRecord[];
+};
 
 type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 

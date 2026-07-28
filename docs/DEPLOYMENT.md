@@ -42,6 +42,7 @@ Gebruik bij voorkeur OpenID Connect tussen GitHub en Azure. Daarmee is geen lang
 - `.github/workflows/container.yml`: bouwt en publiceert een container bij een versie-tag of handmatige start;
 - `app/Dockerfile`: reproduceerbare productiecontainer;
 - `app/next.config.ts`: Next.js standalone output voor een kleine runtimecontainer.
+- `app/scripts/check-operational-readiness.ts`: bewaakt migratie, bronsnapshot, voorraadsluiting en de nieuwste herstelproef zonder gegevens te wijzigen.
 
 ## Nog nodig voor echte productie
 
@@ -52,7 +53,7 @@ Gebruik bij voorkeur OpenID Connect tussen GitHub en Azure. Daarmee is geen lang
 5. Staging- en productie-resources.
 6. GitHub OIDC-federation naar Azure.
 7. Databaseverbinding en migratieworkflow.
-8. Back-up-, herstel- en bewaartermijnbesluit.
+8. Back-up-, herstel- en bewaartermijnbesluit plus een echte herstelproef buiten productie.
 9. Eerste fysieke telling vóór productieve ingebruikname.
 
 ## Waarom geen GitHub Pages

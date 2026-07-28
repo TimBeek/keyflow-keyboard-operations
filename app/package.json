@@ -14,7 +14,9 @@
     "db:preflight": "tsx scripts/preflight-production-database.ts",
     "db:bootstrap": "tsx scripts/bootstrap-production-inventory.ts",
     "db:bootstrap:apply": "tsx scripts/bootstrap-production-inventory.ts --apply",
-    "db:verify": "tsx scripts/verify-production-database.ts"
+    "db:verify": "tsx scripts/verify-production-database.ts",
+    "db:recovery:smoke": "tsx scripts/smoke-recovery-drill.ts",
+    "db:operations:check": "tsx scripts/check-operational-readiness.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",
