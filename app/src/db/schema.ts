@@ -21,6 +21,9 @@ export const conversionJobStatus = pgEnum("conversion_job_status", ["draft", "ad
 export const qualityResult = pgEnum("quality_result", ["passed", "rework", "scrap", "blocked"]);
 export const stickerVerificationOutcome = pgEnum("sticker_verification_outcome", ["passed", "blocked_unused", "scrapped"]);
 export const keyboardReferenceStatus = pgEnum("keyboard_reference_status", ["draft", "approved", "rejected"]);
+export const stockCountStatus = pgEnum("stock_count_status", ["open", "completed", "cancelled"]);
+export const modelGroupProposalStatus = pgEnum("model_group_proposal_status", ["pending", "approved", "rejected", "superseded"]);
+export const modelGroupReviewDecision = pgEnum("model_group_review_decision", ["approved", "rejected"]);
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -111,6 +114,64 @@ export const skuModelCompatibility = pgTable("sku_model_compatibility", {
   testedBy: uuid("tested_by").references(() => users.id),
 }, (table) => [primaryKey({ columns: [table.skuId, table.modelId] })]);
 
+export const modelGroupProposals = pgTable("model_group_proposals", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  suggestionKey: text("suggestion_key").notNull(),
+  proposedName: text("proposed_name").notNull(),
+  manufacturer: text("manufacturer").notNull(),
+  skuId: uuid("sku_id").references(() => stickerSkus.id),
+  layoutId: uuid("layout_id").references(() => keyboardLayouts.id),
+  variantCode: text("variant_code"),
+  candidateModels: jsonb("candidate_models").notNull(),
+  sourceEvidence: jsonb("source_evidence").notNull(),
+  riskFlags: jsonb("risk_flags").notNull(),
+  confidence: integer("confidence").notNull(),
+  source: text("source").notNull().default("catalog_assistant"),
+  status: modelGroupProposalStatus("status").notNull().default("pending"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("model_group_proposals_suggestion_key_uq").on(table.suggestionKey),
+  check("model_group_proposals_confidence_range", sql`${table.confidence} between 0 and 100`),
+]);
+
+export const modelGroupReviews = pgTable("model_group_reviews", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  proposalId: uuid("proposal_id").notNull().references(() => modelGroupProposals.id),
+  idempotencyKey: text("idempotency_key").notNull(),
+  decision: modelGroupReviewDecision("decision").notNull(),
+  manufacturerPartNumber: text("manufacturer_part_number"),
+  photoReference: text("photo_reference"),
+  evidence: jsonb("evidence").notNull(),
+  notes: text("notes"),
+  reviewedBy: uuid("reviewed_by").notNull().references(() => users.id),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("model_group_reviews_idempotency_key_uq").on(table.idempotencyKey),
+]);
+
+export const compatibilityEvidence = pgTable("compatibility_evidence", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  idempotencyKey: text("idempotency_key").notNull(),
+  catalogKey: text("catalog_key").notNull(),
+  skuId: uuid("sku_id").notNull().references(() => stickerSkus.id),
+  modelId: uuid("model_id").notNull().references(() => laptopModels.id),
+  status: keyboardReferenceStatus("status").notNull(),
+  variantCode: text("variant_code").notNull(),
+  manufacturerPartNumber: text("manufacturer_part_number").notNull(),
+  photoReference: text("photo_reference").notNull(),
+  keyboardWidthMm: integer("keyboard_width_mm").notNull(),
+  keyboardHeightMm: integer("keyboard_height_mm").notNull(),
+  checkpoints: jsonb("checkpoints").notNull(),
+  notes: text("notes"),
+  reviewedBy: uuid("reviewed_by").notNull().references(() => users.id),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("compatibility_evidence_idempotency_key_uq").on(table.idempotencyKey),
+  check("compatibility_evidence_width_range", sql`${table.keyboardWidthMm} between 150 and 500`),
+  check("compatibility_evidence_height_range", sql`${table.keyboardHeightMm} between 50 and 250`),
+]);
+
 export const locations = pgTable("locations", {
   id: uuid("id").primaryKey().defaultRandom(),
   code: text("code").notNull(),
@@ -152,6 +213,40 @@ export const inventoryTransactions = pgTable("inventory_transactions", {
 }, (table) => [
   uniqueIndex("inventory_transactions_idempotency_uq").on(table.idempotencyKey),
   check("inventory_transactions_delta_nonzero", sql`${table.quantityDelta} <> 0`),
+]);
+
+export const stockCounts = pgTable("stock_counts", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  locationId: uuid("location_id").notNull().references(() => locations.id),
+  status: stockCountStatus("status").notNull().default("open"),
+  startedBy: uuid("started_by").notNull().references(() => users.id),
+  completedBy: uuid("completed_by").references(() => users.id),
+  notes: text("notes"),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+});
+
+export const stockCountLines = pgTable("stock_count_lines", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  countId: uuid("count_id").notNull().references(() => stockCounts.id),
+  idempotencyKey: text("idempotency_key").notNull(),
+  skuId: uuid("sku_id").references(() => stickerSkus.id),
+  hangingFileNumber: integer("hanging_file_number").notNull(),
+  sourceSkuText: text("source_sku_text"),
+  expectedQuantity: integer("expected_quantity").notNull(),
+  countedQuantity: integer("counted_quantity").notNull(),
+  difference: integer("difference").notNull(),
+  reasonCode: text("reason_code"),
+  notes: text("notes"),
+  inventoryTransactionId: uuid("inventory_transaction_id").references(() => inventoryTransactions.id),
+  countedBy: uuid("counted_by").notNull().references(() => users.id),
+  countedAt: timestamp("counted_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("stock_count_lines_count_hanging_file_uq").on(table.countId, table.hangingFileNumber),
+  uniqueIndex("stock_count_lines_idempotency_uq").on(table.idempotencyKey),
+  check("stock_count_lines_hanging_file_positive", sql`${table.hangingFileNumber} > 0`),
+  check("stock_count_lines_expected_nonnegative", sql`${table.expectedQuantity} >= 0`),
+  check("stock_count_lines_counted_nonnegative", sql`${table.countedQuantity} >= 0`),
 ]);
 
 export const conversionMethods = pgTable("conversion_methods", {

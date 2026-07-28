@@ -4,6 +4,11 @@ import path from "node:path";
 const appDirectory = process.cwd();
 const outputDirectory = path.join(appDirectory, "dist");
 const nextDirectory = path.join(appDirectory, ".next");
+const requiredPublicAssets = [
+  "keyboard-reference-e1-dell-v2.png",
+  "keyboard-reference-e2-dell-v2.png",
+  "keyboard-reference-guide-dell.png",
+];
 
 if (path.basename(outputDirectory) !== "dist" || path.dirname(outputDirectory) !== appDirectory) {
   throw new Error("Ongeldige preview-outputmap.");
@@ -37,6 +42,8 @@ await cp(
   path.join(outputDirectory, "assets"),
   { recursive: true },
 );
+await Promise.all(requiredPublicAssets.map((asset) =>
+  access(path.join(outputDirectory, "assets", asset))));
 await cp(
   path.join(appDirectory, ".openai", "hosting.json"),
   path.join(outputDirectory, ".openai", "hosting.json"),

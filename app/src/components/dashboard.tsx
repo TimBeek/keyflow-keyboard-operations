@@ -19,12 +19,34 @@ import {
   inventoryCatalog,
   inventoryCatalogSummary,
   planningCatalog,
+  type InventoryCatalogItem,
 } from "@/data/inventory-catalog";
 import { initialInventoryTransactions } from "@/data/operations-demo";
 import { demoWorkOrders } from "@/data/orders-demo";
 import type { UserRole } from "@/domain/access-control";
+import {
+  createCompatibilityEvidenceRecord,
+  type CompatibilityEvidenceInput,
+  type CompatibilityEvidenceRecord,
+} from "@/domain/compatibility-evidence";
+import {
+  calculateStockCount,
+  type StockCountInput,
+  type StockCountRecord,
+} from "@/domain/cycle-count";
 import { calculateInventoryMutation } from "@/domain/inventory";
 import { calculateForecastAdvice } from "@/domain/forecasting";
+import {
+  inventoryQuantity,
+  migrateInventoryQuantities,
+  withInventoryQuantity,
+} from "@/domain/inventory-quantities";
+import {
+  createModelGroupDecision,
+  type ModelGroupDecision,
+  type ModelGroupProposal,
+  type ModelGroupReviewInput,
+} from "@/domain/model-grouping";
 import {
   defaultOperationsPolicy,
   type InventoryMutationRequest,
@@ -104,12 +126,23 @@ const viewHeadings: Record<ViewName, { title: string; subtitle: string }> = {
   reports: { title: "Rapportages", subtitle: "Volg verbruik, dekking, trends en komende behoefte." },
 };
 
-const initialLowStock: InventoryItem[] = [
+const initialLowStockSeed: InventoryItem[] = [
   { model: "Fujitsu Lifebook U7410", sku: "NB10210E1NL", layout: "QWERTY US", stock: 0, threshold: 10 },
   { model: "HP 240 G8", sku: "NB10200E2NL", layout: "QWERTY US", stock: 2, threshold: 10 },
   { model: "HP ZBook 15 G3", sku: "NB10043E1DE", layout: "QWERTZ DE", stock: 4, threshold: 10 },
   { model: "Dell Latitude 7300", sku: "NB10060E1NL", layout: "QWERTY US", stock: 5, threshold: 10 },
 ];
+
+const initialLowStock = initialLowStockSeed.map((item) => {
+  const catalogItem = findCatalogItemForInventoryItem(item);
+  return catalogItem
+    ? {
+        ...item,
+        catalogKey: catalogItem.catalogKey,
+        storageNumber: catalogItem.storageNumber,
+      }
+    : item;
+});
 
 const methods = [
   { id: 1, name: "Losse stickers", detail: "Wordt uitgefaseerd", tone: "muted", status: "Fallback" },
@@ -132,12 +165,16 @@ export function Dashboard() {
   const [transactions, setTransactions] = useState<InventoryTransactionEntry[]>(initialInventoryTransactions);
   const [operationsPolicy, setOperationsPolicy] = useState<OperationsPolicy>(defaultOperationsPolicy);
   const [verificationReports, setVerificationReports] = useState<StickerVerificationReport[]>([]);
+  const [stockCounts, setStockCounts] = useState<StockCountRecord[]>([]);
+  const [modelGroupDecisions, setModelGroupDecisions] = useState<ModelGroupDecision[]>([]);
+  const [compatibilityEvidenceRecords, setCompatibilityEvidenceRecords] = useState<CompatibilityEvidenceRecord[]>([]);
   const [persistenceReady, setPersistenceReady] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [persistenceMessage, setPersistenceMessage] = useState("Lokale pilotopslag laden…");
   const [mutation, setMutation] = useState<{
     mode: "issue" | "receipt";
     item: InventoryItem;
+    catalogItem?: InventoryCatalogItem;
     onConfirm?: (newQuantity: number) => void;
   } | null>(null);
   const [lastAction, setLastAction] = useState("");
@@ -151,12 +188,12 @@ export function Dashboard() {
     .filter((entry) => entry.occurredAt.startsWith(today) && entry.quantityDelta < 0)
     .reduce((sum, entry) => sum + Math.abs(entry.quantityDelta), 0);
   const currentCatalogStock = inventoryCatalog.reduce(
-    (sum, item) => sum + (catalogQuantities[item.sku] ?? item.stock),
+    (sum, item) => sum + inventoryQuantity(catalogQuantities, item),
     0,
   );
   const planningActionCount = planningCatalog.filter((item) => {
     const advice = calculateForecastAdvice({
-      onHand: catalogQuantities[item.sku] ?? item.stock,
+      onHand: inventoryQuantity(catalogQuantities, item),
       reserved: item.reserved,
       averageWeeklyDemand: item.averageWeeklyDemand,
       leadTimeDays: item.leadTimeDays,
@@ -169,13 +206,20 @@ export function Dashboard() {
     const timeoutId = window.setTimeout(() => {
       const restored = readOperationsState(window.localStorage);
       if (restored.success && restored.state) {
-        setCatalogQuantities(restored.state.catalogQuantities);
+        const migratedQuantities = migrateInventoryQuantities(
+          restored.state.catalogQuantities,
+          inventoryCatalog,
+        );
+        setCatalogQuantities(migratedQuantities);
         setTransactions(restored.state.transactions);
         setOperationsPolicy(restored.state.operationsPolicy);
         setVerificationReports(restored.state.verificationReports);
+        setStockCounts(restored.state.stockCounts);
+        setModelGroupDecisions(restored.state.modelGroupDecisions);
+        setCompatibilityEvidenceRecords(restored.state.compatibilityEvidenceRecords);
         setStockItems((items) => items.map((item) => ({
           ...item,
-          stock: restored.state?.catalogQuantities[item.sku] ?? item.stock,
+          stock: quantityForInventoryItem(migratedQuantities, item),
         })));
         setLastSavedAt(restored.state.savedAt);
         setPersistenceMessage("Pilotgegevens van dit apparaat hersteld.");
@@ -191,33 +235,62 @@ export function Dashboard() {
 
   useEffect(() => {
     if (!persistenceReady) return;
-    const timeoutId = window.setTimeout(() => {
-      try {
-        const snapshot = createOperationsSnapshot({
-          catalogQuantities,
-          transactions,
-          operationsPolicy,
-          verificationReports,
-        });
-        writeOperationsState(window.localStorage, snapshot);
-        setLastSavedAt(snapshot.savedAt);
-        setPersistenceMessage("Wijzigingen automatisch bewaard op dit apparaat.");
-      } catch {
-        setPersistenceMessage("Lokale opslag is niet gelukt. Download een back-up via Beheer & analyse.");
-      }
-    }, 250);
-    return () => window.clearTimeout(timeoutId);
-  }, [catalogQuantities, operationsPolicy, persistenceReady, transactions, verificationReports]);
+    let savedAt: string | null = null;
+    let message = "Lokale opslag is niet gelukt. Download een back-up via Beheer & analyse.";
+    try {
+      const snapshot = createOperationsSnapshot({
+        catalogQuantities,
+        transactions,
+        operationsPolicy,
+        verificationReports,
+        stockCounts,
+        modelGroupDecisions,
+        compatibilityEvidenceRecords,
+      });
+      writeOperationsState(window.localStorage, snapshot);
+      savedAt = snapshot.savedAt;
+      message = "Wijzigingen automatisch bewaard op dit apparaat.";
+    } catch {
+      // De foutmelding staat al klaar; de laatst bekende geldige opslag blijft staan.
+    }
+    const statusUpdate = window.setTimeout(() => {
+      if (savedAt) setLastSavedAt(savedAt);
+      setPersistenceMessage(message);
+    }, 0);
+    return () => window.clearTimeout(statusUpdate);
+  }, [
+    catalogQuantities,
+    compatibilityEvidenceRecords,
+    modelGroupDecisions,
+    operationsPolicy,
+    persistenceReady,
+    stockCounts,
+    transactions,
+    verificationReports,
+  ]);
 
   function saveMutation(newQuantity: number, quantityDelta: number) {
     if (!mutation) return;
+    const catalogItem = mutation.catalogItem
+      ?? findCatalogItemForInventoryItem(mutation.item);
     if (mutation.onConfirm) mutation.onConfirm(newQuantity);
-    else setStockItems((items) => items.map((item) => item.sku === mutation.item.sku ? { ...item, stock: newQuantity } : item));
+    else if (catalogItem) {
+      setCatalogQuantities((current) =>
+        withInventoryQuantity(current, catalogItem, newQuantity),
+      );
+    }
+    setStockItems((items) => items.map((item) =>
+      inventoryItemsMatch(item, mutation.item)
+        ? { ...item, stock: newQuantity }
+        : item,
+    ));
     setTransactions((current) => [
       ...current,
       {
         id: crypto.randomUUID(),
         occurredAt: new Date().toISOString(),
+        catalogKey: catalogItem?.catalogKey,
+        storageNumber: catalogItem?.storageNumber,
         sku: mutation.item.sku,
         model: mutation.item.model,
         layout: mutation.item.layout,
@@ -242,7 +315,7 @@ export function Dashboard() {
       throw new Error(`Sticker-SKU ${request.sku} is onbekend, dubbel of geblokkeerd voor boeken.`);
     }
     const item = matchingItems[0];
-    const currentQuantity = catalogQuantities[item.sku] ?? item.stock;
+    const currentQuantity = inventoryQuantity(catalogQuantities, item);
     const result = calculateInventoryMutation({
       sku: request.sku,
       currentQuantity,
@@ -252,13 +325,19 @@ export function Dashboard() {
       notes: request.notes,
       idempotencyKey: `employee-${crypto.randomUUID()}`,
     });
-    setCatalogQuantities((current) => ({ ...current, [item.sku]: result.newQuantity }));
-    setStockItems((items) => items.map((stockItem) => stockItem.sku === item.sku ? { ...stockItem, stock: result.newQuantity } : stockItem));
+    setCatalogQuantities((current) => withInventoryQuantity(current, item, result.newQuantity));
+    setStockItems((items) => items.map((stockItem) =>
+      stockItem.catalogKey === item.catalogKey
+        ? { ...stockItem, stock: result.newQuantity }
+        : stockItem,
+    ));
     setTransactions((current) => [
       ...current,
       {
         id: crypto.randomUUID(),
         occurredAt: new Date().toISOString(),
+        catalogKey: item.catalogKey,
+        storageNumber: item.storageNumber,
         sku: item.sku,
         model: item.model,
         layout: item.layout,
@@ -272,6 +351,68 @@ export function Dashboard() {
     ]);
     setLastAction(`${item.sku}: ${result.quantityDelta > 0 ? "+" : ""}${result.quantityDelta} door ${request.actor} · voorraad ${result.newQuantity}`);
     return result;
+  }
+
+  function recordStockCount(input: StockCountInput) {
+    const item = inventoryCatalog.find(({ catalogKey }) => catalogKey === input.catalogKey);
+    if (!item) throw new Error("De gekozen hangmap bestaat niet in de catalogus.");
+    const expectedQuantity = inventoryQuantity(catalogQuantities, item);
+    const result = calculateStockCount(
+      expectedQuantity,
+      input.countedQuantity,
+      input.notes,
+    );
+    const occurredAt = new Date().toISOString();
+    const record: StockCountRecord = {
+      id: crypto.randomUUID(),
+      occurredAt,
+      catalogKey: item.catalogKey,
+      storageNumber: item.storageNumber,
+      sku: item.sku,
+      model: item.model,
+      ...result,
+      actor: "Tim Beek",
+    };
+
+    setCatalogQuantities((current) =>
+      withInventoryQuantity(current, item, result.countedQuantity),
+    );
+    setStockItems((items) => items.map((stockItem) =>
+      stockItem.catalogKey === item.catalogKey
+        ? { ...stockItem, stock: result.countedQuantity }
+        : stockItem,
+    ));
+    setStockCounts((current) => [...current, record]);
+
+    if (result.difference !== 0) {
+      setTransactions((current) => [
+        ...current,
+        {
+          id: crypto.randomUUID(),
+          occurredAt,
+          catalogKey: item.catalogKey,
+          storageNumber: item.storageNumber,
+          sku: item.sku || `HANGMAP-${String(item.storageNumber).padStart(3, "0")}`,
+          model: item.model,
+          layout: item.layout,
+          type: "adjustment",
+          quantityDelta: result.difference,
+          reasonCode: result.difference < 0
+            ? "cycle_count_shortage"
+            : "cycle_count_overage",
+          notes: result.notes,
+          actor: "Tim Beek",
+          reference: `TELLING-HANGMAP-${item.storageNumber}`,
+        },
+      ]);
+    }
+
+    setLastAction(
+      result.difference === 0
+        ? `Hangmap ${item.storageNumber} geteld: voorraad klopt (${result.countedQuantity}).`
+        : `Hangmap ${item.storageNumber} geteld: ${formatSigned(result.difference)} gecorrigeerd naar ${result.countedQuantity}.`,
+    );
+    return record;
   }
 
   function recordStickerVerification(input: StickerVerificationReportInput) {
@@ -290,6 +431,39 @@ export function Dashboard() {
     return report;
   }
 
+  function reviewModelGroup(
+    proposal: ModelGroupProposal,
+    input: ModelGroupReviewInput,
+  ) {
+    const decision = createModelGroupDecision(proposal, input, {
+      id: crypto.randomUUID(),
+      decidedAt: new Date().toISOString(),
+      reviewer: "Tim Beek",
+    });
+    setModelGroupDecisions((current) => [...current, decision]);
+    setLastAction(
+      `${proposal.proposedName} ${decision.status === "approved" ? "goedgekeurd" : "afgewezen"} door ${decision.reviewer}.`,
+    );
+    return decision;
+  }
+
+  function recordCompatibilityEvidence(input: CompatibilityEvidenceInput) {
+    const record = createCompatibilityEvidenceRecord(
+      inventoryCatalog,
+      input,
+      {
+        id: crypto.randomUUID(),
+        recordedAt: new Date().toISOString(),
+        reviewer: "Tim Beek",
+      },
+    );
+    setCompatibilityEvidenceRecords((current) => [...current, record]);
+    setLastAction(
+      `${record.model} · ${record.sku} ${record.status === "approved" ? "fysiek goedgekeurd" : "afgekeurd"} door ${record.reviewer}.`,
+    );
+    return record;
+  }
+
   function switchRole(nextRole: UserRole) {
     setRole(nextRole);
     setActiveView("overview");
@@ -303,6 +477,9 @@ export function Dashboard() {
       transactions,
       operationsPolicy,
       verificationReports,
+      stockCounts,
+      modelGroupDecisions,
+      compatibilityEvidenceRecords,
     });
     const blob = new Blob([serializeOperationsSnapshot(snapshot)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -317,13 +494,20 @@ export function Dashboard() {
   async function restorePilotBackup(file: File) {
     const restored = parseOperationsSnapshot(await file.text());
     if (!restored.success) return { success: false, message: restored.error };
-    setCatalogQuantities(restored.state.catalogQuantities);
+    const migratedQuantities = migrateInventoryQuantities(
+      restored.state.catalogQuantities,
+      inventoryCatalog,
+    );
+    setCatalogQuantities(migratedQuantities);
     setTransactions(restored.state.transactions);
     setOperationsPolicy(restored.state.operationsPolicy);
     setVerificationReports(restored.state.verificationReports);
+    setStockCounts(restored.state.stockCounts);
+    setModelGroupDecisions(restored.state.modelGroupDecisions);
+    setCompatibilityEvidenceRecords(restored.state.compatibilityEvidenceRecords);
     setStockItems((items) => items.map((item) => ({
       ...item,
-      stock: restored.state.catalogQuantities[item.sku] ?? item.stock,
+      stock: quantityForInventoryItem(migratedQuantities, item),
     })));
     setLastSavedAt(restored.state.savedAt);
     setLastAction(`Back-up van ${formatPersistenceTime(restored.state.savedAt)} hersteld.`);
@@ -336,6 +520,9 @@ export function Dashboard() {
     setTransactions(initialInventoryTransactions);
     setOperationsPolicy(defaultOperationsPolicy);
     setVerificationReports([]);
+    setStockCounts([]);
+    setModelGroupDecisions([]);
+    setCompatibilityEvidenceRecords([]);
     setStockItems(initialLowStock);
     setLastSavedAt(null);
     setLastAction("Lokale pilotgegevens teruggezet naar de veilige beginstand.");
@@ -405,6 +592,7 @@ export function Dashboard() {
             orders={demoWorkOrders}
             quantities={catalogQuantities}
             policy={operationsPolicy}
+            compatibilityEvidenceRecords={compatibilityEvidenceRecords}
             onInventoryMutation={recordEmployeeInventoryMutation}
             onStickerVerification={recordStickerVerification}
           />
@@ -514,17 +702,22 @@ export function Dashboard() {
             globalQuery={query}
             quantities={catalogQuantities}
             onReceive={(item) => {
-              const currentStock = catalogQuantities[item.sku] ?? item.stock;
+              const currentStock = inventoryQuantity(catalogQuantities, item);
               setMutation({
                 mode: "receipt",
+                catalogItem: item,
                 item: {
+                  catalogKey: item.catalogKey,
+                  storageNumber: item.storageNumber,
                   model: item.model,
                   sku: item.sku,
                   layout: item.layout,
                   stock: currentStock,
                   threshold: calculateCatalogThreshold(item.averageWeeklyDemand, item.leadTimeDays, item.safetyStockWeeks),
                 },
-                onConfirm: (newQuantity) => setCatalogQuantities((current) => ({ ...current, [item.sku]: newQuantity })),
+                onConfirm: (newQuantity) => setCatalogQuantities((current) =>
+                  withInventoryQuantity(current, item, newQuantity),
+                ),
               });
             }}
           />
@@ -538,6 +731,12 @@ export function Dashboard() {
             transactions={transactions}
             policy={operationsPolicy}
             verificationReports={verificationReports}
+            stockCounts={stockCounts}
+            modelGroupDecisions={modelGroupDecisions}
+            compatibilityEvidenceRecords={compatibilityEvidenceRecords}
+            onRecordStockCount={recordStockCount}
+            onReviewModelGroup={reviewModelGroup}
+            onRecordCompatibilityEvidence={recordCompatibilityEvidence}
             onPolicyChange={(nextPolicy) => {
               setOperationsPolicy(nextPolicy);
               setLastAction(`Conversiebeleid bijgewerkt · grens €${nextPolicy.thresholdEur}`);
@@ -593,4 +792,39 @@ function formatPersistenceTime(value: string) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value));
+}
+
+function quantityForInventoryItem(
+  quantities: Record<string, number>,
+  item: InventoryItem,
+) {
+  const catalogItem = findCatalogItemForInventoryItem(item);
+  return catalogItem
+    ? inventoryQuantity(quantities, catalogItem)
+    : item.stock;
+}
+
+function findCatalogItemForInventoryItem(item: InventoryItem) {
+  if (item.catalogKey) {
+    return inventoryCatalog.find(
+      ({ catalogKey }) => catalogKey === item.catalogKey,
+    );
+  }
+  const candidates = inventoryCatalog.filter(
+    (candidate) =>
+      candidate.dataQuality === "ready"
+      && candidate.sku === item.sku,
+  );
+  return candidates.length === 1 ? candidates[0] : undefined;
+}
+
+function inventoryItemsMatch(left: InventoryItem, right: InventoryItem) {
+  if (left.catalogKey || right.catalogKey) {
+    return left.catalogKey === right.catalogKey;
+  }
+  return left.sku === right.sku;
+}
+
+function formatSigned(value: number) {
+  return `${value > 0 ? "+" : ""}${value}`;
 }

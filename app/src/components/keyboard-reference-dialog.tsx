@@ -14,6 +14,8 @@ type Props = {
   topic: KeyboardReferenceTopic;
   currentLayout: string;
   targetLayout: string;
+  expectedVariant?: string | null;
+  expectedSku?: string;
   onClose: () => void;
   onTopicChange: (topic: KeyboardReferenceTopic) => void;
   onChooseCurrentLayout: (layout: string) => void;
@@ -28,16 +30,37 @@ const fitCheckpoints = [
   ["Pointing stick", "Controleer de uitsparing bij modellen met een trackpoint."],
 ];
 
+const fitVariantReferences = [
+  {
+    variant: "E1",
+    image: "/keyboard-reference-e1-dell-v2.png",
+    tone: "e1",
+    label: "Blauwe controleweergave",
+    explanation: "Controleer of E1 letterlijk in het exacte SKU-label staat.",
+  },
+  {
+    variant: "E2",
+    image: "/keyboard-reference-e2-dell-v2.png",
+    tone: "e2",
+    label: "Oranje controleweergave",
+    explanation: "Controleer of E2 letterlijk in het exacte SKU-label staat.",
+  },
+] as const;
+
 export function KeyboardReferenceDialog({
   open,
   topic,
   currentLayout,
   targetLayout,
+  expectedVariant,
+  expectedSku,
   onClose,
   onTopicChange,
   onChooseCurrentLayout,
 }: Props) {
   const [selectedReference, setSelectedReference] = useState<ScandinavianLayoutReference | null>(null);
+  const [failedFitImages, setFailedFitImages] = useState<string[]>([]);
+  const [fitImageRetries, setFitImageRetries] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (!open) return;
@@ -49,6 +72,12 @@ export function KeyboardReferenceDialog({
   }, [onClose, open]);
 
   if (!open) return null;
+
+  const orderedFitVariantReferences = expectedVariant
+    ? [...fitVariantReferences].sort((left, right) =>
+        Number(right.variant === expectedVariant.toUpperCase())
+        - Number(left.variant === expectedVariant.toUpperCase()))
+    : fitVariantReferences;
 
   return (
     <div className="modal-backdrop keyboard-reference-backdrop" role="presentation" onMouseDown={(event) => {
@@ -86,19 +115,82 @@ export function KeyboardReferenceDialog({
             <>
               <div className="reference-safety-note">
                 <strong>E1/E2 is een artikelvariant, geen taalkeuze</strong>
-                <p>Noviply publiceert geen universele E1/E2-vormdefinitie. Het SKU-etiket, het gevalideerde laptopmodel en een droge fysieke uitlijning zijn daarom leidend.</p>
+                <p>Noviply beschrijft de stickers als model- en taalspecifiek. Behandel E1/E2 daarom niet als een universele toetsvormregel: het SKU-etiket, het gevalideerde laptopmodel en een droge fysieke uitlijning zijn leidend.</p>
               </div>
-              <figure className="keyboard-reference-figure">
-                <Image
-                  src="/keyboard-reference-guide-dell.png"
-                  width={1672}
-                  height={941}
-                  sizes="(max-width: 900px) 92vw, 820px"
-                  alt="Twee Dell Latitude-stijl laptoptoetsenborden met transparante stickerlagen en gemarkeerde controlepunten voor pasvorm"
-                  priority
-                />
-                <figcaption>Dell Latitude-stijl trainingsillustratie: controlepunten zijn gemarkeerd, maar de getoonde vormen bepalen nooit zelfstandig E1 of E2.</figcaption>
-              </figure>
+              {expectedVariant && (
+                <div className="expected-variant-banner">
+                  <span>DEZE UITVOERING VRAAGT</span>
+                  <strong>{expectedVariant}</strong>
+                  <p>{expectedSku ? `Controleer het volledige label: ${expectedSku}` : "Controleer het volledige SKU-label op het vel."}</p>
+                </div>
+              )}
+              <div className="fit-variant-grid">
+                {orderedFitVariantReferences.map((reference) => {
+                  const isExpected = expectedVariant?.toUpperCase() === reference.variant;
+                  const imageFailed = failedFitImages.includes(reference.image);
+                  const retryNumber = fitImageRetries[reference.image] ?? 0;
+                  const imageSource = retryNumber > 0
+                    ? `${reference.image}?retry=${retryNumber}`
+                    : reference.image;
+                  return (
+                    <article
+                      className={`fit-variant-card ${reference.tone}${isExpected ? " expected" : ""}`}
+                      key={reference.variant}
+                    >
+                      <div className="fit-variant-heading">
+                        <div>
+                          <span>DELL TRAININGSBEELD</span>
+                          <strong>{reference.variant}</strong>
+                        </div>
+                        <b>{isExpected ? "Verwacht voor deze order" : reference.label}</b>
+                      </div>
+                      <figure>
+                        {imageFailed ? (
+                          <div className="fit-image-fallback" role="alert">
+                            <strong>Referentiebeeld niet geladen</strong>
+                            <span>Gebruik dit beeld niet voor de controle. Probeer opnieuw of stop zonder afboeken.</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFailedFitImages((current) =>
+                                  current.filter((image) => image !== reference.image));
+                                setFitImageRetries((current) => ({
+                                  ...current,
+                                  [reference.image]: retryNumber + 1,
+                                }));
+                              }}
+                            >
+                              Opnieuw laden
+                            </button>
+                          </div>
+                        ) : (
+                          <Image
+                            key={imageSource}
+                            src={imageSource}
+                            width={1672}
+                            height={941}
+                            sizes="(max-width: 760px) 92vw, 430px"
+                            alt={`Dell Latitude-stijl toetsenbord met ${reference.tone === "e1" ? "blauwe" : "oranje"} illustratieve ${reference.variant}-controleoverlay rond Enter, Shift, functierij, pijltjes en pointing stick`}
+                            loading="eager"
+                            onError={() => setFailedFitImages((current) =>
+                              current.includes(reference.image)
+                                ? current
+                                : [...current, reference.image])}
+                          />
+                        )}
+                      </figure>
+                      <div className="fit-variant-copy">
+                        <strong>{reference.explanation}</strong>
+                        <span>De kleur helpt alleen deze gids leesbaar te maken en komt niet van het echte productlabel.</span>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+              <div className="variant-difference-explainer">
+                <strong>Waar zie je het verschil in deze gids?</strong>
+                <p>E1 gebruikt een doorgetrokken blauwe controlecontour. E2 gebruikt een oranje contour met extra stippellijn rond de kritieke uitsneden. Dit maakt de twee trainingsbeelden direct herkenbaar; het bewijst niet dat ieder E1- of E2-vel overal dezelfde fysieke vorm heeft.</p>
+              </div>
               <div className="fit-checkpoint-grid">
                 {fitCheckpoints.map(([title, explanation], index) => (
                   <article key={title}>
@@ -111,6 +203,12 @@ export function KeyboardReferenceDialog({
                 <article><span>E1 / E2 controleren</span><strong>Lees de variant uit het exacte SKU-label</strong><p>Wissel E1 en E2 nooit zelf om omdat een modelnaam ongeveer overeenkomt.</p></article>
                 <article><span>Droge pastest</span><strong>Laat de drager en kleeflaag intact</strong><p>Lijn alle randen, toetsen en uitsparingen uit vóórdat je toestemming geeft om aan te brengen.</p></article>
                 <article className="stop"><span>Bij twijfel</span><strong>Stop zonder afboeken</strong><p>Meld “variant” of “positionering” en laat een teamleider de combinatie valideren.</p></article>
+              </div>
+              <div className="reference-source-note">
+                <p><strong>Broncontrole:</strong> Noviply noemt de keyboardstickers model-specifiek en exact passend. Gebruik de beelden daarom als controlehulp, nooit als vervanging van het echte SKU-label.</p>
+                <div>
+                  <a href="https://noviply.com/laptop-keyboard-sticker/" target="_blank" rel="noreferrer">Officiële Noviply productuitleg ↗</a>
+                </div>
               </div>
             </>
           ) : topic === "scandinavian" ? (

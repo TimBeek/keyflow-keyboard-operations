@@ -9,6 +9,7 @@ import {
 } from "@/data/inventory-catalog";
 import { calculateForecastAdvice, type StockAdviceStatus } from "@/domain/forecasting";
 import { createInventoryCsv } from "@/domain/inventory-export";
+import { inventoryQuantity } from "@/domain/inventory-quantities";
 
 type Props = {
   globalQuery: string;
@@ -37,7 +38,7 @@ export function InventoryCatalog({ globalQuery, quantities, onReceive }: Props) 
     };
     return inventoryCatalog
       .map((sourceItem) => {
-        const item = { ...sourceItem, stock: quantities[sourceItem.sku] ?? sourceItem.stock };
+        const item = { ...sourceItem, stock: inventoryQuantity(quantities, sourceItem) };
         const advice = item.dataQuality === "ready" && item.planningDataStatus === "sample"
           ? calculateForecastAdvice({
               onHand: item.stock,
@@ -72,7 +73,7 @@ export function InventoryCatalog({ globalQuery, quantities, onReceive }: Props) 
   }, [globalQuery, layout, location, quantities, sort, status]);
 
   const actionCount = planningCatalog.filter((sourceItem) => {
-    const item = { ...sourceItem, stock: quantities[sourceItem.sku] ?? sourceItem.stock };
+    const item = { ...sourceItem, stock: inventoryQuantity(quantities, sourceItem) };
     const advice = calculateForecastAdvice({
       onHand: item.stock,
       reserved: item.reserved,

@@ -67,4 +67,13 @@ Migratie `0009_keyboard_reference_library.sql` voegt een beheerbare referentiebi
 - een referentie krijgt `draft`, `approved` of `rejected`;
 - alleen een door management goedgekeurd record mag later als compatibiliteitsbewijs dienen.
 
-De actieve illustratie in `app/public/keyboard-reference-guide-dell.png` is een eigen gegenereerde Dell Latitude-stijl trainingsillustratie. Zij markeert controlepunten, maar bewijst niet dat een specifieke sticker E1 of E2 is. De eerdere generieke versie blijft als bronvariant beschikbaar in `app/public/keyboard-reference-guide.png`.
+De actieve vergelijking gebruikt twee eigen gegenereerde Dell Latitude-stijl trainingsillustraties:
+
+- `app/public/keyboard-reference-e1-dell-v2.png` — blauwe, doorgetrokken controlecontour;
+- `app/public/keyboard-reference-e2-dell-v2.png` — oranje controlecontour met extra stippellijn rond kritieke uitsneden.
+
+Beide beelden gebruiken bewust exact dezelfde Dell-basis. Daardoor vergelijkt de werknemer de stickerdrager en controlezones in plaats van twee verschillende laptopmodellen. KeyFlow markeert bovendien welk van de twee varianten het actuele SKU-label vraagt.
+
+Blauw en oranje zijn uitsluitend kleuren van de trainingsgids. De voorbeeldcontouren zijn geen Noviply-maattekeningen en bewijzen niet dat een specifieke sticker E1 of E2 is. De bestanden `app/public/keyboard-reference-guide-dell.png` en `app/public/keyboard-reference-guide.png` blijven als eerdere bronvarianten beschikbaar.
+
+Als een beeldbestand niet geladen kan worden, vervangt KeyFlow het lege vlak door een zichtbare stopmelding en een knop `Opnieuw laden`. De werknemer mag een ontbrekend referentiebeeld nooit als een geslaagde visuele controle behandelen.

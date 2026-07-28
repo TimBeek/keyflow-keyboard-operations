@@ -8,6 +8,8 @@ export const initialInventoryTransactions: InventoryTransactionEntry[] = plannin
       ? [{
           id: `history-issue-${item.sku}`,
           occurredAt: `2026-07-${String(2 + (index % 24)).padStart(2, "0")}T09:15:00.000Z`,
+          catalogKey: item.catalogKey,
+          storageNumber: item.storageNumber,
           sku: item.sku,
           model: item.model,
           layout: item.layout,
@@ -23,6 +25,8 @@ export const initialInventoryTransactions: InventoryTransactionEntry[] = plannin
       ? [{
           id: `history-receipt-${item.sku}`,
           occurredAt: `2026-07-${String(3 + (index % 20)).padStart(2, "0")}T11:30:00.000Z`,
+          catalogKey: item.catalogKey,
+          storageNumber: item.storageNumber,
           sku: item.sku,
           model: item.model,
           layout: item.layout,

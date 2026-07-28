@@ -9,7 +9,7 @@ Nodig:
 - beheerde PostgreSQL-server en database;
 - `DATABASE_URL`, SSL-beleid en netwerktoegang;
 - bewaartermijn, back-upfrequentie en hersteltijddoel;
-- goedkeuring voor het uitvoeren van migraties `0001` tot en met `0009`;
+- goedkeuring voor het uitvoeren van migraties `0001` tot en met `0012`;
 - goedgekeurde afhandeling van de drie harde Excel-fouten en negen mogelijke dubbele groepen;
 - fysieke begintelling per hangmap vóór live-import.
 
@@ -20,12 +20,14 @@ Al aantoonbaar voorbereid:
 - 139 regels zijn operationeel bruikbaar;
 - 9 regels met ontbrekende of dubbele artikelnummers worden veilig tegen boeken geblokkeerd;
 - gekoppelde modellen, bronnotities en conflicterende kandidaat-SKU's zijn zichtbaar voor management.
+- fysieke tellingen zijn per hangmap ontworpen, inclusief verplichte verschilreden, idempotente correctie en auditregel voor een kloppende telling;
 
 Acceptatiebewijs:
 
 - migraties zonder fout uitgevoerd;
 - alle 148 hangmapnummers uniek;
 - openingsvoorraad sluit aan op de ondertekende telling;
+- de geregistreerde begintellingen zijn per hangmap terug te vinden en ieder verschil verwijst naar exact één correctietransactie;
 - twee gelijktijdige apparaten zien dezelfde boeking;
 - hersteltest van een back-up is vastgelegd.
 

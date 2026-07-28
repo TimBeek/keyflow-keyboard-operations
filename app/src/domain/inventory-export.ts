@@ -1,4 +1,5 @@
 import type { InventoryCatalogItem } from "@/data/inventory-catalog";
+import { inventoryQuantity } from "./inventory-quantities";
 
 const headers = [
   "Hangmap",
@@ -22,7 +23,7 @@ export function createInventoryCsv(
     item.model,
     item.sku,
     item.layout,
-    quantities[item.sku] ?? item.stock,
+    inventoryQuantity(quantities, item),
     item.modelAliases.join(", "),
     item.sourceNote ?? "",
     item.dataQuality === "ready" ? "Operationeel" : "Geblokkeerd",

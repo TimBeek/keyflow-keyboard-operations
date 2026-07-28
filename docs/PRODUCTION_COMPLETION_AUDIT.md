@@ -13,13 +13,16 @@ Deze matrix toetst de actuele applicatie aan de oorspronkelijke projectprompt en
 | Oude Noviply: locatie tonen en automatisch −1 | Gereed in pilotopslag | Order 1859 toont SKU NB10172E1NL, E1 en hangmap 75; afboeken volgt pas na controle | Centrale database en gelijktijdigheidstest |
 | Verkeerd vel of verkeerde pasvorm | Gereed in pilotopslag | Stoppen zonder afboeken of afzonderlijk uitval boeken; managementanalyse bewaart oorzaak | Fysieke foutscenario's accepteren |
 | Nieuwe vellen inboeken | Gereed in pilotopslag | Werknemersontvangst met SKU, aantal en pakbonreferentie | Centrale database en echte pakbonnen |
+| Fysieke telling per hangmap | Voorbereid en browsergetest | Blinde invoer, verplichte verschilreden, locatiegebonden voorraad, audit van kloppende tellingen en idempotente centrale API/migratie | Centrale database uitvoeren, ondertekende begintelling en gelijktijdigheidstest met twee apparaten |
 | Management ABC/hardlopers/zachtlopers | Gereed op geregistreerde pilottransacties | ABC-engine, configureerbare grenzen, transactielog en tests | Genoeg echte historie voor operationele classificatie |
 | Forecasting en besteladvies | Voorbereid | Geteste ROP-, safety-stock- en dekkingberekening; 25 expliciete voorbeeldparameterregels | Echte levertijd, kostprijs, open orders en verbruikshistorie |
 | CSV-export | Gereed | Alle 148 regels met locatie, actuele voorraad, modelkoppelingen en datakwaliteit; formule-injectie wordt geneutraliseerd | Gebruikersacceptatie van kolommen |
-| PostgreSQL-transacties | Voorbereid | Schema, migraties, rijvergrendeling, idempotentie, autorisatie en API | `DATABASE_URL`, migratie, seed, back-up en hersteltest |
+| PostgreSQL-transacties | Voorbereid | Schema, migraties 0001–0010, rij- en idempotentielocks, autorisatie en API's voor mutaties en tellingen | `DATABASE_URL`, migratie, seed, back-up en hersteltest |
 | Persoonlijke werknemer/managementlogin | Niet gereed | Rollen- en permissiematrix bestaat | Entra-appregistratie, groepen, MFA en sessiebeleid |
 | Werkelijke order/ERP-koppeling | Voorbereid | Vervangbare lookupadapter en fout-/holdflow | API, authenticatie, veldmapping en testorders |
-| Dell E1/E2- en layoutreferenties | Trainingslaag gereed | Dell Latitude-stijl gids, Nordic-keuzes en NL/US-vergelijking | Goedgekeurde model/SKU-foto's en fysieke pastesten |
+| Dell E1/E2- en layoutreferenties | Trainingslaag gereed | Afzonderlijke Dell Latitude-stijl E1/E2-beelden, actuele-variantmarkering, Nordic-keuzes en NL/US-vergelijking | Goedgekeurde model/SKU-foto's en fysieke pastesten |
+| AI-ondersteunde modelgroepen | Wachtrij gereed | Herleidbare voorstellen, bronconflicten, score, verplichte E1/E2-/onderdeelnummer-/foto-/pastestcontrole, lokale audit en geautoriseerde idempotente PostgreSQL-API | Echte bewijsvelden verzamelen, migratie 0011 uitvoeren en eventuele externe AI-bronnen aansluiten |
+| Fysieke compatibiliteitsbibliotheek | Flow gereed | Per exact model/SKU: onderdeelnummer, afmetingen, foto, vijf controlepunten, goedkeuring/afwijzing, lokale audit en centrale API; laatste afwijzing blokkeert werknemersadvies | Echte pastesten uitvoeren, foto's opslaan, migratie 0012 uitvoeren en management laten aftekenen |
 | Private live-uitrol en GitHub | Gereed per gepubliceerde versie | Private Sites-productie-URL en private GitHub-branch/PR | Nieuwe versie na iedere wijziging blijven publiceren |
 | Werkvloeracceptatie | Niet gereed | Desktop- en mobiel browserpad getest | Echte scanners, tablet, hangmappenwagen, medewerkers en timingmeting |
 

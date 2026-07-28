@@ -3,6 +3,10 @@
 import { useMemo, useRef, useState } from "react";
 import type { InventoryCatalogItem } from "@/data/inventory-catalog";
 import {
+  latestCompatibilityEvidence,
+  type CompatibilityEvidenceRecord,
+} from "@/domain/compatibility-evidence";
+import {
   lookupWorkOrder,
   type WorkOrderSnapshot,
 } from "@/domain/order-lookup";
@@ -64,6 +68,7 @@ type Props = {
   orders: WorkOrderSnapshot[];
   quantities: Record<string, number>;
   policy: OperationsPolicy;
+  compatibilityEvidenceRecords: CompatibilityEvidenceRecord[];
   onInventoryMutation: (request: InventoryMutationRequest) => InventoryMutationOutcome;
   onStickerVerification: (input: StickerVerificationReportInput) => unknown;
 };
@@ -73,6 +78,7 @@ export function EmployeeWorkspace({
   orders,
   quantities,
   policy,
+  compatibilityEvidenceRecords,
   onInventoryMutation,
   onStickerVerification,
 }: Props) {
@@ -121,6 +127,16 @@ export function EmployeeWorkspace({
     () => findNoviplySku(model, targetLayout, catalog, quantities),
     [catalog, model, quantities, targetLayout],
   );
+  const compatibilityEvidence = useMemo(() => {
+    if (noviplyMatch.status !== "matched" && noviplyMatch.status !== "out_of_stock") {
+      return null;
+    }
+    return latestCompatibilityEvidence(
+      compatibilityEvidenceRecords,
+      noviplyMatch.item.catalogKey,
+      model,
+    );
+  }, [compatibilityEvidenceRecords, model, noviplyMatch]);
   const recommendation = useMemo(() => recommendConversion({
     saleValueEur: saleValue,
     saleValueLabel: saleBand.label,
@@ -136,11 +152,21 @@ export function EmployeeWorkspace({
     },
     compatible: {
       loose_stickers: true,
-      noviply_sheet: noviplyMatch.status === "matched",
+      noviply_sheet:
+        noviplyMatch.status === "matched"
+        && compatibilityEvidence?.status !== "rejected",
       printed_sticker: true,
       direct_reprint: true,
     },
-  }), [currentLayout, noviplyMatch.status, policy, saleBand.label, saleValue, targetLayout]);
+  }), [
+    compatibilityEvidence?.status,
+    currentLayout,
+    noviplyMatch.status,
+    policy,
+    saleBand.label,
+    saleValue,
+    targetLayout,
+  ]);
 
   const methodInstructions = instructions[recommendation.primary];
   const matchedSticker = noviplyMatch.status === "matched" ? noviplyMatch : null;
@@ -465,6 +491,21 @@ export function EmployeeWorkspace({
               )}
               {valueBandClassification === "overlap" && <div className="value-band-warning">De managementgrens van €{policy.thresholdEur} valt midden in {saleBand.label}. Laat management de grens op een klassengrens zetten of controleer het exacte bedrag.</div>}
               <LiveAdvice recommendation={recommendation} match={noviplyMatch} />
+              {compatibilityEvidence && (
+                <div className={`compatibility-evidence-banner ${compatibilityEvidence.status}`}>
+                  <strong>
+                    {compatibilityEvidence.status === "approved"
+                      ? "✓ Fysieke pastest goedgekeurd"
+                      : "Stop: deze combinatie is fysiek afgewezen"}
+                  </strong>
+                  <span>
+                    {compatibilityEvidence.model} · {compatibilityEvidence.sku} · onderdeel{" "}
+                    {compatibilityEvidence.manufacturerPartNumber} ·{" "}
+                    {compatibilityEvidence.reviewer}
+                  </span>
+                  {compatibilityEvidence.notes && <small>{compatibilityEvidence.notes}</small>}
+                </div>
+              )}
               <button ref={continueButtonRef} className="employee-primary employee-continue" disabled={!orderConfirmed || !model || currentLayoutNeedsSpecification || recommendation.primary === "none" || valueBandClassification === "overlap"} onClick={() => setStep("advice")}>Open advies voor {model || "gekozen model"} →</button>
             </div>
           )}
@@ -480,6 +521,16 @@ export function EmployeeWorkspace({
                 <div className="pick-sticker-card">
                   <div><span>PAK UIT DE HANGMAPPENWAGEN</span><strong>Hangmap {matchedSticker.item.storageNumber}</strong><small>Exacte locatie uit Excel-kolom ‘nr.’</small></div>
                   <div><span>CONTROLEER HET ETIKET</span><strong>{matchedSticker.item.sku}</strong><small>{matchedSticker.variant} · {matchedSticker.item.layout} · {matchedSticker.currentStock} beschikbaar</small></div>
+                </div>
+              )}
+              {recommendation.primary === "noviply_sheet" && compatibilityEvidence?.status === "approved" && (
+                <div className="compatibility-evidence-banner approved">
+                  <strong>✓ Goedgekeurd fysiek compatibiliteitsbewijs</strong>
+                  <span>
+                    {compatibilityEvidence.manufacturerPartNumber} ·{" "}
+                    {compatibilityEvidence.keyboardWidthMm} × {compatibilityEvidence.keyboardHeightMm} mm ·{" "}
+                    {compatibilityEvidence.photoReference}
+                  </span>
                 </div>
               )}
               {recommendation.primary === "noviply_sheet" && matchedSticker?.item.sourceNote && (
@@ -609,6 +660,8 @@ export function EmployeeWorkspace({
         topic={referenceTopic}
         currentLayout={currentLayout}
         targetLayout={targetLayout}
+        expectedVariant={matchedSticker?.variant ?? (selectedStockItem ? extractStickerVariant(selectedStockItem.sku) : null)}
+        expectedSku={matchedSticker?.item.sku ?? selectedStockItem?.sku}
         onClose={() => setReferenceOpen(false)}
         onTopicChange={setReferenceTopic}
         onChooseCurrentLayout={setCurrentLayout}

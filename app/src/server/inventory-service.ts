@@ -10,6 +10,7 @@ import {
   AuthorizationError,
   requirePermission,
 } from "@/server/authorization-service";
+import { databaseUuidSchema } from "@/server/validation";
 
 export const recordMutationSchema = z.object({
   sku: z.string().min(1).max(64),
@@ -19,7 +20,7 @@ export const recordMutationSchema = z.object({
   reasonCode: z.string().min(2).max(64),
   notes: z.string().max(500).optional(),
   idempotencyKey: z.string().min(8).max(200),
-  actorId: z.string().uuid(),
+  actorId: databaseUuidSchema,
 });
 
 export type RecordMutationInput = z.input<typeof recordMutationSchema>;

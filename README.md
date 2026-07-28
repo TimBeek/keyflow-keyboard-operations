@@ -41,11 +41,15 @@ De eerste applicatiebasis bevat:
 - korte modelnummerinvoer (`5420`) met automatische resolutie of een beperkte keuzelijst;
 - vaste verkoopwaardeklassen in plaats van handmatige bedragen;
 - een managementwerkruimte voor transacties, ABC-classificatie en configureerbaar conversiebeleid;
+- een blinde fysieke hangmaptelling met verschiltoelichting, automatische correctie en blijvend controlebewijs;
+- locatiegebonden voorraadstanden, zodat een dubbel of ontbrekend SKU nooit twee fysieke hangmappen als één voorraadpositie behandelt;
 - een managementoverzicht van geslaagde en mislukte hangmap-, E1/E2- en positioneringscontroles;
 - een werknemersgids met eigen trainingsillustratie voor E1/E2, toetsvorm en droge pascontrole;
-- een Dell Latitude-stijl E1/E2-trainingsbeeld en een aparte vergelijking Nederlands versus US International;
+- afzonderlijke, zelf gegenereerde Dell Latitude-stijl E1- en E2-controlebeelden met orderafhankelijke variantmarkering;
 - Scandinavische invoer als gebruikelijke startkeuze, met verplichte specificatie naar Zweeds/Fins, Noors of Deens;
 - een databasestructuur voor door management goedgekeurde layout-, model- en variantreferenties;
+- een AI-ondersteunde modelgroepwachtrij met bronconflicten en verplichte menselijke bewijscontrole;
+- een fysieke compatibiliteitsbibliotheek die afwijzingen direct uit het werknemersadvies houdt;
 - versiegebonden en gevalideerde lokale pilotopslag die boekingen en beleid na een herstart van de browser herstelt;
 - JSON-back-up, gecontroleerd herstel en een tweestapsreset voor management;
 - een productiebuild zonder lint- of TypeScriptfouten;
@@ -92,6 +96,9 @@ npm run db:migrate
 De database-API's zijn daarna beschikbaar via:
 
 - `POST /api/inventory/mutations` voor een idempotente voorraadmutatie;
+- `POST /api/inventory/counts` voor een idempotente fysieke hangmaptelling en eventuele correctie;
+- `POST /api/model-groups/reviews` voor een geautoriseerde, idempotente managementbeoordeling met verplicht fysiek bewijs;
+- `POST /api/compatibility/evidence` voor goedgekeurde of afgewezen model/SKU-pastesten;
 - `POST /api/imports/inventory` voor een gecontroleerde `.xlsx`-upload;
 - `GET /api/imports/inventory/{batchId}` voor alle herleidbare bevindingen van een import;
 - `PATCH /api/imports/inventory/{batchId}/issues/{issueId}` voor auditbare afhandeling;
@@ -133,10 +140,13 @@ De generator weigert een bron die niet exact 148 unieke hangmappen en 3.218 vell
 - `docs/EMPLOYEE_WORKFLOW.md` — scanner-, modelnummer- en waardeklasseflow voor werknemers;
 - `docs/PILOT_PERSISTENCE_AND_ORDER_LOOKUP.md` — orderlookup, lokale pilotopslag, back-up en productiegrenzen;
 - `docs/HANGING_FILE_VERIFICATION.md` — hangmaplocaties en de verplichte controle vóór Noviply-afboeking;
+- `docs/CYCLE_COUNTS.md` — fysieke hangmaptelling, verschilafhandeling en centrale API;
 - `docs/KEYBOARD_LAYOUT_REFERENCE.md` — Scandinavische herkenning, E1/E2-pasvormcontrole en referentiebeheer;
 - `docs/GO_LIVE_INPUTS.md` — exacte toegangen, gegevens en acceptatiebewijzen die nog nodig zijn voor 100%;
 - `docs/PRODUCTION_COMPLETION_AUDIT.md` — requirementmatrix met bewijs, ontbrekende aansluitingen en actuele status;
 - `docs/AI_MODEL_GROUP_DATA_REQUIREMENTS.md` — vereiste bron- en validatiedata voor veilige AI-modelgroepvoorstellen;
+- `docs/MODEL_GROUP_REVIEW.md` — werkende managementwachtrij, bewijsvelden en goedkeuringsregels;
+- `docs/COMPATIBILITY_EVIDENCE.md` — fysieke pastesten, werknemersblokkades en centrale bewijs-API;
 - `ONDERZOEKSRAPPORT_FASE_1.pdf` — goedgekeurde onderzoeksbasis;
 - `docs/DEPLOYMENT.md` — voorgestelde GitHub- en productie-uitrol;
 - `app/Dockerfile` — productiecontainer;

@@ -20,17 +20,18 @@ import {
   AuthorizationError,
   requirePermission,
 } from "@/server/authorization-service";
+import { databaseUuidSchema } from "@/server/validation";
 
 const importMetadataSchema = z.object({
   fileName: z.string().trim().min(1).max(255),
-  actorId: z.string().uuid(),
+  actorId: databaseUuidSchema,
 });
 
-const importIdSchema = z.string().uuid();
+const importIdSchema = databaseUuidSchema;
 const resolveImportIssueSchema = z.object({
-  batchId: z.string().uuid(),
-  issueId: z.string().uuid(),
-  actorId: z.string().uuid(),
+  batchId: databaseUuidSchema,
+  issueId: databaseUuidSchema,
+  actorId: databaseUuidSchema,
   resolved: z.boolean(),
   resolutionNote: z.string().trim().min(3).max(500),
   resolutionAction: resolutionActionSchema,

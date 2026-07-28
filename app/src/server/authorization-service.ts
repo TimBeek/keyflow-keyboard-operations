@@ -1,5 +1,5 @@
 import "server-only";
-import { database } from "@/server/database";
+import { database } from "./database";
 import type { Permission } from "@/domain/access-control";
 
 export async function requirePermission(actorId: string, permission: Permission) {

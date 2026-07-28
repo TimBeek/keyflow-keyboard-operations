@@ -35,3 +35,15 @@ Als iets niet klopt, kiest de medewerker de reden en één van twee uitkomsten:
 Management ziet beide soorten meldingen in `Beheer & analyse` onder `Hangmapcontroles`. Daardoor zijn verkeerde locaties, SKU's, layouts, E1/E2-varianten en positioneringsproblemen afzonderlijk analyseerbaar.
 
 Bronnotities uit Excel worden als waarschuwing getoond. Zo wordt een bekende opmerking over maatvoering of een foutief taaletiket zichtbaar vóórdat een medewerker het vel aanbrengt.
+
+## Fysieke voorraad tellen
+
+Management gebruikt `Beheer & analyse` > `Voorraad tellen` voor de begin- en periodieke telling:
+
+1. voer uitsluitend het nummer op de hangmap in;
+2. tel de vellen fysiek zonder de systeemvoorraad vooraf over te nemen;
+3. voer het getelde gehele aantal in;
+4. licht ieder tekort of overschot met minimaal drie tekens toe;
+5. controleer na opslaan de nieuwe voorraad en de aparte telregel.
+
+KeyFlow bewaart ook een kloppende telling. Bij een verschil wordt de voorraad op de getelde stand gezet en ontstaat precies één correctietransactie met reden `cycle_count_shortage` of `cycle_count_overage`. De voorraad is intern aan de fysieke hangmap gekoppeld, niet alleen aan de tekst van het SKU. Daardoor blijven locaties afzonderlijk controleerbaar wanneer de bron een ontbrekend of dubbel artikelnummer bevat.

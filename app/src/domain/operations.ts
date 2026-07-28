@@ -1,5 +1,6 @@
 import type { InventoryCatalogItem } from "@/data/inventory-catalog";
 import type { ConversionMethodId } from "@/domain/conversion-policy";
+import { inventoryQuantity } from "./inventory-quantities";
 import { modelMatchesCatalogItem } from "./model-catalog";
 
 export type OperationalMethodId = Exclude<ConversionMethodId, "none">;
@@ -32,6 +33,8 @@ export const defaultOperationsPolicy: OperationsPolicy = {
 export type InventoryTransactionEntry = {
   id: string;
   occurredAt: string;
+  catalogKey?: string;
+  storageNumber?: number;
   sku: string;
   model: string;
   layout: string;
@@ -102,7 +105,7 @@ export function findNoviplySku(
   }
 
   const item = candidates[0];
-  const currentStock = quantities[item.sku] ?? item.stock;
+  const currentStock = inventoryQuantity(quantities, item);
   const variant = extractStickerVariant(item.sku);
 
   if (currentStock <= 0) {
@@ -117,6 +120,8 @@ export function extractStickerVariant(sku: string) {
 }
 
 export type AbcAnalysisRow = {
+  catalogKey: string;
+  storageNumber: number;
   sku: string;
   model: string;
   layout: string;
@@ -136,7 +141,11 @@ export function calculateAbcAnalysis(
   policy: Pick<OperationsPolicy, "abcAThreshold" | "abcBThreshold">,
 ): AbcAnalysisRow[] {
   const rows = catalog.map((item) => {
-    const skuTransactions = transactions.filter((entry) => entry.sku === item.sku);
+    const skuTransactions = transactions.filter((entry) =>
+      entry.catalogKey
+        ? entry.catalogKey === item.catalogKey
+        : item.dataQuality === "ready" && entry.sku === item.sku,
+    );
     const issueUnits = skuTransactions
       .filter((entry) => entry.quantityDelta < 0)
       .reduce((sum, entry) => sum + Math.abs(entry.quantityDelta), 0);
@@ -145,6 +154,8 @@ export function calculateAbcAnalysis(
       .reduce((sum, entry) => sum + entry.quantityDelta, 0);
 
     return {
+      catalogKey: item.catalogKey,
+      storageNumber: item.storageNumber,
       sku: item.sku,
       model: item.model,
       layout: item.layout,

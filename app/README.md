@@ -31,3 +31,9 @@ De generator accepteert alleen de gecontroleerde momentopname met 148 unieke han
 ## Centrale productie
 
 De server-API en migraties gebruiken PostgreSQL zodra `DATABASE_URL` is ingesteld. Zonder centrale database draait de live werknemersflow bewust in lokale pilotmodus; persoonlijke SSO, de echte order-API en formele fysieke acceptatie zijn aparte go-livevoorwaarden. Zie `../docs/GO_LIVE_INPUTS.md` en `../docs/PRODUCTION_COMPLETION_AUDIT.md`.
+
+Management kan in `Beheer & analyse` onder `Voorraad tellen` iedere fysieke hangmap blind tellen. Een verschil vereist een toelichting en maakt precies één herleidbare correctieboeking. De centrale route is `POST /api/inventory/counts`; migratie `0010_stock_counts.sql` bewaart ook kloppende tellingen als controlebewijs.
+
+Onder `AI-modelgroepen` analyseert KeyFlow gedeelde SKU-, layout-, E1/E2- en modelbrondata. Management kan een voorstel alleen goedkeuren nadat onderdeelnummer, foto, variant en droge pastest expliciet zijn bevestigd. Besluiten worden lokaal in de pilotback-up bewaard; migratie `0011_model_group_review.sql` bereidt de centrale auditwachtrij voor.
+
+Onder `Bewijsbibliotheek` legt management iedere fysieke model/SKU-pastest afzonderlijk vast. Een goedkeuring vereist vijf vormcontroles, onderdeelnummer, afmetingen en fotoreferentie. Een laatste afwijzing blokkeert de oude Noviply-methode voor dat exacte model in de werknemersflow. Migratie `0012_compatibility_evidence.sql` en `POST /api/compatibility/evidence` bereiden centrale opslag voor.
