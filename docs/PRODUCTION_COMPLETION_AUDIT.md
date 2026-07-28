@@ -18,7 +18,7 @@ Deze matrix toetst de actuele applicatie aan de oorspronkelijke projectprompt en
 | Forecasting en besteladvies | Voorbereid | Geteste ROP-, safety-stock- en dekkingberekening; 25 expliciete voorbeeldparameterregels | Echte levertijd, kostprijs, open orders en verbruikshistorie |
 | CSV-export | Gereed | Alle 148 regels met locatie, actuele voorraad, modelkoppelingen en datakwaliteit; formule-injectie wordt geneutraliseerd | Gebruikersacceptatie van kolommen |
 | PostgreSQL-transacties | Voorbereid | Schema, migraties 0001–0010, rij- en idempotentielocks, autorisatie en API's voor mutaties en tellingen | `DATABASE_URL`, migratie, seed, back-up en hersteltest |
-| Persoonlijke werknemer/managementlogin | Niet gereed | Rollen- en permissiematrix bestaat | Entra-appregistratie, groepen, MFA en sessiebeleid |
+| Persoonlijke werknemer/managementlogin | Technisch voorbereid | Tenantgebonden Entra/OIDC, app-rollen, achtuurs sessies, gebruikerssynchronisatie, gedeactiveerde-accountblokkade en beveiligde API-actor | Echte Entra-appregistratie, roltoewijzingen, MFA/Conditional Access en acceptatietest |
 | Werkelijke order/ERP-koppeling | Voorbereid | Vervangbare lookupadapter en fout-/holdflow | API, authenticatie, veldmapping en testorders |
 | Dell E1/E2- en layoutreferenties | Trainingslaag gereed | Afzonderlijke Dell Latitude-stijl E1/E2-beelden, actuele-variantmarkering, Nordic-keuzes en NL/US-vergelijking | Goedgekeurde model/SKU-foto's en fysieke pastesten |
 | AI-ondersteunde modelgroepen | Wachtrij gereed | Herleidbare voorstellen, bronconflicten, score, verplichte E1/E2-/onderdeelnummer-/foto-/pastestcontrole, lokale audit en geautoriseerde idempotente PostgreSQL-API | Echte bewijsvelden verzamelen, migratie 0011 uitvoeren en eventuele externe AI-bronnen aansluiten |
@@ -28,4 +28,4 @@ Deze matrix toetst de actuele applicatie aan de oorspronkelijke projectprompt en
 
 ## Conclusie
 
-De aantoonbare voortgang is 87%. De zelfstandig bouwbare broncatalogus, werknemerslogica, managementanalyse, modelkoppelingen en veiligheidsblokkades zijn aanwezig. De resterende 13% bestaat hoofdzakelijk uit centrale infrastructuur, persoonlijke identiteit, de echte orderbron, formeel compatibiliteitsbewijs en fysieke werkvloeracceptatie. Deze onderdelen mogen niet met demo-informatie als “gereed” worden gemarkeerd.
+De aantoonbare voortgang is 90%. De zelfstandig bouwbare broncatalogus, werknemerslogica, managementanalyse, modelkoppelingen, veiligheidsblokkades en persoonlijke-loginbasis zijn aanwezig. De resterende 10% bestaat hoofdzakelijk uit beheerde centrale infrastructuur, echte Entra-configuratie, de werkelijke orderbron, formeel compatibiliteitsbewijs en fysieke werkvloeracceptatie. Deze onderdelen mogen niet met demo-informatie als “gereed” worden gemarkeerd.

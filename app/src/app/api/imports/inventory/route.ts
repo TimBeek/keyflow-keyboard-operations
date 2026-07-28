@@ -3,6 +3,11 @@ import {
   importInventoryWorkbook,
   inventoryImportErrorResponse,
 } from "@/server/inventory-import-service";
+import {
+  RequestIdentityError,
+  requestIdentityErrorResponse,
+  resolveRequestActorId,
+} from "@/server/request-identity";
 
 export const runtime = "nodejs";
 
@@ -17,9 +22,10 @@ export async function POST(request: Request) {
     const form = await request.formData();
     const file = form.get("file");
     const suppliedActorId = form.get("actorId");
-    const actorId = typeof suppliedActorId === "string" && suppliedActorId
-      ? suppliedActorId
-      : process.env.KEYFLOW_IMPORT_ACTOR_ID;
+    const actorId = await resolveRequestActorId(
+      suppliedActorId,
+      process.env.KEYFLOW_IMPORT_ACTOR_ID,
+    );
 
     if (!(file instanceof File)) {
       return Response.json(
@@ -56,6 +62,10 @@ export async function POST(request: Request) {
     });
     return Response.json(result, { status: result.duplicate ? 200 : 201 });
   } catch (error) {
+    if (error instanceof RequestIdentityError) {
+      const response = requestIdentityErrorResponse(error);
+      return Response.json(response.body, { status: response.status });
+    }
     if (error instanceof DatabaseConfigurationError) {
       return Response.json(
         { error: "DATABASE_NOT_CONFIGURED", message: error.message },

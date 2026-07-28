@@ -3,6 +3,11 @@ import {
   inventoryImportErrorResponse,
   resolveInventoryImportIssue,
 } from "@/server/inventory-import-service";
+import {
+  RequestIdentityError,
+  requestIdentityErrorResponse,
+  resolveRequestActorId,
+} from "@/server/request-identity";
 
 export const runtime = "nodejs";
 
@@ -13,9 +18,10 @@ export async function PATCH(
   try {
     const { batchId, issueId } = await context.params;
     const body = await request.json();
-    const actorId = typeof body.actorId === "string" && body.actorId
-      ? body.actorId
-      : process.env.KEYFLOW_IMPORT_ACTOR_ID;
+    const actorId = await resolveRequestActorId(
+      body.actorId,
+      process.env.KEYFLOW_IMPORT_ACTOR_ID,
+    );
     if (!actorId) {
       return Response.json(
         {
@@ -37,6 +43,10 @@ export async function PATCH(
     });
     return Response.json(result);
   } catch (error) {
+    if (error instanceof RequestIdentityError) {
+      const response = requestIdentityErrorResponse(error);
+      return Response.json(response.body, { status: response.status });
+    }
     if (error instanceof DatabaseConfigurationError) {
       return Response.json(
         { error: "DATABASE_NOT_CONFIGURED", message: error.message },

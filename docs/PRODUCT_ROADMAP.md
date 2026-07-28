@@ -2,7 +2,7 @@
 
 De voortgang wordt gemeten richting een volledige productieversie, niet alleen richting een visueel prototype.
 
-## Huidige voortgang: 87%
+## Huidige voortgang: 90%
 
 | Onderdeel | Gewicht | Gereed |
 |---|---:|---:|
@@ -14,14 +14,14 @@ De voortgang wordt gemeten richting een volledige productieversie, niet alleen r
 | Forecasting, besteladvies en managementrapportages | 10% | 9% |
 | Rollen, permissies en gebruikerservaring per rol | 10% | 10% |
 | Live PostgreSQL, back-up, herstel en monitoring | 8% | 3% |
-| Persoonlijke authenticatie/SSO en sessiebeveiliging | 5% | 0% |
+| Persoonlijke authenticatie/SSO en sessiebeveiliging | 5% | 3% |
 | Externe koppelingen en productieacceptatie | 7% | 6% |
-| **Totaal** | **100%** | **87%** |
+| **Totaal** | **100%** | **90%** |
 
 ## Eerstvolgende fasen
 
 1. De lokale pilotpersistentie vervangen door gedeelde PostgreSQL-opslag en de 139 operationele plus 9 geblokkeerde bronregels gecontroleerd migreren.
-2. Persoonlijke login koppelen aan management- en werknemersrollen.
+2. De gebouwde Entra-login met de echte tenant, appregistratie, app-rollen, MFA en productiehost configureren en accepteren.
 3. De orderlookup-adapter op het werkelijke order- of ERP-systeem aansluiten.
 4. De scanner-first invoer, hangmapnummers en vijfpuntscontrole met de werkelijke scanners, hangmappenwagen en tablets op de werkvloer accepteren.
 5. De gebouwde fysieke bewijsbibliotheek met echte E1/E2-, onderdeelnummer-, afmetings-, foto- en pastestrecords vullen en door management laten aftekenen.
@@ -32,5 +32,7 @@ De voortgang wordt gemeten richting een volledige productieversie, niet alleen r
 De applicatie bevat nu de volledige, checksum-gebonden Excelmomentopname: 148 unieke hangmaplocaties, 3.218 vellen, 139 veilig operationele regels en 9 geblokkeerde regels met ontbrekende of dubbele artikelnummers. Alle gekoppelde modellen zijn doorzoekbaar, conflicterende SKU-koppelingen worden automatisch in een managementwachtrij gezet en de volledige catalogus kan veilig als CSV worden geëxporteerd. De bronkoppelingen zijn nadrukkelijk nog geen fysieke compatibiliteitsgoedkeuring.
 
 De huidige 3% voor database/back-up betreft de geteste, versiegebonden pilotpersistentie, het gevalideerde JSON-herstel en het databaseschema voor hangmaplocaties, fysieke tellingen, controle-uitkomsten, keyboardreferenties, modelgroepbeoordelingen en compatibiliteitsbewijzen. De telflow en bewijsflow hebben idempotente centrale API's, maar zijn nog niet op een beheerde database uitgevoerd. De 6% voor koppelingen/acceptatie betreft de vervangbare orderlookup-adapter, de complete scan-naar-adviesflow, de op werkvloerinformatie aangepaste hangmapcontrole, een desktop- en mobiel geteste Scandinavische/NL-US-herkenningsflow, de Dell Latitude-stijl E1/E2-pasvormgids, de herleidbare modelgroepwachtrij en de werknemersblokkade na een afgewezen fysieke pastest. Centrale teamsynchronisatie, de werkelijke orderkoppeling, echte onderdeelnummer-/fotobewijzen en fysieke acceptatietests zijn nog niet gereed.
+
+De huidige 3% voor persoonlijke authenticatie omvat de tenantgebonden Microsoft Entra ID/OIDC-flow, achtuurs JWT-sessies, expliciete `KeyFlow.Employee`- en `KeyFlow.Management`-app-rollen, automatische databasegebruikerssynchronisatie en server-side vervanging van meegestuurde actor-id's door de persoonlijke sessie. De echte tenantregistratie, toegewezen gebruikers/groepen, MFA/Conditional Access en operationele acceptatie ontbreken nog.
 
 Het percentage wordt alleen verhoogd nadat een onderdeel is geïmplementeerd, getest, naar GitHub gepusht en in de private live-omgeving gepubliceerd.

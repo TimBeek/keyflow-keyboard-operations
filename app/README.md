@@ -30,7 +30,9 @@ De generator accepteert alleen de gecontroleerde momentopname met 148 unieke han
 
 ## Centrale productie
 
-De server-API en migraties gebruiken PostgreSQL zodra `DATABASE_URL` is ingesteld. Zonder centrale database draait de live werknemersflow bewust in lokale pilotmodus; persoonlijke SSO, de echte order-API en formele fysieke acceptatie zijn aparte go-livevoorwaarden. Zie `../docs/GO_LIVE_INPUTS.md` en `../docs/PRODUCTION_COMPLETION_AUDIT.md`.
+De server-API en migraties gebruiken PostgreSQL zodra `DATABASE_URL` is ingesteld. Zonder centrale database draait de live werknemersflow bewust in lokale pilotmodus; de echte order-API en formele fysieke acceptatie blijven aparte go-livevoorwaarden. Zie `../docs/GO_LIVE_INPUTS.md` en `../docs/PRODUCTION_COMPLETION_AUDIT.md`.
+
+De Microsoft Entra ID/OIDC-loginbasis gebruikt app-rollen `KeyFlow.Employee` en `KeyFlow.Management`, synchroniseert persoonlijke accounts met de database en vervangt in productiemodus meegestuurde actor-id's door de beveiligde sessie-identiteit. `/api/health` meldt ontbrekende configuratie zonder secrets te tonen en `/api/readiness` wordt pas groen wanneer ook PostgreSQL bereikbaar is. De private preview blijft in pilotmodus totdat de echte Entra-registratie en productieomgeving zijn ingevuld. Zie `../docs/IDENTITY_AND_SSO.md`.
 
 Management kan in `Beheer & analyse` onder `Voorraad tellen` iedere fysieke hangmap blind tellen. Een verschil vereist een toelichting en maakt precies één herleidbare correctieboeking. De centrale route is `POST /api/inventory/counts`; migratie `0010_stock_counts.sql` bewaart ook kloppende tellingen als controlebewijs.
 

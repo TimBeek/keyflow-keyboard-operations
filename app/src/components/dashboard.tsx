@@ -24,6 +24,7 @@ import {
 import { initialInventoryTransactions } from "@/data/operations-demo";
 import { demoWorkOrders } from "@/data/orders-demo";
 import type { UserRole } from "@/domain/access-control";
+import type { KeyFlowIdentity } from "@/domain/identity";
 import {
   createCompatibilityEvidenceRecord,
   type CompatibilityEvidenceInput,
@@ -151,8 +152,14 @@ const methods = [
   { id: 4, name: "Directe keyboardprint", detail: "Vanaf €300 · premium resultaat", tone: "green", status: "Voorkeur" },
 ];
 
-export function Dashboard() {
-  const [role, setRole] = useState<UserRole>("management");
+export function Dashboard({
+  identity,
+  onSignOut,
+}: {
+  identity: KeyFlowIdentity;
+  onSignOut?: () => void;
+}) {
+  const [role, setRole] = useState<UserRole>(identity.role);
   const [activeView, setActiveView] = useState<ViewName>("overview");
   const [query, setQuery] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -178,6 +185,13 @@ export function Dashboard() {
     onConfirm?: (newQuantity: number) => void;
   } | null>(null);
   const [lastAction, setLastAction] = useState("");
+  const demoAccess = identity.mode === "pilot";
+  const actorName = identity.mode === "entra"
+    ? identity.displayName
+    : role === "management"
+      ? "Tim Beek"
+      : "Medewerker";
+  const actorInitials = initialsFor(actorName);
   const filteredStock = useMemo(
     () => stockItems.filter((item) => `${item.model} ${item.sku} ${item.layout}`.toLowerCase().includes(query.toLowerCase())),
     [query, stockItems],
@@ -297,7 +311,7 @@ export function Dashboard() {
         type: quantityDelta > 0 ? "receipt" : "issue",
         quantityDelta,
         reasonCode: quantityDelta > 0 ? "supplier_delivery" : "manual_issue",
-        actor: "Tim Beek",
+        actor: actorName,
         reference: "Managementboeking",
       },
     ]);
@@ -371,7 +385,7 @@ export function Dashboard() {
       sku: item.sku,
       model: item.model,
       ...result,
-      actor: "Tim Beek",
+      actor: actorName,
     };
 
     setCatalogQuantities((current) =>
@@ -401,7 +415,7 @@ export function Dashboard() {
             ? "cycle_count_shortage"
             : "cycle_count_overage",
           notes: result.notes,
-          actor: "Tim Beek",
+          actor: actorName,
           reference: `TELLING-HANGMAP-${item.storageNumber}`,
         },
       ]);
@@ -420,7 +434,7 @@ export function Dashboard() {
       ...input,
       id: crypto.randomUUID(),
       occurredAt: new Date().toISOString(),
-      actor: "Medewerker",
+      actor: actorName,
     };
     setVerificationReports((current) => [...current, report]);
     setLastAction(
@@ -438,7 +452,7 @@ export function Dashboard() {
     const decision = createModelGroupDecision(proposal, input, {
       id: crypto.randomUUID(),
       decidedAt: new Date().toISOString(),
-      reviewer: "Tim Beek",
+      reviewer: actorName,
     });
     setModelGroupDecisions((current) => [...current, decision]);
     setLastAction(
@@ -454,7 +468,7 @@ export function Dashboard() {
       {
         id: crypto.randomUUID(),
         recordedAt: new Date().toISOString(),
-        reviewer: "Tim Beek",
+        reviewer: actorName,
       },
     );
     setCompatibilityEvidenceRecords((current) => [...current, record]);
@@ -465,6 +479,7 @@ export function Dashboard() {
   }
 
   function switchRole(nextRole: UserRole) {
+    if (!demoAccess) return;
     setRole(nextRole);
     setActiveView("overview");
     setQuery("");
@@ -549,9 +564,13 @@ export function Dashboard() {
         <div className="sidebar-footer">
           <button className="nav-item" onClick={() => role === "management" && setAccessOpen(true)}><Icon name="settings" /><span>{role === "management" ? "Toegangsbeheer" : "Hulp"}</span></button>
           <div className="profile">
-            <div className="avatar">{role === "management" ? "TB" : "MW"}</div>
-            <div><strong>{role === "management" ? "Tim Beek" : "Medewerker"}</strong><span>{role === "management" ? "Management" : "Uitvoering"}</span></div>
-            <button aria-label="Profielmenu">•••</button>
+            <div className="avatar">{actorInitials}</div>
+            <div><strong>{actorName}</strong><span>{role === "management" ? "Management" : "Uitvoering"}</span></div>
+            <button
+              aria-label={onSignOut ? "Afmelden" : "Profielmenu"}
+              onClick={onSignOut}
+              title={onSignOut ? "Afmelden" : "Pilotprofiel"}
+            >{onSignOut ? "↗" : "•••"}</button>
           </div>
         </div>
       </aside>
@@ -564,13 +583,20 @@ export function Dashboard() {
             <p>{role === "employee" ? "Eén duidelijke taak tegelijk, met automatisch methodeadvies." : viewHeadings[activeView].subtitle}</p>
           </div>
           <div className="top-actions">
-            <div className="role-switcher" aria-label="Demorol kiezen">
-              <span>TOEGANG</span>
-              <div>
-                <button className={role === "employee" ? "active" : ""} onClick={() => switchRole("employee")}>Werknemer</button>
-                <button className={role === "management" ? "active" : ""} onClick={() => switchRole("management")}>Management</button>
+            {demoAccess ? (
+              <div className="role-switcher" aria-label="Demorol kiezen">
+                <span>PILOTTOEGANG</span>
+                <div>
+                  <button className={role === "employee" ? "active" : ""} onClick={() => switchRole("employee")}>Werknemer</button>
+                  <button className={role === "management" ? "active" : ""} onClick={() => switchRole("management")}>Management</button>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="identity-badge">
+                <span>MICROSOFT ENTRA ID</span>
+                <strong>{role === "management" ? "Management" : "Werknemer"}</strong>
+              </div>
+            )}
             {role === "management" && <label className="global-search">
               <span className="sr-only">Zoeken</span>
               <Icon name="scan" />
@@ -589,6 +615,7 @@ export function Dashboard() {
         {role === "employee" && (
           <EmployeeWorkspace
             catalog={inventoryCatalog}
+            actorName={actorName}
             orders={demoWorkOrders}
             quantities={catalogQuantities}
             policy={operationsPolicy}
@@ -755,10 +782,14 @@ export function Dashboard() {
 
         <footer className="app-footer">
           <span><i /> {persistenceReady ? `Lokaal bewaard${lastSavedAt ? ` · ${formatPersistenceTime(lastSavedAt)}` : ""}` : "Opslag laden…"}</span>
-          <span>{lastAction || `Productieroadmap 87% · ${role === "management" ? "managementweergave" : "werknemersuitvoering"}`}</span>
+          <span>{lastAction || `Productieroadmap 90% · ${role === "management" ? "managementweergave" : "werknemersuitvoering"}`}</span>
         </footer>
         <ConversionAdvisor open={advisorOpen} onClose={() => setAdvisorOpen(false)} />
-        <AccessManagementDialog open={accessOpen} onClose={() => setAccessOpen(false)} />
+        <AccessManagementDialog
+          open={accessOpen}
+          onClose={() => setAccessOpen(false)}
+          identity={identity}
+        />
         <InventoryImportDialog
           open={importOpen}
           onClose={() => setImportOpen(false)}
@@ -783,6 +814,12 @@ export function Dashboard() {
 
 function calculateCatalogThreshold(averageWeeklyDemand: number, leadTimeDays: number, safetyStockWeeks: number) {
   return Math.ceil(averageWeeklyDemand * (leadTimeDays / 7 + safetyStockWeeks));
+}
+
+function initialsFor(displayName: string) {
+  const parts = displayName.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "KF";
+  return `${parts[0][0] ?? ""}${parts.at(-1)?.[0] ?? ""}`.toUpperCase();
 }
 
 function formatPersistenceTime(value: string) {
