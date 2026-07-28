@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { inventoryCatalog } from "../data/inventory-demo";
+import { inventoryCatalog } from "../data/inventory-catalog";
 import {
   calculateAbcAnalysis,
   extractStickerVariant,

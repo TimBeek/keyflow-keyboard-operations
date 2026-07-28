@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { inventoryCatalog } from "@/data/inventory-demo";
+import { inventoryCatalog } from "@/data/inventory-catalog";
 import {
   calculateAbcAnalysis,
   type InventoryTransactionEntry,

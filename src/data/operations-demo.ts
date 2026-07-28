@@ -1,7 +1,7 @@
-import { inventoryCatalog } from "./inventory-demo";
+import { planningCatalog } from "./inventory-catalog";
 import type { InventoryTransactionEntry } from "../domain/operations";
 
-export const initialInventoryTransactions: InventoryTransactionEntry[] = inventoryCatalog.flatMap(
+export const initialInventoryTransactions: InventoryTransactionEntry[] = planningCatalog.flatMap(
   (item, index) => {
     const issueUnits = Math.round(item.averageWeeklyDemand * 12);
     const issueEntry: InventoryTransactionEntry[] = issueUnits > 0

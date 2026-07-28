@@ -1,11 +1,18 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { inventoryCatalog } from "@/data/inventory-demo";
+import {
+  inventoryCatalog,
+  planningCatalog,
+} from "@/data/inventory-catalog";
 import { calculateForecastAdvice } from "@/domain/forecasting";
 import { scandinavianLayoutReferences } from "@/domain/keyboard-layouts";
+import {
+  buildModelGroupAudit,
+  type ModelGroupStatus,
+} from "@/domain/model-groups";
 
-const plannedItems = inventoryCatalog
+const plannedItems = planningCatalog
   .map((item) => ({
     ...item,
     advice: calculateForecastAdvice({
@@ -91,9 +98,9 @@ export function OrdersWorkspace() {
 export function ReportsWorkspace() {
   const weeklyUsage = [72, 85, 68, 94, 101, 88, 113, 96];
   const maxUsage = Math.max(...weeklyUsage);
-  const topItems = [...inventoryCatalog].sort((a, b) => b.averageWeeklyDemand - a.averageWeeklyDemand).slice(0, 6);
-  const totalWeekly = inventoryCatalog.reduce((sum, item) => sum + item.averageWeeklyDemand, 0);
-  const dormantValue = inventoryCatalog.filter(({ averageWeeklyDemand }) => averageWeeklyDemand === 0).reduce((sum, item) => sum + item.stock * item.unitCost, 0);
+  const topItems = [...planningCatalog].sort((a, b) => b.averageWeeklyDemand - a.averageWeeklyDemand).slice(0, 6);
+  const totalWeekly = planningCatalog.reduce((sum, item) => sum + item.averageWeeklyDemand, 0);
+  const dormantValue = planningCatalog.filter(({ averageWeeklyDemand }) => averageWeeklyDemand === 0).reduce((sum, item) => sum + item.stock * item.unitCost, 0);
 
   return (
     <div className="workspace-view">
@@ -135,42 +142,73 @@ export function ReportsWorkspace() {
 }
 
 export function ModelsWorkspace() {
-  const [selectedFamily, setSelectedFamily] = useState<string | null>(null);
-  const groups = useMemo(() => [
-    { family: "Dell Latitude 7x00", models: 14, skus: 4, coverage: 91, note: "7400, 7490, 7300 en aliases" },
-    { family: "Dell Latitude 5x00", models: 18, skus: 6, coverage: 86, note: "5300, 5400, 5410, 5420" },
-    { family: "HP EliteBook 8xx", models: 22, skus: 7, coverage: 94, note: "830, 840 en 850 generaties" },
-    { family: "HP ProBook 4xx/6xx", models: 19, skus: 8, coverage: 82, note: "430, 440, 640 en gekoppelde modellen" },
-    { family: "HP ZBook 15/Fury", models: 11, skus: 5, coverage: 78, note: "NL, FR en DE layoutvarianten" },
-    { family: "Fujitsu Lifebook U/E", models: 17, skus: 9, coverage: 88, note: "U728, U729, U7410 en E548" },
-  ], []);
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const audit = useMemo(() => buildModelGroupAudit(inventoryCatalog), []);
+  const groups = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) return audit.groups;
+    return audit.groups.filter((group) =>
+      `${group.primaryModel} ${group.models.join(" ")} ${group.sku} ${group.layout} ${group.storageNumber}`
+        .toLowerCase()
+        .includes(normalizedQuery),
+    );
+  }, [audit.groups, query]);
+  const selectedGroup = audit.groups.find(({ id }) => id === selectedGroupId) ?? null;
 
   return (
     <div className="workspace-view">
       <section className="workspace-stats">
-        <article><span>Modelgroepen</span><strong>{groups.length}</strong><small>voorbeeldfamilies</small></article>
-        <article><span>Gekoppelde modellen</span><strong>{groups.reduce((sum, group) => sum + group.models, 0)}</strong><small>in deze families</small></article>
-        <article><span>Gemiddelde dekking</span><strong>{Math.round(groups.reduce((sum, group) => sum + group.coverage, 0) / groups.length)}%</strong><small>compatibiliteit bevestigd</small></article>
-        <article className="attention"><span>Te beoordelen</span><strong>31</strong><small>ontbrekende Excel-koppelingen</small></article>
+        <article><span>Hangmapgroepen</span><strong>{audit.groups.length}</strong><small>{audit.blockedSources} bronregels geblokkeerd</small></article>
+        <article><span>Unieke modelnamen</span><strong>{audit.uniqueModels}</strong><small>primair en gekoppeld</small></article>
+        <article className="attention"><span>Koppeling ontbreekt</span><strong>{audit.needsCompatibility}</strong><small>geen bruikbare modellen in Excel</small></article>
+        <article className="attention"><span>Ambigue koppelingen</span><strong>{audit.conflicts.length}</strong><small>model verwijst naar meerdere SKU&apos;s</small></article>
       </section>
       <section className="panel models-panel-full">
-        <div className="order-heading"><div><span className="workspace-kicker">COMPATIBILITEIT</span><h2>Modelgroepen en gedeelde keyboard-layouts</h2><p>Eén gevalideerde koppeling kan meerdere laptopmodellen bedienen.</p></div><button className="primary-button" onClick={() => setSelectedFamily("Nieuwe modelgroep")}>Nieuwe modelgroep</button></div>
+        <div className="order-heading">
+          <div><span className="workspace-kicker">COMPATIBILITEIT UIT EXCEL</span><h2>Modelgroepen en gedeelde keyboard-layouts</h2><p>Iedere groep toont de echte hangmap, SKU en gekoppelde modellen; niets is automatisch fysiek goedgekeurd.</p></div>
+          <label className="global-search"><span className="sr-only">Modelgroepen zoeken</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Zoek model, SKU of hangmap…" /></label>
+        </div>
+        <div className="catalog-result-line"><span>{groups.length} van {audit.groups.length} groepen zichtbaar</span><button onClick={() => setQuery("")}>Zoekopdracht wissen</button></div>
         <div className="model-group-grid">
           {groups.map((group) => (
-            <article key={group.family}>
-              <div><span className="model-family-icon">⌨</span><span className={`coverage ${group.coverage < 80 ? "low" : ""}`}>{group.coverage}% getest</span></div>
-              <h3>{group.family}</h3><p>{group.note}</p>
-              <dl><div><dt>Modellen</dt><dd>{group.models}</dd></div><div><dt>Sticker-SKU&apos;s</dt><dd>{group.skus}</dd></div></dl>
-              <button onClick={() => setSelectedFamily(group.family)}>Compatibiliteit beheren →</button>
+            <article key={group.id}>
+              <div><span className="model-family-icon">⌨</span><span className={`coverage ${group.status !== "imported_unverified" ? "low" : ""}`}>{modelGroupStatusLabel(group.status)}</span></div>
+              <h3>{group.primaryModel}</h3><p>{group.sku || "Artikelnummer ontbreekt"} · {group.layout} · hangmap {group.storageNumber}</p>
+              <dl><div><dt>Modellen</dt><dd>{group.models.length}</dd></div><div><dt>Variant</dt><dd>{group.variant}</dd></div></dl>
+              <button onClick={() => setSelectedGroupId(group.id)}>Bronkoppeling controleren →</button>
             </article>
           ))}
         </div>
-        {selectedFamily && (
+        {groups.length === 0 && <div className="empty">Geen modelgroep gevonden voor deze zoekopdracht.</div>}
+        {selectedGroup && (
           <div className="model-selection">
-            <div><strong>{selectedFamily}</strong><span>{selectedFamily === "Nieuwe modelgroep" ? "Wizard voorbereid voor fabrikant, familie en aliases." : "Compatibiliteitsbeheer geselecteerd; wijzigingen worden later via database en auditlog opgeslagen."}</span></div>
-            <button className="secondary-button" onClick={() => setSelectedFamily(null)}>Sluiten</button>
+            <div>
+              <strong>{selectedGroup.primaryModel} · hangmap {selectedGroup.storageNumber}</strong>
+              <span>{selectedGroup.statusReason}</span>
+              <small>{selectedGroup.models.join(", ")}</small>
+              {selectedGroup.sourceNote && <small>Bronnotitie: {selectedGroup.sourceNote}</small>}
+            </div>
+            <button className="secondary-button" onClick={() => setSelectedGroupId(null)}>Sluiten</button>
           </div>
         )}
+      </section>
+      <section className="panel reference-library-panel">
+        <div className="order-heading">
+          <div><span className="workspace-kicker">CONFLICTWACHTRIJ</span><h2>Modellen met meerdere kandidaat-SKU&apos;s</h2><p>Deze koppelingen blijven ambigu totdat E1/E2, onderdeelnummer, foto en fysieke pastest uitsluitsel geven.</p></div>
+          <span className="data-badge">{audit.conflicts.length} te beoordelen</span>
+        </div>
+        <div className="reference-layout-table">
+          {audit.conflicts.slice(0, 12).map((conflict) => (
+            <div key={`${conflict.model}-${conflict.layout}`}>
+              <span className="reference-layout-code">{conflict.layout}</span>
+              <strong>{conflict.model}</strong>
+              <b title={conflict.skus.join(", ")}>{conflict.skus.length} kandidaat-SKU&apos;s</b>
+              <small>Hangmappen {conflict.storageNumbers.join(", ")}</small>
+            </div>
+          ))}
+        </div>
+        {audit.conflicts.length > 12 && <p className="reference-library-note">De eerste 12 conflicten worden getoond. De volledige set blijft beschikbaar in de bron- en auditlaag.</p>}
       </section>
       <section className="panel reference-library-panel">
         <div className="order-heading">
@@ -196,6 +234,15 @@ export function ModelsWorkspace() {
       </section>
     </div>
   );
+}
+
+function modelGroupStatusLabel(status: ModelGroupStatus) {
+  return {
+    blocked_source: "Bron geblokkeerd",
+    needs_models: "Modellen ontbreken",
+    needs_fit_review: "Pasvorm controleren",
+    imported_unverified: "Niet fysiek bevestigd",
+  }[status];
 }
 
 export function ConversionsWorkspace({ onNew }: { onNew: () => void }) {
