@@ -1,18 +1,22 @@
 import { createHash } from "node:crypto";
-import { readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import readExcelFile from "read-excel-file/node";
 
 const inputPath = process.argv[2];
 const outputPath = process.argv[3] ?? "src/data/inventory-source.generated.ts";
+const jsonOutputPath = process.argv[4] ?? "db/seed/inventory-source.json";
 
 if (!inputPath) {
-  console.error("Gebruik: npm run inventory:seed -- <pad-naar-xlsx> [uitvoerbestand]");
+  console.error(
+    "Gebruik: npm run inventory:seed -- <pad-naar-xlsx> [typescript-uitvoer] [json-uitvoer]",
+  );
   process.exit(1);
 }
 
 const resolvedInput = path.resolve(inputPath);
 const resolvedOutput = path.resolve(outputPath);
+const resolvedJsonOutput = path.resolve(jsonOutputPath);
 const workbook = await readExcelFile(resolvedInput);
 const production = workbook.find(({ sheet }) => sheet.trim().toLowerCase() === "productie");
 
@@ -73,9 +77,25 @@ export const inventorySourceMetadata = ${JSON.stringify({
 export const inventorySourceRows: readonly InventorySourceRow[] = ${JSON.stringify(rows, null, 2)};
 `;
 
+const metadata = {
+  fileName: path.basename(resolvedInput),
+  sheet: production.sheet,
+  sha256: sourceHash,
+  rowCount: rows.length,
+  totalQuantity,
+};
+
+await mkdir(path.dirname(resolvedOutput), { recursive: true });
+await mkdir(path.dirname(resolvedJsonOutput), { recursive: true });
 await writeFile(resolvedOutput, generated, "utf8");
+await writeFile(
+  resolvedJsonOutput,
+  `${JSON.stringify({ metadata, rows }, null, 2)}\n`,
+  "utf8",
+);
 console.log(
-  `Inventarisbron gegenereerd: ${rows.length} hangmappen, ${totalQuantity} vellen, SHA-256 ${sourceHash}.`,
+  `Inventarisbron gegenereerd: ${rows.length} hangmappen, ${totalQuantity} vellen, `
+  + `SHA-256 ${sourceHash}; TypeScript en JSON zijn bijgewerkt.`,
 );
 
 function text(value) {

@@ -22,28 +22,32 @@ type Props = {
 };
 
 const fitCheckpoints = [
-  ["Enter", "Controleer vorm, hoogte en uitsparing."],
-  ["Shift links én rechts", "Vergelijk beide breedtes en omliggende toetsen."],
-  ["Pijltjestoetsen", "Controleer cluster, hoogte en tussenruimte."],
-  ["Functierij", "Vergelijk aantal, maat en onderlinge afstand."],
-  ["Numpad", "Controleer of het model wel of geen numeriek deel heeft."],
-  ["Pointing stick", "Controleer de uitsparing bij modellen met een trackpoint."],
+  ["E1: horizontale Enter", "Eén brede rechthoekige toets op één toetsenrij."],
+  ["E2: L-vormige Enter", "Hoge Enter met een duidelijke hoek over twee toetsenrijen."],
+  ["Toetsen naast Enter", "Controleer de korte toetsposities direct links en boven de Enter."],
+  ["Exact SKU-label", "E1 of E2 moet letterlijk in het artikelnummer op het vel staan."],
+  ["Droge positionering", "Lijn het volledige vel uit zonder de kleeflaag vrij te maken."],
+  ["Bij twijfel stoppen", "Niet plakken en niet afboeken; vraag een teamleider om controle."],
 ];
 
 const fitVariantReferences = [
   {
     variant: "E1",
-    image: "/keyboard-reference-e1-dell-v2.png",
+    image: "/keyboard-reference-e1-dell-v3.png",
+    width: 1773,
+    height: 887,
     tone: "e1",
-    label: "Blauwe controleweergave",
-    explanation: "Controleer of E1 letterlijk in het exacte SKU-label staat.",
+    label: "Brede horizontale Enter",
+    explanation: "E1: controleer de brede rechthoekige Enter op één toetsenrij.",
   },
   {
     variant: "E2",
-    image: "/keyboard-reference-e2-dell-v2.png",
+    image: "/keyboard-reference-e2-dell-v3.png",
+    width: 1805,
+    height: 871,
     tone: "e2",
-    label: "Oranje controleweergave",
-    explanation: "Controleer of E2 letterlijk in het exacte SKU-label staat.",
+    label: "Hoge L-vormige Enter",
+    explanation: "E2: controleer de hoge Enter met hoek over twee toetsenrijen.",
   },
 ] as const;
 
@@ -114,8 +118,8 @@ export function KeyboardReferenceDialog({
           {topic === "fit" ? (
             <>
               <div className="reference-safety-note">
-                <strong>E1/E2 is een artikelvariant, geen taalkeuze</strong>
-                <p>Noviply beschrijft de stickers als model- en taalspecifiek. Behandel E1/E2 daarom niet als een universele toetsvormregel: het SKU-etiket, het gevalideerde laptopmodel en een droge fysieke uitlijning zijn leidend.</p>
+                <strong>Het Enter-blok is de eerste E1/E2-controle</strong>
+                <p>In deze interne Dell-referentie heeft E1 een brede horizontale Enter en E2 een hoge L-vormige Enter. Controleer daarna nog steeds het exacte SKU-label, het laptopmodel en de droge fysieke uitlijning.</p>
               </div>
               {expectedVariant && (
                 <div className="expected-variant-banner">
@@ -167,10 +171,10 @@ export function KeyboardReferenceDialog({
                           <Image
                             key={imageSource}
                             src={imageSource}
-                            width={1672}
-                            height={941}
+                            width={reference.width}
+                            height={reference.height}
                             sizes="(max-width: 760px) 92vw, 430px"
-                            alt={`Dell Latitude-stijl toetsenbord met ${reference.tone === "e1" ? "blauwe" : "oranje"} illustratieve ${reference.variant}-controleoverlay rond Enter, Shift, functierij, pijltjes en pointing stick`}
+                            alt={`Dell Latitude-stijl ${reference.variant}-toetsenbord met ${reference.tone === "e1" ? "cyaan gemarkeerde brede horizontale" : "oranje gemarkeerde hoge L-vormige"} Enter`}
                             loading="eager"
                             onError={() => setFailedFitImages((current) =>
                               current.includes(reference.image)
@@ -188,8 +192,8 @@ export function KeyboardReferenceDialog({
                 })}
               </div>
               <div className="variant-difference-explainer">
-                <strong>Waar zie je het verschil in deze gids?</strong>
-                <p>E1 gebruikt een doorgetrokken blauwe controlecontour. E2 gebruikt een oranje contour met extra stippellijn rond de kritieke uitsneden. Dit maakt de twee trainingsbeelden direct herkenbaar; het bewijst niet dat ieder E1- of E2-vel overal dezelfde fysieke vorm heeft.</p>
+                <strong>Waar zie je het verschil?</strong>
+                <p><strong>E1</strong> heeft rechts een brede horizontale Enter op één rij. <strong>E2</strong> heeft een hoge L-vormige Enter die over twee rijen loopt. De cyaan en oranje contouren markeren alleen dit beslispunt.</p>
               </div>
               <div className="fit-checkpoint-grid">
                 {fitCheckpoints.map(([title, explanation], index) => (

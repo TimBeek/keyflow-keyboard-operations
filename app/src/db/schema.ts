@@ -215,6 +215,70 @@ export const inventoryTransactions = pgTable("inventory_transactions", {
   check("inventory_transactions_delta_nonzero", sql`${table.quantityDelta} <> 0`),
 ]);
 
+export const inventorySourceSnapshots = pgTable("inventory_source_snapshots", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  sourceSha256: text("source_sha256").notNull(),
+  fileName: text("file_name").notNull(),
+  sheetName: text("sheet_name").notNull(),
+  rowCount: integer("row_count").notNull(),
+  totalQuantity: integer("total_quantity").notNull(),
+  status: text("status").notNull().default("prepared"),
+  importedBy: uuid("imported_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  appliedAt: timestamp("applied_at", { withTimezone: true }),
+}, (table) => [
+  uniqueIndex("inventory_source_snapshots_source_sha256_uq").on(table.sourceSha256),
+  check("inventory_source_snapshots_row_count_positive", sql`${table.rowCount} > 0`),
+  check("inventory_source_snapshots_quantity_nonnegative", sql`${table.totalQuantity} >= 0`),
+  check(
+    "inventory_source_snapshots_status_valid",
+    sql`${table.status} in ('prepared', 'applied', 'failed')`,
+  ),
+  check(
+    "inventory_source_snapshots_sha256_valid",
+    sql`${table.sourceSha256} ~ '^[0-9a-f]{64}$'`,
+  ),
+]);
+
+export const inventorySourceRows = pgTable("inventory_source_rows", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  snapshotId: uuid("snapshot_id").notNull()
+    .references(() => inventorySourceSnapshots.id, { onDelete: "cascade" }),
+  sourceRow: integer("source_row").notNull(),
+  catalogKey: text("catalog_key").notNull(),
+  hangingFileNumber: integer("hanging_file_number").notNull(),
+  modelName: text("model_name").notNull(),
+  layoutText: text("layout_text").notNull(),
+  skuText: text("sku_text").notNull(),
+  openingQuantity: integer("opening_quantity").notNull(),
+  linkedModels: jsonb("linked_models").notNull().default([]),
+  notes: text("notes"),
+  dataQuality: text("data_quality").notNull(),
+  dataQualityIssues: jsonb("data_quality_issues").notNull().default([]),
+  skuId: uuid("sku_id").references(() => stickerSkus.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("inventory_source_rows_snapshot_source_row_uq")
+    .on(table.snapshotId, table.sourceRow),
+  uniqueIndex("inventory_source_rows_snapshot_catalog_key_uq")
+    .on(table.snapshotId, table.catalogKey),
+  uniqueIndex("inventory_source_rows_snapshot_hanging_file_uq")
+    .on(table.snapshotId, table.hangingFileNumber),
+  check("inventory_source_rows_source_row_positive", sql`${table.sourceRow} > 0`),
+  check(
+    "inventory_source_rows_hanging_file_positive",
+    sql`${table.hangingFileNumber} > 0`,
+  ),
+  check(
+    "inventory_source_rows_quantity_nonnegative",
+    sql`${table.openingQuantity} >= 0`,
+  ),
+  check(
+    "inventory_source_rows_quality_valid",
+    sql`${table.dataQuality} in ('ready', 'blocked')`,
+  ),
+]);
+
 export const stockCounts = pgTable("stock_counts", {
   id: uuid("id").primaryKey().defaultRandom(),
   locationId: uuid("location_id").notNull().references(() => locations.id),
