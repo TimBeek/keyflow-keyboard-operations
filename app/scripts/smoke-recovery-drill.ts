@@ -61,13 +61,13 @@ async function main() {
           now(),
           0,
           2,
-          ${JSON.stringify({
+          ${transaction.json({
             migrations: true,
             sourceSnapshot: true,
             inventoryBalances: true,
             transactionLedger: true,
             accessControl: true,
-          })}::jsonb,
+          })},
           'passed',
           'Tijdelijke CI-database: valideert registratie en integriteitsquery, niet een providerrestore.',
           ${actorId}::uuid

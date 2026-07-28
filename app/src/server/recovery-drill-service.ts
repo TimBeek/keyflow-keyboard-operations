@@ -85,7 +85,7 @@ export async function recordRecoveryDrill(rawInput: RecordRecoveryDrillRequest) 
         ${validated.completedAt}::timestamptz,
         ${validated.rpoMinutes},
         ${validated.rtoMinutes},
-        ${JSON.stringify(validated.checks)}::jsonb,
+        ${transaction.json(validated.checks)},
         ${validated.result}::recovery_drill_result,
         ${validated.notes || null},
         ${input.actorId}::uuid
@@ -122,13 +122,13 @@ export async function recordRecoveryDrill(rawInput: RecordRecoveryDrillRequest) 
         'operations.recovery_drill_recorded',
         'recovery_drill',
         ${created.id},
-        ${JSON.stringify({
+        ${transaction.json({
           backupReference: validated.backupReference,
           targetEnvironment: validated.targetEnvironment,
           result: validated.result,
           rpoMinutes: validated.rpoMinutes,
           rtoMinutes: validated.rtoMinutes,
-        })}::jsonb
+        })}
       )
     `;
 
