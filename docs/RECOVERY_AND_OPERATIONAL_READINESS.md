@@ -20,8 +20,11 @@ Migratie `0014_recovery_drills.sql` voegt een idempotente, geautoriseerde bewijs
 
 - `GET /api/operations/recovery-drills` voor managementrapportage;
 - `POST /api/operations/recovery-drills` voor een herstelproefregistratie.
+- `GET /api/operations/readiness` voor migratie-, bron-, voorraad- en herstelstatus.
 
 In productiemodus komt de actor altijd uit de persoonlijke Entra-sessie. Schrijven vereist `policies.manage`; lezen vereist `reports.view`. Een productierestore is als doelomgeving bewust niet toegestaan.
+
+De managementinterface schakelt automatisch om: pilotmodus leest en schrijft de versieerbare lokale back-up, Entra-modus leest en schrijft PostgreSQL. Een lokale back-up of reset kan de centrale herstelhistorie niet overschrijven. Bij netwerkuitval blijft de fout zichtbaar en kan management de runtimecontrole handmatig opnieuw laden.
 
 ## Geautomatiseerde controles
 

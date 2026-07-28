@@ -9,6 +9,7 @@ import { InventoryImportDialog } from "@/components/inventory-import";
 import { InventoryCatalog } from "@/components/inventory-catalog";
 import { InventoryMutationDialog, type InventoryItem } from "@/components/inventory-mutation";
 import { OperationsManagement } from "@/components/operations-management";
+import type { ContinuitySyncState } from "@/components/production-readiness-center";
 import {
   ConversionsWorkspace,
   ModelsWorkspace,
@@ -181,6 +182,15 @@ export function Dashboard({
   const [modelGroupDecisions, setModelGroupDecisions] = useState<ModelGroupDecision[]>([]);
   const [compatibilityEvidenceRecords, setCompatibilityEvidenceRecords] = useState<CompatibilityEvidenceRecord[]>([]);
   const [recoveryDrills, setRecoveryDrills] = useState<RecoveryDrillRecord[]>([]);
+  const [continuitySync, setContinuitySync] = useState<ContinuitySyncState>({
+    mode: identity.mode === "entra" ? "central" : "local",
+    status: identity.mode === "entra" ? "loading" : "local",
+    message: identity.mode === "entra"
+      ? "Persoonlijke sessie wordt met de centrale database verbonden."
+      : "Herstelhistorie wordt opgenomen in de lokale pilotback-up.",
+    centralReadiness: null,
+  });
+  const [continuityRefreshToken, setContinuityRefreshToken] = useState(0);
   const [persistenceReady, setPersistenceReady] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [persistenceMessage, setPersistenceMessage] = useState("Lokale pilotopslag laden…");
@@ -237,7 +247,9 @@ export function Dashboard({
         setStockCounts(restored.state.stockCounts);
         setModelGroupDecisions(restored.state.modelGroupDecisions);
         setCompatibilityEvidenceRecords(restored.state.compatibilityEvidenceRecords);
-        setRecoveryDrills(restored.state.recoveryDrills);
+        if (identity.mode === "pilot") {
+          setRecoveryDrills(restored.state.recoveryDrills);
+        }
         setStockItems((items) => items.map((item) => ({
           ...item,
           stock: quantityForInventoryItem(migratedQuantities, item),
@@ -252,13 +264,60 @@ export function Dashboard({
       setPersistenceReady(true);
     }, 0);
     return () => window.clearTimeout(timeoutId);
-  }, []);
+  }, [identity.mode]);
+
+  useEffect(() => {
+    if (identity.mode !== "entra" || identity.role !== "management") return;
+    const controller = new AbortController();
+    setContinuitySync({
+      mode: "central",
+      status: "loading",
+      message: "Herstelhistorie en runtimecontrole worden centraal geladen.",
+      centralReadiness: null,
+    });
+
+    Promise.all([
+      fetch("/api/operations/recovery-drills", { signal: controller.signal }),
+      fetch("/api/operations/readiness", { signal: controller.signal }),
+    ]).then(async ([historyResponse, readinessResponse]) => {
+      if (!historyResponse.ok) throw new Error(await responseErrorMessage(historyResponse));
+      if (!readinessResponse.ok) throw new Error(await responseErrorMessage(readinessResponse));
+      const history = await historyResponse.json() as { records: RecoveryDrillRecord[] };
+      const centralReadiness = await readinessResponse.json() as ContinuitySyncState["centralReadiness"];
+      setRecoveryDrills(history.records);
+      setContinuitySync({
+        mode: "central",
+        status: "ready",
+        message: "Herstelhistorie komt uit PostgreSQL en iedere wijziging gebruikt de persoonlijke sessie.",
+        centralReadiness,
+      });
+    }).catch((error: unknown) => {
+      if (controller.signal.aborted) return;
+      setContinuitySync({
+        mode: "central",
+        status: "error",
+        message: error instanceof Error
+          ? error.message
+          : "Centrale continuïteitsgegevens konden niet worden geladen.",
+        centralReadiness: null,
+      });
+    });
+
+    return () => controller.abort();
+  }, [continuityRefreshToken, identity.mode, identity.role]);
 
   useEffect(() => {
     if (!persistenceReady) return;
     let savedAt: string | null = null;
     let message = "Lokale opslag is niet gelukt. Download een back-up via Beheer & analyse.";
     try {
+      const existingLocalState = identity.mode === "entra"
+        ? readOperationsState(window.localStorage)
+        : null;
+      const locallyStoredRecoveryDrills =
+        existingLocalState?.success && existingLocalState.state
+          ? existingLocalState.state.recoveryDrills
+          : [];
       const snapshot = createOperationsSnapshot({
         catalogQuantities,
         transactions,
@@ -267,7 +326,9 @@ export function Dashboard({
         stockCounts,
         modelGroupDecisions,
         compatibilityEvidenceRecords,
-        recoveryDrills,
+        recoveryDrills: identity.mode === "pilot"
+          ? recoveryDrills
+          : locallyStoredRecoveryDrills,
       });
       writeOperationsState(window.localStorage, snapshot);
       savedAt = snapshot.savedAt;
@@ -290,6 +351,7 @@ export function Dashboard({
     transactions,
     verificationReports,
     recoveryDrills,
+    identity.mode,
   ]);
 
   function saveMutation(newQuantity: number, quantityDelta: number) {
@@ -487,17 +549,75 @@ export function Dashboard({
     return record;
   }
 
-  function recordRecoveryDrill(input: RecoveryDrillInput) {
-    const record = createRecoveryDrill(input, {
-      id: crypto.randomUUID(),
-      recordedAt: new Date().toISOString(),
-      recordedBy: actorName,
-    });
-    setRecoveryDrills((current) => [...current, record]);
-    setLastAction(
-      `Herstelproef ${record.backupReference} ${record.result === "passed" ? "geslaagd" : "mislukt"} vastgelegd.`,
-    );
-    return record;
+  async function recordRecoveryDrill(input: RecoveryDrillInput) {
+    if (identity.mode === "pilot") {
+      const record = createRecoveryDrill(input, {
+        id: crypto.randomUUID(),
+        recordedAt: new Date().toISOString(),
+        recordedBy: actorName,
+      });
+      setRecoveryDrills((current) => [...current, record]);
+      setLastAction(
+        `Herstelproef ${record.backupReference} ${record.result === "passed" ? "geslaagd" : "mislukt"} lokaal vastgelegd.`,
+      );
+      return record;
+    }
+
+    setContinuitySync((current) => ({
+      ...current,
+      status: "saving",
+      message: "Herstelproef wordt met de persoonlijke sessie centraal opgeslagen.",
+    }));
+    try {
+      const response = await fetch("/api/operations/recovery-drills", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          ...input,
+          idempotencyKey: `recovery-drill:${crypto.randomUUID()}`,
+        }),
+      });
+      if (!response.ok) throw new Error(await responseErrorMessage(response));
+      const result = await response.json() as {
+        record: RecoveryDrillRecord;
+        duplicate: boolean;
+      };
+      setRecoveryDrills((current) => [
+        result.record,
+        ...current.filter(({ id }) => id !== result.record.id),
+      ]);
+
+      const readinessResponse = await fetch("/api/operations/readiness");
+      if (readinessResponse.ok) {
+        const centralReadiness = await readinessResponse.json() as ContinuitySyncState["centralReadiness"];
+        setContinuitySync({
+          mode: "central",
+          status: "ready",
+          message: "Herstelproef is centraal opgeslagen en de runtimecontrole is vernieuwd.",
+          centralReadiness,
+        });
+      } else {
+        setContinuitySync((current) => ({
+          ...current,
+          mode: "central",
+          status: "error",
+          message: "De herstelproef is opgeslagen, maar de runtimecontrole kon niet worden vernieuwd.",
+        }));
+      }
+      setLastAction(
+        `Herstelproef ${result.record.backupReference} centraal vastgelegd door ${actorName}.`,
+      );
+      return result.record;
+    } catch (error) {
+      setContinuitySync((current) => ({
+        ...current,
+        status: "error",
+        message: error instanceof Error
+          ? error.message
+          : "Centrale herstelregistratie is mislukt.",
+      }));
+      throw error;
+    }
   }
 
   function switchRole(nextRole: UserRole) {
@@ -509,6 +629,13 @@ export function Dashboard({
   }
 
   function exportPilotBackup() {
+    const existingLocalState = identity.mode === "entra"
+      ? readOperationsState(window.localStorage)
+      : null;
+    const locallyStoredRecoveryDrills =
+      existingLocalState?.success && existingLocalState.state
+        ? existingLocalState.state.recoveryDrills
+        : [];
     const snapshot = createOperationsSnapshot({
       catalogQuantities,
       transactions,
@@ -517,7 +644,9 @@ export function Dashboard({
       stockCounts,
       modelGroupDecisions,
       compatibilityEvidenceRecords,
-      recoveryDrills,
+      recoveryDrills: identity.mode === "pilot"
+        ? recoveryDrills
+        : locallyStoredRecoveryDrills,
     });
     const blob = new Blob([serializeOperationsSnapshot(snapshot)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -543,7 +672,9 @@ export function Dashboard({
     setStockCounts(restored.state.stockCounts);
     setModelGroupDecisions(restored.state.modelGroupDecisions);
     setCompatibilityEvidenceRecords(restored.state.compatibilityEvidenceRecords);
-    setRecoveryDrills(restored.state.recoveryDrills);
+    if (identity.mode === "pilot") {
+      setRecoveryDrills(restored.state.recoveryDrills);
+    }
     setStockItems((items) => items.map((item) => ({
       ...item,
       stock: quantityForInventoryItem(migratedQuantities, item),
@@ -562,7 +693,9 @@ export function Dashboard({
     setStockCounts([]);
     setModelGroupDecisions([]);
     setCompatibilityEvidenceRecords([]);
-    setRecoveryDrills([]);
+    if (identity.mode === "pilot") {
+      setRecoveryDrills([]);
+    }
     setStockItems(initialLowStock);
     setLastSavedAt(null);
     setLastAction("Lokale pilotgegevens teruggezet naar de veilige beginstand.");
@@ -740,8 +873,8 @@ export function Dashboard({
           </section>
         </div>
         <section className="roadmap-panel">
-          <div className="roadmap-heading"><div><span className="workspace-kicker">PRODUCTIEROADMAP</span><h2>KeyFlow is 94% compleet</h2><p>Voortgang naar de volledige live productieversie.</p></div><strong>94%</strong></div>
-          <div className="roadmap-track"><span style={{ width: "94%" }} /></div>
+          <div className="roadmap-heading"><div><span className="workspace-kicker">PRODUCTIEROADMAP</span><h2>KeyFlow is 95% compleet</h2><p>Voortgang naar de volledige live productieversie.</p></div><strong>95%</strong></div>
+          <div className="roadmap-track"><span style={{ width: "95%" }} /></div>
           <div className="roadmap-steps">
             <span className="done">Basis & UX</span><span className="done">Excel-import</span><span className="done">Voorraad & planning</span><span className="current">Rollen & uitvoering</span><span>Database live</span><span>SSO & integraties</span><span>Productieacceptatie</span>
           </div>
@@ -788,6 +921,8 @@ export function Dashboard({
             compatibilityEvidenceRecords={compatibilityEvidenceRecords}
             recoveryDrills={recoveryDrills}
             actorName={actorName}
+            continuitySync={continuitySync}
+            onRefreshContinuity={() => setContinuityRefreshToken((current) => current + 1)}
             onRecordStockCount={recordStockCount}
             onReviewModelGroup={reviewModelGroup}
             onRecordCompatibilityEvidence={recordCompatibilityEvidence}
@@ -810,7 +945,7 @@ export function Dashboard({
 
         <footer className="app-footer">
           <span><i /> {persistenceReady ? `Lokaal bewaard${lastSavedAt ? ` · ${formatPersistenceTime(lastSavedAt)}` : ""}` : "Opslag laden…"}</span>
-          <span>{lastAction || `Productieroadmap 94% · ${role === "management" ? "managementweergave" : "werknemersuitvoering"}`}</span>
+          <span>{lastAction || `Productieroadmap 95% · ${role === "management" ? "managementweergave" : "werknemersuitvoering"}`}</span>
         </footer>
         <ConversionAdvisor open={advisorOpen} onClose={() => setAdvisorOpen(false)} />
         <AccessManagementDialog
@@ -892,4 +1027,18 @@ function inventoryItemsMatch(left: InventoryItem, right: InventoryItem) {
 
 function formatSigned(value: number) {
   return `${value > 0 ? "+" : ""}${value}`;
+}
+
+async function responseErrorMessage(response: Response) {
+  try {
+    const body = await response.json() as {
+      message?: unknown;
+      error?: unknown;
+    };
+    if (typeof body.message === "string") return body.message;
+    if (typeof body.error === "string") return body.error;
+  } catch {
+    // De HTTP-status blijft de veilige fallback wanneer de body niet leesbaar is.
+  }
+  return `Centrale aanvraag mislukt (${response.status}).`;
 }

@@ -31,7 +31,10 @@ import {
   stickerVerificationFailureLabel,
   type StickerVerificationReport,
 } from "@/domain/sticker-verification";
-import { ProductionReadinessCenter } from "@/components/production-readiness-center";
+import {
+  ProductionReadinessCenter,
+  type ContinuitySyncState,
+} from "@/components/production-readiness-center";
 import type {
   RecoveryDrillInput,
   RecoveryDrillRecord,
@@ -47,6 +50,8 @@ type Props = {
   compatibilityEvidenceRecords: CompatibilityEvidenceRecord[];
   recoveryDrills: RecoveryDrillRecord[];
   actorName: string;
+  continuitySync: ContinuitySyncState;
+  onRefreshContinuity: () => void;
   onRecordStockCount: (input: StockCountInput) => StockCountRecord;
   onReviewModelGroup: (
     proposal: ModelGroupProposal,
@@ -55,7 +60,7 @@ type Props = {
   onRecordCompatibilityEvidence: (
     input: CompatibilityEvidenceInput,
   ) => CompatibilityEvidenceRecord;
-  onRecordRecoveryDrill: (input: RecoveryDrillInput) => RecoveryDrillRecord;
+  onRecordRecoveryDrill: (input: RecoveryDrillInput) => Promise<RecoveryDrillRecord>;
   onPolicyChange: (policy: OperationsPolicy) => void;
   persistence: {
     ready: boolean;
@@ -103,6 +108,8 @@ export function OperationsManagement({
   compatibilityEvidenceRecords,
   recoveryDrills,
   actorName,
+  continuitySync,
+  onRefreshContinuity,
   onRecordStockCount,
   onReviewModelGroup,
   onRecordCompatibilityEvidence,
@@ -1159,6 +1166,8 @@ export function OperationsManagement({
           <ProductionReadinessCenter
             records={recoveryDrills}
             actorName={actorName}
+            sync={continuitySync}
+            onRefresh={onRefreshContinuity}
             onRecord={onRecordRecoveryDrill}
           />
         )}

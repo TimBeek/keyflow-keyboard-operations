@@ -7,14 +7,24 @@ import {
   productionReadinessSummary,
   recoveryCheckKeys,
   type RecoveryCheckKey,
+  type CentralOperationsReadinessReport,
   type RecoveryDrillInput,
   type RecoveryDrillRecord,
 } from "@/domain/production-readiness";
 
+export type ContinuitySyncState = {
+  mode: "local" | "central";
+  status: "local" | "loading" | "saving" | "ready" | "error";
+  message: string;
+  centralReadiness: CentralOperationsReadinessReport | null;
+};
+
 type Props = {
   records: RecoveryDrillRecord[];
   actorName: string;
-  onRecord: (input: RecoveryDrillInput) => RecoveryDrillRecord;
+  sync: ContinuitySyncState;
+  onRefresh: () => void;
+  onRecord: (input: RecoveryDrillInput) => Promise<RecoveryDrillRecord>;
 };
 
 const checkLabels: Record<RecoveryCheckKey, string> = {
@@ -30,7 +40,13 @@ function localDateTime(date: Date) {
   return new Date(date.getTime() - offset).toISOString().slice(0, 16);
 }
 
-export function ProductionReadinessCenter({ records, actorName, onRecord }: Props) {
+export function ProductionReadinessCenter({
+  records,
+  actorName,
+  sync,
+  onRefresh,
+  onRecord,
+}: Props) {
   const now = new Date();
   const [backupReference, setBackupReference] = useState("");
   const [targetEnvironment, setTargetEnvironment] =
@@ -50,9 +66,20 @@ export function ProductionReadinessCenter({ records, actorName, onRecord }: Prop
   });
   const [notes, setNotes] = useState("");
   const [message, setMessage] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const gates = useMemo(() => productionReadinessGates(records), [records]);
-  const summary = useMemo(() => productionReadinessSummary(records), [records]);
+  const readinessContext = useMemo(() => ({
+    centralDatabaseReady: sync.centralReadiness?.databaseReady === true,
+    personalIdentityReady: sync.mode === "central",
+  }), [sync.centralReadiness?.databaseReady, sync.mode]);
+  const gates = useMemo(
+    () => productionReadinessGates(records, readinessContext),
+    [readinessContext, records],
+  );
+  const summary = useMemo(
+    () => productionReadinessSummary(records, readinessContext),
+    [readinessContext, records],
+  );
   const latest = useMemo(() => latestRecoveryDrill(records), [records]);
   const recentRecords = useMemo(
     () => [...records]
@@ -65,11 +92,12 @@ export function ProductionReadinessCenter({ records, actorName, onRecord }: Prop
     setChecks((current) => ({ ...current, [key]: !current[key] }));
   }
 
-  function submitRecoveryDrill(event: React.FormEvent<HTMLFormElement>) {
+  async function submitRecoveryDrill(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setMessage("");
+    setSubmitting(true);
     try {
-      const record = onRecord({
+      const record = await onRecord({
         backupReference,
         targetEnvironment,
         startedAt: new Date(startedAt).toISOString(),
@@ -93,11 +121,46 @@ export function ProductionReadinessCenter({ records, actorName, onRecord }: Prop
           ? error.message
           : "De herstelproef kon niet worden vastgelegd.",
       );
+    } finally {
+      setSubmitting(false);
     }
   }
 
   return (
     <div className="operations-tab-content readiness-center">
+      <section className={`continuity-sync-banner ${sync.status}`}>
+        <div>
+          <span>{sync.mode === "central" ? "CENTRALE PRODUCTIESYNCHRONISATIE" : "LOKALE PILOTOPSLAG"}</span>
+          <strong>
+            {sync.status === "loading"
+              ? "Centrale gegevens laden…"
+              : sync.status === "saving"
+                ? "Controlebewijs opslaan…"
+                : sync.status === "ready"
+                  ? "PostgreSQL en persoonlijke sessie actief"
+                  : sync.status === "error"
+                    ? "Centrale synchronisatie vereist aandacht"
+                    : "Dit apparaat bewaart de pilotgegevens"}
+          </strong>
+          <small>{sync.message}</small>
+        </div>
+        <div className="continuity-sync-actions">
+          <span className={`readiness-status ${sync.status === "error" ? "action_required" : sync.status === "local" ? "external" : "ready"}`}>
+            {sync.status === "error" ? "Actie nodig" : sync.status === "local" ? "Pilot" : sync.status === "ready" ? "Gesynchroniseerd" : "Bezig"}
+          </span>
+          {sync.mode === "central" && (
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={onRefresh}
+              disabled={sync.status === "loading" || sync.status === "saving"}
+            >
+              Opnieuw laden
+            </button>
+          )}
+        </div>
+      </section>
+
       <section className="readiness-summary">
         <article>
           <span>Go-livepoorten</span>
@@ -113,6 +176,11 @@ export function ProductionReadinessCenter({ records, actorName, onRecord }: Prop
           <span>Laatste herstelproef</span>
           <strong>{latest ? (latest.result === "passed" ? "Geslaagd" : "Mislukt") : "Ontbreekt"}</strong>
           <small>{latest ? `RPO ${latest.rpoMinutes} min · RTO ${latest.rtoMinutes} min` : "Nog geen bewijs geregistreerd"}</small>
+        </article>
+        <article className={sync.status === "error" ? "attention" : ""}>
+          <span>Gegevensbron</span>
+          <strong>{sync.mode === "central" ? "PostgreSQL" : "Browserpilot"}</strong>
+          <small>{sync.mode === "central" ? "Persoonlijk en centraal auditbaar" : "Alleen op dit apparaat"}</small>
         </article>
       </section>
 
@@ -135,6 +203,28 @@ export function ProductionReadinessCenter({ records, actorName, onRecord }: Prop
           ))}
         </div>
       </section>
+
+      {sync.centralReadiness && (
+        <section className="central-readiness-report">
+          <div className="workspace-card-heading">
+            <div>
+              <h3>Centrale runtimecontrole</h3>
+              <p>Live gelezen uit PostgreSQL op {formatDate(sync.centralReadiness.generatedAt)}.</p>
+            </div>
+            <span className={`readiness-status ${sync.centralReadiness.ready ? "ready" : "action_required"}`}>
+              {sync.centralReadiness.ready ? "Operationeel gereed" : "Controle nodig"}
+            </span>
+          </div>
+          <div className="central-readiness-checks">
+            {sync.centralReadiness.checks.map((check) => (
+              <article key={check.id} className={check.ready ? "ready" : "failed"}>
+                <span>{check.ready ? "✓" : "!"}</span>
+                <div><strong>{check.label}</strong><small>{check.detail}</small></div>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="recovery-drill-grid">
         <form className="recovery-drill-form" onSubmit={submitRecoveryDrill}>
@@ -200,7 +290,16 @@ export function ProductionReadinessCenter({ records, actorName, onRecord }: Prop
             <span>Notities, oorzaak en vervolgactie</span>
             <textarea value={notes} onChange={(event) => setNotes(event.target.value)} rows={4} maxLength={1000} />
           </label>
-          <button className="primary-button" type="submit">Herstelproef vastleggen</button>
+          <button
+            className="primary-button"
+            type="submit"
+            disabled={
+              submitting
+              || (sync.mode === "central" && sync.status !== "ready")
+            }
+          >
+            {submitting ? "Herstelproef opslaan…" : "Herstelproef vastleggen"}
+          </button>
           {message && <div className={message.startsWith("Geslaagde") ? "policy-saved" : "form-error"} role="status">{message}</div>}
           <small>Registratie door {actorName}. Een geslaagde status vereist alle vijf controles.</small>
         </form>

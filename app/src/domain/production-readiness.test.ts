@@ -98,4 +98,21 @@ describe("productiecontinuïteit", () => {
       external: 4,
     });
   });
+
+  it("markeert centrale database en persoonlijke identiteit alleen met runtimebewijs", () => {
+    const drill = createRecoveryDrill(passedInput, {
+      id: "drill-runtime",
+      recordedAt: "2026-07-28T09:00:00.000Z",
+      recordedBy: "Tim Beek",
+    });
+    expect(productionReadinessSummary([drill], {
+      centralDatabaseReady: true,
+      personalIdentityReady: true,
+    })).toEqual({
+      total: 7,
+      ready: 5,
+      actionRequired: 0,
+      external: 2,
+    });
+  });
 });

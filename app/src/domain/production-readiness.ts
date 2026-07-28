@@ -52,6 +52,39 @@ export type ProductionReadinessGate = {
   detail: string;
 };
 
+export type CentralReadinessCheck = {
+  id: "migration" | "source_snapshot" | "inventory_integrity" | "recovery_drill";
+  label: string;
+  ready: boolean;
+  detail: string;
+};
+
+export type CentralOperationsReadinessReport = {
+  ready: boolean;
+  databaseReady: boolean;
+  generatedAt: string;
+  maxRecoveryAgeDays: number;
+  latestMigration: string | null;
+  snapshot: {
+    status: string | null;
+    rowCount: number | null;
+    totalQuantity: number | null;
+  };
+  inventory: {
+    operationalRows: number;
+    linkedBalances: number;
+    onHand: number;
+    ledgerQuantity: number;
+  };
+  latestRecoveryDrill: RecoveryDrillRecord | null;
+  checks: CentralReadinessCheck[];
+};
+
+export type ProductionReadinessContext = {
+  centralDatabaseReady?: boolean;
+  personalIdentityReady?: boolean;
+};
+
 export class RecoveryDrillError extends Error {
   constructor(
     public readonly code:
@@ -106,6 +139,7 @@ export function latestRecoveryDrill(records: readonly RecoveryDrillRecord[]) {
 
 export function productionReadinessGates(
   records: readonly RecoveryDrillRecord[],
+  context: ProductionReadinessContext = {},
 ): ProductionReadinessGate[] {
   const latestDrill = latestRecoveryDrill(records);
   const recoveryReady = latestDrill?.result === "passed";
@@ -126,8 +160,10 @@ export function productionReadinessGates(
     {
       id: "managed_database",
       label: "Beheerde PostgreSQL-productie",
-      status: "external",
-      detail: "Productiedatabase, netwerktoegang en providerback-ups moeten nog worden geleverd.",
+      status: context.centralDatabaseReady ? "ready" : "external",
+      detail: context.centralDatabaseReady
+        ? "De centrale database is bereikbaar en de bron- en voorraadcontroles sluiten."
+        : "Productiedatabase, netwerktoegang en providerback-ups moeten nog worden geleverd.",
     },
     {
       id: "recovery_drill",
@@ -142,8 +178,10 @@ export function productionReadinessGates(
     {
       id: "personal_identity",
       label: "Persoonlijke Entra-login",
-      status: "external",
-      detail: "Tenantregistratie, roltoewijzing, MFA en Conditional Access ontbreken nog.",
+      status: context.personalIdentityReady ? "ready" : "external",
+      detail: context.personalIdentityReady
+        ? "Management gebruikt een persoonlijke Entra-sessie voor centrale acties."
+        : "Tenantregistratie, roltoewijzing, MFA en Conditional Access ontbreken nog.",
     },
     {
       id: "order_source",
@@ -162,8 +200,9 @@ export function productionReadinessGates(
 
 export function productionReadinessSummary(
   records: readonly RecoveryDrillRecord[],
+  context: ProductionReadinessContext = {},
 ) {
-  const gates = productionReadinessGates(records);
+  const gates = productionReadinessGates(records, context);
   return {
     total: gates.length,
     ready: gates.filter(({ status }) => status === "ready").length,
