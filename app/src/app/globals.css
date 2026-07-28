@@ -50,6 +50,18 @@ button { cursor: pointer; }
 .role-switcher > div { display: flex; padding: 3px; border-radius: 9px; background: #e7ecef; }
 .role-switcher button { height: 34px; padding: 0 11px; border: 0; border-radius: 7px; background: transparent; color: #6d7b88; font-size: 9px; font-weight: 800; }
 .role-switcher button.active { background: white; color: var(--teal); box-shadow: 0 1px 4px rgba(28,49,64,.12); }
+.identity-badge { display: grid; gap: 4px; min-width: 112px; padding: 8px 11px; border: 1px solid #cfe3e1; border-radius: 9px; background: #f1faf8; }
+.identity-badge span { color: #51817d; font-size: 7px; font-weight: 900; letter-spacing: .6px; }
+.identity-badge strong { color: var(--teal); font-size: 9px; }
+.identity-page { min-height: 100vh; display: grid; place-items: center; padding: 24px; background: radial-gradient(circle at top, #eaf7f5, #f5f7f8 45%, #e8eef1); }
+.identity-card { width: min(460px, 100%); display: grid; justify-items: center; padding: 42px; border: 1px solid #d8e3e7; border-radius: 18px; background: white; box-shadow: 0 24px 70px rgba(29,54,68,.14); text-align: center; }
+.identity-card .brand-mark { width: 52px; height: 52px; margin-bottom: 22px; font-size: 22px; }
+.identity-card > span { color: var(--teal); font-size: 8px; font-weight: 900; letter-spacing: 1.1px; }
+.identity-card h1 { margin: 10px 0 8px; color: #243a49; font-size: 28px; }
+.identity-card p { max-width: 360px; margin: 0; color: #6b7d89; font-size: 11px; line-height: 1.65; }
+.identity-card button { width: 100%; min-height: 48px; margin-top: 24px; border: 1px solid #056b65; border-radius: 9px; background: var(--teal); color: white; font-size: 11px; font-weight: 900; }
+.identity-card button:hover { background: var(--teal-dark); }
+.identity-card small { margin-top: 18px; color: #8997a0; font-size: 8px; line-height: 1.55; }
 .global-search { width: min(340px, 32vw); height: 46px; display: flex; align-items: center; gap: 10px; padding: 0 11px 0 14px; background: white; border: 1px solid #dbe2e8; border-radius: 10px; color: #81909e; box-shadow: 0 2px 5px rgba(30,52,68,.04); }
 .global-search:focus-within { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(8,127,123,.12); }
 .global-search input { width: 100%; border: 0; outline: 0; color: var(--ink); font-size: 13px; }

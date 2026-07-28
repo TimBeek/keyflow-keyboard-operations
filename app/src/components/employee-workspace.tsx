@@ -65,6 +65,7 @@ type StockMode = "receipt" | "mismatch";
 
 type Props = {
   catalog: InventoryCatalogItem[];
+  actorName: string;
   orders: WorkOrderSnapshot[];
   quantities: Record<string, number>;
   policy: OperationsPolicy;
@@ -75,6 +76,7 @@ type Props = {
 
 export function EmployeeWorkspace({
   catalog,
+  actorName,
   orders,
   quantities,
   policy,
@@ -280,7 +282,7 @@ export function EmployeeWorkspace({
           reasonCode: "conversion_usage",
           notes: `Hangmap ${matchedSticker.item.storageNumber} gecontroleerd · ${matchedSticker.variant} · ${currentLayout} naar ${targetLayout}`,
           reference: orderReference,
-          actor: "Medewerker",
+          actor: actorName,
         });
         setExecutionMessage(`${matchedSticker.item.sku} automatisch −1 geboekt · nieuwe voorraad ${result.newQuantity}.`);
       } catch (error) {
@@ -320,7 +322,7 @@ export function EmployeeWorkspace({
           reasonCode: "verification_scrap",
           notes: `${stickerVerificationFailureLabel(verificationFailureReason)} · hangmap ${matchedSticker.item.storageNumber} · ${matchedSticker.variant}`,
           reference: orderReference,
-          actor: "Medewerker",
+          actor: actorName,
         });
         stockMessage = `Uitval apart −1 geboekt · nog ${result.newQuantity} beschikbaar.`;
       }
@@ -383,7 +385,7 @@ export function EmployeeWorkspace({
         reasonCode: stockMode === "receipt" ? "supplier_delivery" : "verification_scrap",
         notes: stockMode === "receipt" ? "Nieuwe bestelde stickers ontvangen" : `${stickerVerificationFailureLabel(stockMismatchReason)} · hangmap ${item.storageNumber}`,
         reference: stockReference || undefined,
-        actor: "Medewerker",
+        actor: actorName,
       });
       if (stockMode === "mismatch") {
         onStickerVerification({

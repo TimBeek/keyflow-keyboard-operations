@@ -37,9 +37,17 @@ Nodig:
 
 - Microsoft Entra-tenant-ID en appregistratie;
 - redirect-URL van staging en productie;
-- Entra-groepen voor werknemer en management;
+- gebruikers of groepen die aan de app-rollen `KeyFlow.Employee` en `KeyFlow.Management` worden toegewezen;
 - contactpersoon die groepslidmaatschap mag goedkeuren;
 - sessieduur en MFA-/Conditional Access-beleid.
+
+Al aantoonbaar voorbereid:
+
+- single-tenant OIDC-configuratie met tenantgebonden issuer;
+- app-rolmapping zonder handmatige managementschakelaar;
+- persoonlijke databasegebruikerssynchronisatie en blokkade van gedeactiveerde accounts;
+- achtuurs sessies en server-side actorvervanging op beveiligde mutatie- en import-API's;
+- veilige health- en readinesscontroles zonder weergave van secrets.
 
 Acceptatiebewijs:
 

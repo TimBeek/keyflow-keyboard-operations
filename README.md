@@ -50,6 +50,8 @@ De eerste applicatiebasis bevat:
 - een databasestructuur voor door management goedgekeurde layout-, model- en variantreferenties;
 - een AI-ondersteunde modelgroepwachtrij met bronconflicten en verplichte menselijke bewijscontrole;
 - een fysieke compatibiliteitsbibliotheek die afwijzingen direct uit het werknemersadvies houdt;
+- een tenantgebonden Microsoft Entra ID-loginbasis met persoonlijke app-rollen, databasesynchronisatie en afgeschermde productie-API's;
+- productie-health- en readinesscontroles die ontbrekende configuratie melden zonder secrets te lekken;
 - versiegebonden en gevalideerde lokale pilotopslag die boekingen en beleid na een herstart van de browser herstelt;
 - JSON-back-up, gecontroleerd herstel en een tweestapsreset voor management;
 - een productiebuild zonder lint- of TypeScriptfouten;
@@ -147,6 +149,7 @@ De generator weigert een bron die niet exact 148 unieke hangmappen en 3.218 vell
 - `docs/AI_MODEL_GROUP_DATA_REQUIREMENTS.md` — vereiste bron- en validatiedata voor veilige AI-modelgroepvoorstellen;
 - `docs/MODEL_GROUP_REVIEW.md` — werkende managementwachtrij, bewijsvelden en goedkeuringsregels;
 - `docs/COMPATIBILITY_EVIDENCE.md` — fysieke pastesten, werknemersblokkades en centrale bewijs-API;
+- `docs/IDENTITY_AND_SSO.md` — Entra-appregistratie, persoonlijke app-rollen, sessies en productieconfiguratie;
 - `ONDERZOEKSRAPPORT_FASE_1.pdf` — goedgekeurde onderzoeksbasis;
 - `docs/DEPLOYMENT.md` — voorgestelde GitHub- en productie-uitrol;
 - `app/Dockerfile` — productiecontainer;
