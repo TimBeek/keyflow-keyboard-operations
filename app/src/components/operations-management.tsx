@@ -43,6 +43,7 @@ import {
   WorkfloorAcceptanceCenter,
   type WorkfloorSyncState,
 } from "@/components/workfloor-acceptance-center";
+import { OperationalScenarioCenter } from "@/components/operational-scenario-center";
 import type {
   RecoveryDrillInput,
   RecoveryDrillRecord,
@@ -110,6 +111,7 @@ type Tab =
   | "continuity"
   | "release"
   | "workfloor"
+  | "scenarios"
   | "policy";
 
 type ModelGroupFilter = "pending" | "approved" | "rejected" | "all";
@@ -482,6 +484,10 @@ export function OperationsManagement({
             {workfloorTrials.length > 0 && (
               <span className="tab-count">{workfloorTrials.length}</span>
             )}
+          </button>
+          <button className={tab === "scenarios" ? "active" : ""} onClick={() => setTab("scenarios")}>
+            Scenariotest
+            <span className="tab-count">29</span>
           </button>
           <button className={tab === "policy" ? "active" : ""} onClick={() => setTab("policy")}>Configuratie</button>
         </div>
@@ -1240,6 +1246,10 @@ export function OperationsManagement({
             onRefresh={onRefreshWorkfloor}
             onRecord={onRecordWorkfloorTrial}
           />
+        )}
+
+        {tab === "scenarios" && (
+          <OperationalScenarioCenter actorName={actorName} />
         )}
 
         {tab === "policy" && (
