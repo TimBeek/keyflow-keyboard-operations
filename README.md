@@ -55,6 +55,7 @@ De eerste applicatiebasis bevat:
 - productie-health- en readinesscontroles die ontbrekende configuratie melden zonder secrets te lekken;
 - een management-continuïteitsdashboard met RPO/RTO, vijf herstelcontroles en expliciete externe go-livepoorten;
 - geautoriseerde, idempotente PostgreSQL-opslag van herstelproeven plus een alleen-lezen operationele readinesscheck;
+- automatische omschakeling van lokale pilotcontinuïteit naar persoonlijke, centrale PostgreSQL-synchronisatie in Entra-modus;
 - versiegebonden en gevalideerde lokale pilotopslag die boekingen en beleid na een herstart van de browser herstelt;
 - JSON-back-up, gecontroleerd herstel en een tweestapsreset voor management;
 - een productiebuild zonder lint- of TypeScriptfouten;
@@ -110,6 +111,7 @@ De database-API's zijn daarna beschikbaar via:
 - `POST /api/model-groups/reviews` voor een geautoriseerde, idempotente managementbeoordeling met verplicht fysiek bewijs;
 - `POST /api/compatibility/evidence` voor goedgekeurde of afgewezen model/SKU-pastesten;
 - `GET` en `POST /api/operations/recovery-drills` voor managementrapportage en herstelproefbewijs;
+- `GET /api/operations/readiness` voor een geautoriseerde runtimecontrole van migratie, bron, voorraadsluiting en herstelbewijs;
 - `POST /api/imports/inventory` voor een gecontroleerde `.xlsx`-upload;
 - `GET /api/imports/inventory/{batchId}` voor alle herleidbare bevindingen van een import;
 - `PATCH /api/imports/inventory/{batchId}/issues/{issueId}` voor auditbare afhandeling;
