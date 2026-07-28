@@ -160,6 +160,7 @@ De generator weigert een bron die niet exact 148 unieke hangmappen en 3.218 vell
 - `docs/GO_LIVE_INPUTS.md` — exacte toegangen, gegevens en acceptatiebewijzen die nog nodig zijn voor 100%;
 - `docs/GO_LIVE_ACCEPTANCE_DOSSIER.md` — vijf formele vrijgavepoorten, bewijsregels en centrale audit;
 - `docs/WORKFLOOR_ACCEPTANCE_TRIALS.md` — echte scanner-/apparaatproeven, harde slagingsregels en scheiding van go-livegoedkeuring;
+- `docs/OPERATIONAL_SCENARIOS.md` — 29 reproduceerbare normale, grens- en foutscenario’s met managementrapport;
 - `docs/PRODUCTION_COMPLETION_AUDIT.md` — requirementmatrix met bewijs, ontbrekende aansluitingen en actuele status;
 - `docs/AI_MODEL_GROUP_DATA_REQUIREMENTS.md` — vereiste bron- en validatiedata voor veilige AI-modelgroepvoorstellen;
 - `docs/MODEL_GROUP_REVIEW.md` — werkende managementwachtrij, bewijsvelden en goedkeuringsregels;

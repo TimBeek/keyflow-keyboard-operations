@@ -2,6 +2,8 @@
 
 KeyFlow bevat onder `Beheer & analyse` → `Werkvloerproef` een aparte registratie voor echte proeven met werknemers, apparatuur en de fysieke hangmappenwagen. Deze registratie ondersteunt de uitvoering en audit, maar voert de proef niet zelf uit.
 
+Gebruik vooraf `Beheer & analyse` → `Scenariotest` om 29 reproduceerbare softwarepaden te controleren. De gemarkeerde fysieke scenario’s worden daarna in deze echte werkvloerproef bevestigd. Zie `OPERATIONAL_SCENARIOS.md`.
+
 ## Doel
 
 Een proef toont aan dat de werknemersflow onder werkelijke omstandigheden bruikbaar en veilig is. De registratie legt minimaal vast:

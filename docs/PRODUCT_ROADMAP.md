@@ -39,6 +39,8 @@ Iedere poort bevat daarnaast een eigen vierpunts-bewijschecklist. De centrale AP
 
 De werkvloeracceptatie heeft nu tevens een afzonderlijk uitvoeringsdossier voor scanner, apparaat, deelnemers, timing, alle vier methoden, foutscenario en zes controles. Harde applicatie- en databasevalidatie voorkomen dat een onvolledige proef als geslaagd wordt opgeslagen. Ook dit verhoogt het percentage bewust niet: de registratie kan de echte proef en het afzonderlijke eigenaarsbesluit niet vervangen.
 
+Voorafgaand aan die fysieke proef kan management nu 29 reproduceerbare softwarematige scenario’s uitvoeren en exporteren. Normale routes, bedraggrenzen, fallbacks, geblokkeerde orders, modelambiguïteit, hangmap/SKU-koppeling, nul- en negatieve voorraad, E1/E2-controle, rollen en vrijgaveblokkades worden door dezelfde domeinlogica en GitHub CI gecontroleerd. Deze extra evidence verlaagt het restrisico, maar verhoogt het percentage niet zonder de gemarkeerde fysieke en externe bevestigingen.
+
 De huidige 4% voor persoonlijke authenticatie omvat de tenantgebonden Microsoft Entra ID/OIDC-flow, achtuurs JWT-sessies, expliciete `KeyFlow.Employee`- en `KeyFlow.Management`-app-rollen, automatische databasegebruikerssynchronisatie, server-side vervanging van actor-id's en de nu werkelijk sessiegebonden centrale herstel-/readiness-synchronisatie. Pilotdata kan deze centrale historie niet overschrijven. De echte tenantregistratie, toegewezen gebruikers/groepen, MFA/Conditional Access en operationele acceptatie ontbreken nog.
 
 Het percentage wordt alleen verhoogd nadat een onderdeel is geïmplementeerd, getest, naar GitHub gepusht en in de private live-omgeving gepubliceerd.
