@@ -4,11 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "next build && node scripts/prepare-static-preview.mjs",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "import:analyze": "node scripts/analyze-inventory.mjs"
+    "import:analyze": "node scripts/analyze-inventory.mjs",
+    "inventory:seed": "node scripts/generate-inventory-seed.mjs",
+    "db:migrate": "node scripts/migrate.mjs"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",

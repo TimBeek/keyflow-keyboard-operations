@@ -7,6 +7,8 @@ import {
 } from "@/domain/inventory";
 
 export type InventoryItem = {
+  catalogKey?: string;
+  storageNumber?: number;
   model: string;
   sku: string;
   layout: string;
