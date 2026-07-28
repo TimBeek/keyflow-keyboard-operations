@@ -31,6 +31,11 @@ import {
   stickerVerificationFailureLabel,
   type StickerVerificationReport,
 } from "@/domain/sticker-verification";
+import { ProductionReadinessCenter } from "@/components/production-readiness-center";
+import type {
+  RecoveryDrillInput,
+  RecoveryDrillRecord,
+} from "@/domain/production-readiness";
 
 type Props = {
   quantities: Record<string, number>;
@@ -40,6 +45,8 @@ type Props = {
   stockCounts: StockCountRecord[];
   modelGroupDecisions: ModelGroupDecision[];
   compatibilityEvidenceRecords: CompatibilityEvidenceRecord[];
+  recoveryDrills: RecoveryDrillRecord[];
+  actorName: string;
   onRecordStockCount: (input: StockCountInput) => StockCountRecord;
   onReviewModelGroup: (
     proposal: ModelGroupProposal,
@@ -48,6 +55,7 @@ type Props = {
   onRecordCompatibilityEvidence: (
     input: CompatibilityEvidenceInput,
   ) => CompatibilityEvidenceRecord;
+  onRecordRecoveryDrill: (input: RecoveryDrillInput) => RecoveryDrillRecord;
   onPolicyChange: (policy: OperationsPolicy) => void;
   persistence: {
     ready: boolean;
@@ -66,6 +74,7 @@ type Tab =
   | "verification"
   | "model_groups"
   | "evidence"
+  | "continuity"
   | "policy";
 
 type ModelGroupFilter = "pending" | "approved" | "rejected" | "all";
@@ -92,9 +101,12 @@ export function OperationsManagement({
   stockCounts,
   modelGroupDecisions,
   compatibilityEvidenceRecords,
+  recoveryDrills,
+  actorName,
   onRecordStockCount,
   onReviewModelGroup,
   onRecordCompatibilityEvidence,
+  onRecordRecoveryDrill,
   onPolicyChange,
   persistence,
   onExportBackup,
@@ -409,6 +421,10 @@ export function OperationsManagement({
             {compatibilityEvidenceRecords.length > 0 && (
               <span className="tab-count">{compatibilityEvidenceRecords.length}</span>
             )}
+          </button>
+          <button className={tab === "continuity" ? "active" : ""} onClick={() => setTab("continuity")}>
+            Continuïteit
+            {recoveryDrills.length > 0 && <span className="tab-count">{recoveryDrills.length}</span>}
           </button>
           <button className={tab === "policy" ? "active" : ""} onClick={() => setTab("policy")}>Configuratie</button>
         </div>
@@ -1137,6 +1153,14 @@ export function OperationsManagement({
               </div>
             </section>
           </div>
+        )}
+
+        {tab === "continuity" && (
+          <ProductionReadinessCenter
+            records={recoveryDrills}
+            actorName={actorName}
+            onRecord={onRecordRecoveryDrill}
+          />
         )}
 
         {tab === "policy" && (

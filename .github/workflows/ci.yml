@@ -91,5 +91,11 @@ jobs:
       - name: Apply canonical inventory snapshot
         run: npm run db:bootstrap:apply
 
+      - name: Smoke-test recovery registration
+        run: npm run db:recovery:smoke
+
+      - name: Check operational readiness
+        run: npm run db:operations:check
+
       - name: Verify imported production inventory
         run: npm run db:verify

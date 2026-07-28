@@ -24,6 +24,7 @@ export const keyboardReferenceStatus = pgEnum("keyboard_reference_status", ["dra
 export const stockCountStatus = pgEnum("stock_count_status", ["open", "completed", "cancelled"]);
 export const modelGroupProposalStatus = pgEnum("model_group_proposal_status", ["pending", "approved", "rejected", "superseded"]);
 export const modelGroupReviewDecision = pgEnum("model_group_review_decision", ["approved", "rejected"]);
+export const recoveryDrillResult = pgEnum("recovery_drill_result", ["passed", "failed"]);
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -406,3 +407,29 @@ export const auditLogs = pgTable("audit_logs", {
   correlationId: uuid("correlation_id").notNull().defaultRandom(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+export const recoveryDrills = pgTable("recovery_drills", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  idempotencyKey: text("idempotency_key").notNull(),
+  backupReference: text("backup_reference").notNull(),
+  targetEnvironment: text("target_environment").notNull(),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
+  completedAt: timestamp("completed_at", { withTimezone: true }).notNull(),
+  rpoMinutes: integer("rpo_minutes").notNull(),
+  rtoMinutes: integer("rto_minutes").notNull(),
+  checks: jsonb("checks").notNull(),
+  result: recoveryDrillResult("result").notNull(),
+  notes: text("notes"),
+  performedBy: uuid("performed_by").notNull().references(() => users.id),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (table) => [
+  uniqueIndex("recovery_drills_idempotency_uq").on(table.idempotencyKey),
+  check(
+    "recovery_drills_target_environment_valid",
+    sql`${table.targetEnvironment} in ('staging', 'recovery')`,
+  ),
+  check("recovery_drills_time_range_valid", sql`${table.completedAt} >= ${table.startedAt}`),
+  check("recovery_drills_rpo_nonnegative", sql`${table.rpoMinutes} >= 0`),
+  check("recovery_drills_rto_nonnegative", sql`${table.rtoMinutes} >= 0`),
+  check("recovery_drills_checks_object", sql`jsonb_typeof(${table.checks}) = 'object'`),
+]);

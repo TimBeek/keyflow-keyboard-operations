@@ -66,6 +66,11 @@ import type {
   StickerVerificationReport,
   StickerVerificationReportInput,
 } from "@/domain/sticker-verification";
+import {
+  createRecoveryDrill,
+  type RecoveryDrillInput,
+  type RecoveryDrillRecord,
+} from "@/domain/production-readiness";
 
 type IconName =
   | "home"
@@ -175,6 +180,7 @@ export function Dashboard({
   const [stockCounts, setStockCounts] = useState<StockCountRecord[]>([]);
   const [modelGroupDecisions, setModelGroupDecisions] = useState<ModelGroupDecision[]>([]);
   const [compatibilityEvidenceRecords, setCompatibilityEvidenceRecords] = useState<CompatibilityEvidenceRecord[]>([]);
+  const [recoveryDrills, setRecoveryDrills] = useState<RecoveryDrillRecord[]>([]);
   const [persistenceReady, setPersistenceReady] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [persistenceMessage, setPersistenceMessage] = useState("Lokale pilotopslag laden…");
@@ -231,6 +237,7 @@ export function Dashboard({
         setStockCounts(restored.state.stockCounts);
         setModelGroupDecisions(restored.state.modelGroupDecisions);
         setCompatibilityEvidenceRecords(restored.state.compatibilityEvidenceRecords);
+        setRecoveryDrills(restored.state.recoveryDrills);
         setStockItems((items) => items.map((item) => ({
           ...item,
           stock: quantityForInventoryItem(migratedQuantities, item),
@@ -260,6 +267,7 @@ export function Dashboard({
         stockCounts,
         modelGroupDecisions,
         compatibilityEvidenceRecords,
+        recoveryDrills,
       });
       writeOperationsState(window.localStorage, snapshot);
       savedAt = snapshot.savedAt;
@@ -281,6 +289,7 @@ export function Dashboard({
     stockCounts,
     transactions,
     verificationReports,
+    recoveryDrills,
   ]);
 
   function saveMutation(newQuantity: number, quantityDelta: number) {
@@ -478,6 +487,19 @@ export function Dashboard({
     return record;
   }
 
+  function recordRecoveryDrill(input: RecoveryDrillInput) {
+    const record = createRecoveryDrill(input, {
+      id: crypto.randomUUID(),
+      recordedAt: new Date().toISOString(),
+      recordedBy: actorName,
+    });
+    setRecoveryDrills((current) => [...current, record]);
+    setLastAction(
+      `Herstelproef ${record.backupReference} ${record.result === "passed" ? "geslaagd" : "mislukt"} vastgelegd.`,
+    );
+    return record;
+  }
+
   function switchRole(nextRole: UserRole) {
     if (!demoAccess) return;
     setRole(nextRole);
@@ -495,6 +517,7 @@ export function Dashboard({
       stockCounts,
       modelGroupDecisions,
       compatibilityEvidenceRecords,
+      recoveryDrills,
     });
     const blob = new Blob([serializeOperationsSnapshot(snapshot)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -520,6 +543,7 @@ export function Dashboard({
     setStockCounts(restored.state.stockCounts);
     setModelGroupDecisions(restored.state.modelGroupDecisions);
     setCompatibilityEvidenceRecords(restored.state.compatibilityEvidenceRecords);
+    setRecoveryDrills(restored.state.recoveryDrills);
     setStockItems((items) => items.map((item) => ({
       ...item,
       stock: quantityForInventoryItem(migratedQuantities, item),
@@ -538,6 +562,7 @@ export function Dashboard({
     setStockCounts([]);
     setModelGroupDecisions([]);
     setCompatibilityEvidenceRecords([]);
+    setRecoveryDrills([]);
     setStockItems(initialLowStock);
     setLastSavedAt(null);
     setLastAction("Lokale pilotgegevens teruggezet naar de veilige beginstand.");
@@ -715,8 +740,8 @@ export function Dashboard({
           </section>
         </div>
         <section className="roadmap-panel">
-          <div className="roadmap-heading"><div><span className="workspace-kicker">PRODUCTIEROADMAP</span><h2>KeyFlow is 92% compleet</h2><p>Voortgang naar de volledige live productieversie.</p></div><strong>92%</strong></div>
-          <div className="roadmap-track"><span style={{ width: "92%" }} /></div>
+          <div className="roadmap-heading"><div><span className="workspace-kicker">PRODUCTIEROADMAP</span><h2>KeyFlow is 94% compleet</h2><p>Voortgang naar de volledige live productieversie.</p></div><strong>94%</strong></div>
+          <div className="roadmap-track"><span style={{ width: "94%" }} /></div>
           <div className="roadmap-steps">
             <span className="done">Basis & UX</span><span className="done">Excel-import</span><span className="done">Voorraad & planning</span><span className="current">Rollen & uitvoering</span><span>Database live</span><span>SSO & integraties</span><span>Productieacceptatie</span>
           </div>
@@ -761,9 +786,12 @@ export function Dashboard({
             stockCounts={stockCounts}
             modelGroupDecisions={modelGroupDecisions}
             compatibilityEvidenceRecords={compatibilityEvidenceRecords}
+            recoveryDrills={recoveryDrills}
+            actorName={actorName}
             onRecordStockCount={recordStockCount}
             onReviewModelGroup={reviewModelGroup}
             onRecordCompatibilityEvidence={recordCompatibilityEvidence}
+            onRecordRecoveryDrill={recordRecoveryDrill}
             onPolicyChange={(nextPolicy) => {
               setOperationsPolicy(nextPolicy);
               setLastAction(`Conversiebeleid bijgewerkt · grens €${nextPolicy.thresholdEur}`);
@@ -782,7 +810,7 @@ export function Dashboard({
 
         <footer className="app-footer">
           <span><i /> {persistenceReady ? `Lokaal bewaard${lastSavedAt ? ` · ${formatPersistenceTime(lastSavedAt)}` : ""}` : "Opslag laden…"}</span>
-          <span>{lastAction || `Productieroadmap 92% · ${role === "management" ? "managementweergave" : "werknemersuitvoering"}`}</span>
+          <span>{lastAction || `Productieroadmap 94% · ${role === "management" ? "managementweergave" : "werknemersuitvoering"}`}</span>
         </footer>
         <ConversionAdvisor open={advisorOpen} onClose={() => setAdvisorOpen(false)} />
         <AccessManagementDialog

@@ -72,6 +72,26 @@ describe("operationele pilotopslag", () => {
         },
         notes: "Droge pastest uitgevoerd.",
       }],
+      recoveryDrills: [{
+        id: "recovery-75",
+        backupReference: "azure-backup-2026-07-28",
+        targetEnvironment: "recovery",
+        startedAt: "2026-07-28T08:00:00.000Z",
+        completedAt: "2026-07-28T08:42:00.000Z",
+        rpoMinutes: 15,
+        rtoMinutes: 42,
+        checks: {
+          migrations: true,
+          sourceSnapshot: true,
+          inventoryBalances: true,
+          transactionLedger: true,
+          accessControl: true,
+        },
+        result: "passed",
+        notes: "Herstel buiten productie volledig gecontroleerd.",
+        recordedAt: "2026-07-28T09:00:00.000Z",
+        recordedBy: "Tim Beek",
+      }],
     }, "2026-07-27T18:00:00.000Z");
 
     const restored = parseOperationsSnapshot(serializeOperationsSnapshot(snapshot));
@@ -93,6 +113,11 @@ describe("operationele pilotopslag", () => {
         catalogKey: "hangmap-075",
         model: "Dell Latitude 5420",
         status: "approved",
+      });
+      expect(restored.state.recoveryDrills[0]).toMatchObject({
+        backupReference: "azure-backup-2026-07-28",
+        result: "passed",
+        rtoMinutes: 42,
       });
     }
   });
@@ -119,6 +144,7 @@ describe("operationele pilotopslag", () => {
       expect(restored.state.stockCounts).toEqual([]);
       expect(restored.state.modelGroupDecisions).toEqual([]);
       expect(restored.state.compatibilityEvidenceRecords).toEqual([]);
+      expect(restored.state.recoveryDrills).toEqual([]);
     }
   });
 

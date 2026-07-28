@@ -917,6 +917,37 @@ td b.zero { color: var(--red); }
 .form-error { border: 1px solid #f0c4c4; background: #fff0f0; color: #a73737; }
 .approval-note { border: 1px solid #efd29a; background: #fff8e9; color: #79623b; }
 .audit-preview { margin: 13px 0 0; color: #84909c; font-size: 8px; }
+.readiness-center { display: grid; gap: 16px; background: #f8fafb; }
+.readiness-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.readiness-summary article { padding: 16px; border: 1px solid #dce5e8; border-radius: 10px; background: white; }
+.readiness-summary article.attention { border-color: #e6b8b8; background: #fff5f5; }
+.readiness-summary span, .readiness-summary strong, .readiness-summary small { display: block; }
+.readiness-summary span { color: #73818c; font-size: 8px; font-weight: 900; letter-spacing: .4px; text-transform: uppercase; }
+.readiness-summary strong { margin: 8px 0 4px; font-size: 20px; }
+.readiness-summary small { color: #84919a; font-size: 8px; }
+.readiness-gates, .recovery-drill-form, .recovery-history { padding: 16px; border: 1px solid #dce5e8; border-radius: 10px; background: white; }
+.readiness-gate-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; margin-top: 13px; }
+.readiness-gate-grid article { min-height: 118px; padding: 12px; border: 1px solid #e0e7ea; border-radius: 9px; background: #fbfcfc; }
+.readiness-gate-grid h4 { margin: 9px 0 6px; color: #344b5a; font-size: 9px; }
+.readiness-gate-grid p { margin: 0; color: #7a8892; font-size: 8px; line-height: 1.5; }
+.readiness-status { display: inline-flex; padding: 4px 7px; border-radius: 999px; font-size: 7px; font-weight: 900; text-transform: uppercase; }
+.readiness-status.ready { background: #e5f5ef; color: #19705c; }
+.readiness-status.action_required { background: #fff1e5; color: #a55c1e; }
+.readiness-status.external { background: #edf1f5; color: #667887; }
+.recovery-drill-grid { display: grid; grid-template-columns: minmax(310px, .8fr) minmax(0, 1.2fr); gap: 16px; }
+.recovery-drill-form > label { display: block; margin-top: 11px; }
+.recovery-drill-form label > span, .recovery-checks legend { display: block; margin-bottom: 6px; color: #61727e; font-size: 8px; font-weight: 800; }
+.recovery-drill-form input:not([type="checkbox"]), .recovery-drill-form select, .recovery-drill-form textarea { width: 100%; min-height: 40px; padding: 9px 10px; border: 1px solid #d6e0e4; border-radius: 7px; background: white; color: #354b58; font: inherit; font-size: 9px; }
+.recovery-drill-form textarea { resize: vertical; }
+.recovery-field-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 11px; }
+.recovery-checks { display: grid; gap: 6px; margin: 13px 0 0; padding: 0; border: 0; }
+.recovery-checks label { display: flex; align-items: center; gap: 8px; padding: 8px 9px; border: 1px solid #e1e7e9; border-radius: 7px; }
+.recovery-checks label > span { margin: 0; font-weight: 600; }
+.recovery-checks input { width: 15px; height: 15px; accent-color: var(--teal); }
+.recovery-warning { margin-top: 11px; padding: 10px; border: 1px solid #efd19c; border-radius: 7px; background: #fff9ed; color: #7a633c; font-size: 8px; line-height: 1.5; }
+.recovery-drill-form .primary-button { width: 100%; margin-top: 13px; }
+.recovery-drill-form > small { display: block; margin-top: 9px; color: #7d8a93; font-size: 7px; line-height: 1.4; }
+.recovery-history .table-wrap { margin-top: 12px; }
 
 @media (max-width: 1100px) {
   .quick-actions { grid-template-columns: repeat(2, 1fr); }
@@ -937,6 +968,8 @@ td b.zero { color: var(--red); }
   .compatibility-evidence-fields { grid-template-columns: 1fr 1fr; }
   .ai-readiness { grid-column: auto; grid-template-columns: 1fr; }
   .data-continuity { grid-column: auto; grid-template-columns: 1fr; }
+  .readiness-gate-grid { grid-template-columns: repeat(2, 1fr); }
+  .recovery-drill-grid { grid-template-columns: 1fr; }
   .verification-reference { grid-template-columns: 1fr 1fr; }
   .verification-reference div:nth-child(3) { border-left: 0; }
 }
@@ -1010,6 +1043,7 @@ td b.zero { color: var(--red); }
   .data-continuity dl { grid-template-columns: 1fr; }
   .data-continuity dl div { border-top: 1px solid #e6ebee; border-left: 0; }
   .data-continuity dl div:first-child { border-top: 0; }
+  .readiness-summary, .readiness-gate-grid, .recovery-field-pair { grid-template-columns: 1fr; }
   .order-heading { align-items: flex-start; flex-direction: column; }
   .forecast-horizons { grid-template-columns: 1fr; }
   .top-actions { align-items: stretch; }
