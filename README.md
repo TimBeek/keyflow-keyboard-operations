@@ -51,11 +51,12 @@ De eerste applicatiebasis bevat:
 - een AI-ondersteunde modelgroepwachtrij met bronconflicten en verplichte menselijke bewijscontrole;
 - een fysieke compatibiliteitsbibliotheek die afwijzingen direct uit het werknemersadvies houdt;
 - een tenantgebonden Microsoft Entra ID-loginbasis met persoonlijke app-rollen, databasesynchronisatie en afgeschermde productie-API's;
+- een checksum-gebonden productiepreflight, transactionele beginimport en verificatie voor alle 148 Excelbronregels;
 - productie-health- en readinesscontroles die ontbrekende configuratie melden zonder secrets te lekken;
 - versiegebonden en gevalideerde lokale pilotopslag die boekingen en beleid na een herstart van de browser herstelt;
 - JSON-back-up, gecontroleerd herstel en een tweestapsreset voor management;
 - een productiebuild zonder lint- of TypeScriptfouten;
-- een containerdefinitie en GitHub Actions voor CI en image-publicatie.
+- een containerdefinitie en GitHub Actions voor CI, een echte PostgreSQL-bootstraptest en image-publicatie.
 
 De pilotmutaties blijven nu bewaard in de browser van het gebruikte apparaat. Dit voorkomt gegevensverlies bij verversen of herstarten en management kan een gevalideerde JSON-back-up downloaden en herstellen. Deze lokale opslag is nog geen centrale, gelijktijdige multi-userdatabase; daarvoor wordt de aanwezige PostgreSQL-laag aangesloten.
 
@@ -93,6 +94,9 @@ npm run build
 
 ```text
 npm run db:migrate
+npm run db:preflight
+npm run db:bootstrap:apply
+npm run db:verify
 ```
 
 De database-API's zijn daarna beschikbaar via:
@@ -150,6 +154,7 @@ De generator weigert een bron die niet exact 148 unieke hangmappen en 3.218 vell
 - `docs/MODEL_GROUP_REVIEW.md` — werkende managementwachtrij, bewijsvelden en goedkeuringsregels;
 - `docs/COMPATIBILITY_EVIDENCE.md` — fysieke pastesten, werknemersblokkades en centrale bewijs-API;
 - `docs/IDENTITY_AND_SSO.md` — Entra-appregistratie, persoonlijke app-rollen, sessies en productieconfiguratie;
+- `docs/PRODUCTION_DATABASE_BOOTSTRAP.md` — veilige preflight, eenmalige beginimport en verificatie;
 - `ONDERZOEKSRAPPORT_FASE_1.pdf` — goedgekeurde onderzoeksbasis;
 - `docs/DEPLOYMENT.md` — voorgestelde GitHub- en productie-uitrol;
 - `app/Dockerfile` — productiecontainer;

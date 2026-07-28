@@ -5,8 +5,8 @@ const appDirectory = process.cwd();
 const outputDirectory = path.join(appDirectory, "dist");
 const nextDirectory = path.join(appDirectory, ".next");
 const requiredPublicAssets = [
-  "keyboard-reference-e1-dell-v2.png",
-  "keyboard-reference-e2-dell-v2.png",
+  "keyboard-reference-e1-dell-v3.png",
+  "keyboard-reference-e2-dell-v3.png",
   "keyboard-reference-guide-dell.png",
 ];
 

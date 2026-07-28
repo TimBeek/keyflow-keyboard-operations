@@ -44,3 +44,52 @@ jobs:
 
       - name: Production build
         run: npm run build
+
+  database-bootstrap:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: keyflow
+          POSTGRES_USER: keyflow
+          POSTGRES_PASSWORD: keyflow
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U keyflow -d keyflow"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgres://keyflow:keyflow@localhost:5432/keyflow
+      DATABASE_SSL: disable
+      KEYFLOW_IMPORT_ACTOR_ID: 00000000-0000-0000-0000-000000000001
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Apply migrations
+        run: npm run db:migrate
+
+      - name: Validate database and import identity
+        run: npm run db:preflight
+
+      - name: Apply canonical inventory snapshot
+        run: npm run db:bootstrap:apply
+
+      - name: Verify imported production inventory
+        run: npm run db:verify

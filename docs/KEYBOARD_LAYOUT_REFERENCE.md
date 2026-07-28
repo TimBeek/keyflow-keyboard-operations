@@ -7,7 +7,7 @@ De werknemersgids helpt bij twee verschillende beslissingen:
 1. de aanwezige en gewenste taal-layout correct registreren;
 2. vóór gebruik van een oud Noviply-vel controleren of de fysieke stickeruitsparingen passen.
 
-Deze beslissingen mogen niet door elkaar worden gehaald. `E1` en `E2` zijn leveranciersvarianten in het artikelnummer; het zijn geen talen en er is geen publiek onderbouwde universele vormregel waarmee KeyFlow zelfstandig van E1 naar E2 kan vertalen.
+Deze beslissingen mogen niet door elkaar worden gehaald. `E1` en `E2` zijn leveranciersvarianten in het artikelnummer; het zijn geen talen. In de aangeleverde interne voorbeelden is het Enter-blok het duidelijke onderscheid: E1 heeft een brede horizontale Enter op één rij, E2 een hoge L-vormige Enter over twee rijen. Het SKU-label en een droge pastest blijven verplicht.
 
 ## Scandinavische startkeuze
 
@@ -48,13 +48,10 @@ De bron toont Apple-keyboards. Gebruik de vergelijking daarom alleen als herkenn
 Controleer vóór het lostrekken of aanbrengen:
 
 1. het exacte SKU-label en de daarin opgenomen E1/E2-code;
-2. de Enter-vorm;
-3. de breedte van linker- en rechter-Shift;
-4. het pijltjescluster;
-5. maat en tussenruimte van de functierij;
-6. aanwezigheid en rand van een numeriek toetsenblok;
-7. een eventuele pointing-stickuitsparing;
-8. de droge uitlijning van alle toetsen en randen terwijl drager en kleeflaag intact blijven.
+2. E1: een brede horizontale Enter op één toetsenrij;
+3. E2: een hoge L-vormige Enter over twee toetsenrijen;
+4. de omliggende, verkorte toetsposities direct naast het Enter-blok;
+5. de droge uitlijning van alle toetsen en randen terwijl drager en kleeflaag intact blijven.
 
 Bij twijfel meldt de werknemer `wrong_variant` of `position_mismatch` en stopt zonder afboeken zolang het vel nog bruikbaar is. Alleen een al gebruikt of beschadigd vel wordt als uitval geboekt.
 
@@ -69,11 +66,11 @@ Migratie `0009_keyboard_reference_library.sql` voegt een beheerbare referentiebi
 
 De actieve vergelijking gebruikt twee eigen gegenereerde Dell Latitude-stijl trainingsillustraties:
 
-- `app/public/keyboard-reference-e1-dell-v2.png` — blauwe, doorgetrokken controlecontour;
-- `app/public/keyboard-reference-e2-dell-v2.png` — oranje controlecontour met extra stippellijn rond kritieke uitsneden.
+- `app/public/keyboard-reference-e1-dell-v3.png` — brede horizontale Enter met cyaan contour;
+- `app/public/keyboard-reference-e2-dell-v3.png` — hoge L-vormige Enter met oranje contour.
 
-Beide beelden gebruiken bewust exact dezelfde Dell-basis. Daardoor vergelijkt de werknemer de stickerdrager en controlezones in plaats van twee verschillende laptopmodellen. KeyFlow markeert bovendien welk van de twee varianten het actuele SKU-label vraagt.
+De beelden zijn opnieuw gegenereerd op basis van de aangeleverde E1- en E2-voorbeelden. KeyFlow markeert bovendien welke variant het actuele SKU-label vraagt.
 
-Blauw en oranje zijn uitsluitend kleuren van de trainingsgids. De voorbeeldcontouren zijn geen Noviply-maattekeningen en bewijzen niet dat een specifieke sticker E1 of E2 is. De bestanden `app/public/keyboard-reference-guide-dell.png` en `app/public/keyboard-reference-guide.png` blijven als eerdere bronvarianten beschikbaar.
+Cyaan en oranje zijn uitsluitend kleuren van de trainingsgids. De voorbeeldcontouren zijn geen Noviply-maattekeningen en vervangen nooit het SKU-label of de droge pastest. De bestanden `app/public/keyboard-reference-guide-dell.png` en `app/public/keyboard-reference-guide.png` blijven als eerdere bronvarianten beschikbaar.
 
 Als een beeldbestand niet geladen kan worden, vervangt KeyFlow het lege vlak door een zichtbare stopmelding en een knop `Opnieuw laden`. De werknemer mag een ontbrekend referentiebeeld nooit als een geslaagde visuele controle behandelen.

@@ -1,0 +1,1491 @@
+{
+  "metadata": {
+    "fileName": "Toetsenbordstickers voorraad.xlsx",
+    "sheet": "Productie",
+    "sha256": "30f6d1884c081c6ef72e99f7db779a7ef5a878b12a76fcd1ab85bc42b616ef7a",
+    "rowCount": 148,
+    "totalQuantity": 3218
+  },
+  "rows": [
+    {
+      "sourceRow": 3,
+      "storageNumber": 1,
+      "model": "Dell latitude 7400",
+      "stock": 15,
+      "layout": "QWERTY US",
+      "sku": "NB10052E1NL",
+      "linkedModels": "Dell Latitude 3400, Dell Latitude 5401, Dell Latitude 5402, Dell Latitude 5410, Dell Latitude 5411, Dell Latitude 7400, Dell Latitude 7410",
+      "notes": "Staat Qwertz maar is Qwerty"
+    },
+    {
+      "sourceRow": 4,
+      "storageNumber": 2,
+      "model": "HP Probook 640 G5",
+      "stock": 32,
+      "layout": "QWERTY US",
+      "sku": "NB10056E1NL",
+      "linkedModels": "HP ProBook 430 G5, HP ProBook 440 G5, HP ProBook 445 G5, HP ProBook 640 G4, HP ProBook 645 G4, HP ProBook 645 G5, HP ProBook x360 440 G1, HP ZHAN 66 Pro G1",
+      "notes": ""
+    },
+    {
+      "sourceRow": 5,
+      "storageNumber": 3,
+      "model": "Dell Latitude 7490",
+      "stock": 18,
+      "layout": "QWERTY US",
+      "sku": "NB10057E1NL",
+      "linkedModels": "Dell Latitude 5480, Dell Latitude 5490, Dell Latitude 5495, Dell Latitude 7480, Dell Latitude 7490",
+      "notes": ""
+    },
+    {
+      "sourceRow": 6,
+      "storageNumber": 4,
+      "model": "Dell Latitude 5300",
+      "stock": 23,
+      "layout": "QWERTY US",
+      "sku": "NB10058E1NL",
+      "linkedModels": "Dell Latitude 5300, Dell Latitude 7300, Dell Latitude 5300 2-in-1 Chromebook",
+      "notes": "Staat QWERTZ maar is NL"
+    },
+    {
+      "sourceRow": 7,
+      "storageNumber": 5,
+      "model": "HP Elitebook 735 G5",
+      "stock": 10,
+      "layout": "QWERTY US",
+      "sku": "NB10059E1NL",
+      "linkedModels": "HP EliteBook 730 G5, HP EliteBook 735 G5, HP EliteBook 735 G6, HP EliteBook 830 G5, HP EliteBook 836 G5",
+      "notes": ""
+    },
+    {
+      "sourceRow": 8,
+      "storageNumber": 6,
+      "model": "Dell latitude 7300",
+      "stock": 30,
+      "layout": "QWERTY US",
+      "sku": "NB10060E1NL",
+      "linkedModels": "Dell Latitude 5300, Dell Latitude 7300, Dell Latitude 7310, Dell Latitude 7320, Dell Latitude 7320 2-in-1, Dell Latitude 7320 Chromebook Enterprise",
+      "notes": "op stikkervel staat bij taal QWERTZ maar stikker is NL"
+    },
+    {
+      "sourceRow": 9,
+      "storageNumber": 7,
+      "model": "HP Elitebook X360 1040 G8",
+      "stock": 26,
+      "layout": "QWERTY US",
+      "sku": "NB10061E1NL",
+      "linkedModels": "HP EliteBook x360 1040 G7, HP EliteBook x360 1040 G8",
+      "notes": ""
+    },
+    {
+      "sourceRow": 10,
+      "storageNumber": 8,
+      "model": "Dell Latitude 5420",
+      "stock": 64,
+      "layout": "AZERTY FR",
+      "sku": "NB10172E1FR",
+      "linkedModels": "",
+      "notes": ""
+    },
+    {
+      "sourceRow": 11,
+      "storageNumber": 9,
+      "model": "Fujitsu Lifebook E548",
+      "stock": 30,
+      "layout": "QWERTY US",
+      "sku": "NB10063E1NL",
+      "linkedModels": "Fujitsu LifeBook E448, Fujitsu LifeBook E449, Fujitsu LifeBook E548, Fujitsu LifeBook E549",
+      "notes": "beetje klijn, mist rondje voor nipple"
+    },
+    {
+      "sourceRow": 12,
+      "storageNumber": 10,
+      "model": "HP Elitebook 850 G7",
+      "stock": 18,
+      "layout": "QWERTY US",
+      "sku": "NB10064E1NL",
+      "linkedModels": "HP EliteBook 850 G7, HP EliteBook 850 G8, HP EliteBook 855 G7, HP EliteBook 855 G8",
+      "notes": ""
+    },
+    {
+      "sourceRow": 13,
+      "storageNumber": 11,
+      "model": "HP Zbook Fury 15 G7",
+      "stock": 19,
+      "layout": "QWERTY US",
+      "sku": "NB10065E1NL",
+      "linkedModels": "HP ZBook Fury 15 G8, HP ZBook Fury 17 G7, HP ZBook Fury 17 G8",
+      "notes": ""
+    },
+    {
+      "sourceRow": 14,
+      "storageNumber": 12,
+      "model": "Lenovo Thinkpad A285",
+      "stock": 23,
+      "layout": "QWERTY US",
+      "sku": "NB10066E1NL",
+      "linkedModels": "Lenovo ThinkPad A285, Lenovo ThinkPad X280, Lenovo ThinkPad X390, Lenovo ThinkPad X395, Lenovo ThinkPad L13 Gen 1, Lenovo ThinkPad L13 Yoga Gen 1, Lenovo ThinkPad X13 Gen 1",
+      "notes": "Size is not always right sometimes"
+    },
+    {
+      "sourceRow": 15,
+      "storageNumber": 13,
+      "model": "Dell Latitude 3510",
+      "stock": 10,
+      "layout": "QWERTY US",
+      "sku": "NB10067E1NL",
+      "linkedModels": "Dell Latitude 3510, Dell Latitude 3540",
+      "notes": "door ai met fout."
+    },
+    {
+      "sourceRow": 16,
+      "storageNumber": 14,
+      "model": "Dell Precision 7510",
+      "stock": 13,
+      "layout": "QWERTY US",
+      "sku": "NB10068E1NL",
+      "linkedModels": "Dell Precision 3510, Dell Precision 3520, Dell Precision 7510, Dell Precision 7520, Dell Precision 7710, Dell Precision 7720, Dell Latitude E5550, Dell Latitude E5570, Dell Latitude 5550, Dell Latitude 5580, Dell Latitude 5590, Dell Latitude 5591",
+      "notes": ""
+    },
+    {
+      "sourceRow": 17,
+      "storageNumber": 15,
+      "model": "Lenovo V330-14IKB",
+      "stock": 27,
+      "layout": "QWERTY US",
+      "sku": "NB10069E1NL",
+      "linkedModels": "Lenovo V130-14IKB, Lenovo V330-14IKB, Lenovo V330-14ISK, Lenovo V330-14IGM, Lenovo 330C-14IKB, Lenovo V530S-14IKB",
+      "notes": "de rij van L tot ' is naar links geschoven, kleur niet goed"
+    },
+    {
+      "sourceRow": 18,
+      "storageNumber": 16,
+      "model": "Fujitsu Lifebook U728",
+      "stock": 15,
+      "layout": "QWERTY US",
+      "sku": "NB10070E1NL",
+      "linkedModels": "Fujitsu LifeBook U727, Fujitsu LifeBook U728, Fujitsu LifeBook U729",
+      "notes": ""
+    },
+    {
+      "sourceRow": 19,
+      "storageNumber": 17,
+      "model": "Fujitsu Lifebook U729",
+      "stock": 30,
+      "layout": "QWERTY US",
+      "sku": "NB10072E1NL",
+      "linkedModels": "Fujitsu LifeBook U727, Fujitsu LifeBook U728, Fujitsu LifeBook U729",
+      "notes": "beetje klijn (nog checken)"
+    },
+    {
+      "sourceRow": 20,
+      "storageNumber": 18,
+      "model": "HP Probook 430 G5",
+      "stock": 13,
+      "layout": "QWERTY US",
+      "sku": "NB10074E1NL",
+      "linkedModels": "HP ProBook 430 G5, HP ProBook 440 G5, HP ProBook 445 G5, HP ProBook 640 G4, HP ProBook 645 G4, HP ProBook 645 G5, HP ProBook x360 440 G1, HP ZHAN 66 Pro G1",
+      "notes": ""
+    },
+    {
+      "sourceRow": 21,
+      "storageNumber": 19,
+      "model": "HP Probook 440 G6",
+      "stock": 10,
+      "layout": "QWERTY US",
+      "sku": "NB10075E1NL",
+      "linkedModels": "HP ProBook 440 G6, HP ProBook 445 G6, HP ProBook 440 G7, HP ProBook 445 G7",
+      "notes": "beetje klijn"
+    },
+    {
+      "sourceRow": 22,
+      "storageNumber": 20,
+      "model": "HP Elitebook 830 G7",
+      "stock": 25,
+      "layout": "QWERTY US",
+      "sku": "NB10076E1NL",
+      "linkedModels": "HP EliteBook 830 G8, HP EliteBook 835 G7, HP EliteBook 835 G8, HP EliteBook 735 G7, HP EliteBook 735 G8, HP EliteBook x360 830 G7, HP EliteBook x360 830 G8",
+      "notes": ""
+    },
+    {
+      "sourceRow": 23,
+      "storageNumber": 21,
+      "model": "Dell Latitude 3400",
+      "stock": 18,
+      "layout": "QWERTY US",
+      "sku": "NB10077E1NL",
+      "linkedModels": "Dell Latitude 3400, Dell Latitude 5401 Dell Latitude 7410,",
+      "notes": ""
+    },
+    {
+      "sourceRow": 24,
+      "storageNumber": 22,
+      "model": "Fujitsu Lifebook S938",
+      "stock": 16,
+      "layout": "QWERTY US",
+      "sku": "NB10078E1NL",
+      "linkedModels": "Geen gevonden",
+      "notes": ""
+    },
+    {
+      "sourceRow": 25,
+      "storageNumber": 23,
+      "model": "HP ZBook 15 G5",
+      "stock": 18,
+      "layout": "QWERTY US",
+      "sku": "NB10152E1NL",
+      "linkedModels": "HP ZBook 15 G5,, HP ZBook 17 G5, HP ZBook 17 G6",
+      "notes": ""
+    },
+    {
+      "sourceRow": 26,
+      "storageNumber": 24,
+      "model": "HP Probook 430 G6",
+      "stock": 17,
+      "layout": "QWERTY US",
+      "sku": "NB10080E1NL",
+      "linkedModels": "HP ProBook 430 G5, HP ProBook 430 G6, HP ProBook 440 G6",
+      "notes": ""
+    },
+    {
+      "sourceRow": 27,
+      "storageNumber": 25,
+      "model": "Apple Macbook Pro 13' (2017)",
+      "stock": 24,
+      "layout": "QWERTY US",
+      "sku": "NB10085E1NL",
+      "linkedModels": "Geen gevonden",
+      "notes": ""
+    },
+    {
+      "sourceRow": 28,
+      "storageNumber": 26,
+      "model": "Apple Macbook Pro 15' (2015)",
+      "stock": 25,
+      "layout": "QWERTY US",
+      "sku": "NB10087E1NL",
+      "linkedModels": "Geen gevonden",
+      "notes": ""
+    },
+    {
+      "sourceRow": 29,
+      "storageNumber": 27,
+      "model": "Dell Latitude 7410",
+      "stock": 17,
+      "layout": "QWERTY US",
+      "sku": "NB10091E1NL",
+      "linkedModels": "Dell Latitude 7410 2-in-1, Dell Latitude 5401, Dell Latitude 5410, Dell Latitude 7410 Chromebook",
+      "notes": ""
+    },
+    {
+      "sourceRow": 30,
+      "storageNumber": 28,
+      "model": "Dell XPS 13 9300",
+      "stock": 21,
+      "layout": "QWERTY US",
+      "sku": "NB10092E1NL",
+      "linkedModels": "Dell XPS 13 9300, Dell XPS 13 9310",
+      "notes": ""
+    },
+    {
+      "sourceRow": 31,
+      "storageNumber": 29,
+      "model": "HP Probook 430 G7",
+      "stock": 25,
+      "layout": "QWERTY US",
+      "sku": "NB10093E1NL",
+      "linkedModels": "HP ProBook 430 G6, HP ProBook 430 G7, HP ProBook 435 G6, HP ProBook 435 G7",
+      "notes": ""
+    },
+    {
+      "sourceRow": 32,
+      "storageNumber": 30,
+      "model": "Dell Latitude 5401",
+      "stock": 31,
+      "layout": "QWERTY US",
+      "sku": ",,,,,,,,,,",
+      "linkedModels": "Dell Latitude 5400, Dell Latitude 5401, Dell Latitude 7400, Dell Latitude 7410",
+      "notes": ""
+    },
+    {
+      "sourceRow": 33,
+      "storageNumber": 31,
+      "model": "HP Zbook Studio G5",
+      "stock": 25,
+      "layout": "QWERTY US",
+      "sku": "NB10095E1NL",
+      "linkedModels": "HP ZBook Studio x360 G5, HP EliteBook 1050 G1",
+      "notes": ""
+    },
+    {
+      "sourceRow": 34,
+      "storageNumber": 32,
+      "model": "Dell Latitude 7320",
+      "stock": 58,
+      "layout": "QWERTY US",
+      "sku": "NB10096E1NL",
+      "linkedModels": "Dell Latitude 7300, Dell Latitude 7310, Dell Latitude 7320, Dell Latitude 7320 2-in-1, Dell Latitude 7320 Chromebook Enterprise",
+      "notes": "Staat Qwertz maar is Qwerty NL"
+    },
+    {
+      "sourceRow": 35,
+      "storageNumber": 33,
+      "model": "Dell Precision 5540",
+      "stock": 27,
+      "layout": "QWERTY US",
+      "sku": "NB10097E1NL",
+      "linkedModels": "Dell Precision 5540, Dell Precision 5530, Dell Precision 5520, Dell Precision 5510, Dell XPS 15 7590, Dell XPS 15 9570, Dell XPS 15 9560, Dell XPS 15 9550",
+      "notes": ""
+    },
+    {
+      "sourceRow": 36,
+      "storageNumber": 34,
+      "model": "HP Probook 440 G8",
+      "stock": 9,
+      "layout": "QWERTY US",
+      "sku": "NB10098E1NL",
+      "linkedModels": "HP ProBook 445 G8",
+      "notes": ""
+    },
+    {
+      "sourceRow": 37,
+      "storageNumber": 35,
+      "model": "HP Elitebook 845 G7",
+      "stock": 32,
+      "layout": "QWERTY US",
+      "sku": "NB10099E1NL",
+      "linkedModels": "HP EliteBook 840 G7, HP EliteBook 840 G8, HP EliteBook 845 G8, HP EliteBook 745 G7, HP EliteBook 745 G8, HP ZBook Firefly 14 G7, HP ZBook Firefly 14 G8",
+      "notes": ""
+    },
+    {
+      "sourceRow": 38,
+      "storageNumber": 36,
+      "model": "Microsoft Surface Pro 7",
+      "stock": 27,
+      "layout": "QWERTY US",
+      "sku": "NB10100E1NL",
+      "linkedModels": "Microsoft Surface Pro 6, Microsoft Surface Pro 5 (2017), Microsoft Surface Pro 4, Microsoft Surface Pro",
+      "notes": ""
+    },
+    {
+      "sourceRow": 39,
+      "storageNumber": 37,
+      "model": "Dell Latitude 3301",
+      "stock": 7,
+      "layout": "QWERTY US",
+      "sku": "NB10161E1NL",
+      "linkedModels": "Dell Latitude 3410, Dell Latitude E3301, Dell Latitude P114G, Dell Latitude P120G, Dell Latitude P113G, Dell Latitude P115G",
+      "notes": ""
+    },
+    {
+      "sourceRow": 40,
+      "storageNumber": 38,
+      "model": "Dell Latitude 3310",
+      "stock": 15,
+      "layout": "QWERTY US",
+      "sku": "NB10088E1NL",
+      "linkedModels": "Dell Latitude 3310 2-in-1",
+      "notes": ""
+    },
+    {
+      "sourceRow": 41,
+      "storageNumber": 39,
+      "model": "HP Probook x360 440 G1",
+      "stock": 201,
+      "layout": "QWERTY US",
+      "sku": "NB10071E1NL",
+      "linkedModels": "HP ProBook 430 G5, HP ProBook 440 G5, HP ProBook 445 G5, HP ProBook 640 G4, HP ProBook 645 G4, HP ProBook x360 440 G1",
+      "notes": "beetje klein horizontaal, posseble to have a nipple"
+    },
+    {
+      "sourceRow": 42,
+      "storageNumber": 40,
+      "model": "HP Elitebook X360 1040 G7",
+      "stock": 15,
+      "layout": "QWERTY US",
+      "sku": "NB10083E1NL",
+      "linkedModels": "HP EliteBook x360 1040 G7, HP EliteBook x360 1040 G8",
+      "notes": ""
+    },
+    {
+      "sourceRow": 43,
+      "storageNumber": 41,
+      "model": "HP Zbook 15 G3",
+      "stock": 31,
+      "layout": "AZERTY FR",
+      "sku": "NB10043E1FR",
+      "linkedModels": "",
+      "notes": ""
+    },
+    {
+      "sourceRow": 44,
+      "storageNumber": 42,
+      "model": "HP Elitebook 840 G8",
+      "stock": 25,
+      "layout": "QWERTY US",
+      "sku": "NB10055E1NL",
+      "linkedModels": "HP EliteBook 845 G7, HP EliteBook 840 G8, HP EliteBook 845 G8, HP EliteBook 745 G7, HP EliteBook 745 G8, HP ZBook Firefly 14 G7, HP ZBook Firefly 14 G8",
+      "notes": ""
+    },
+    {
+      "sourceRow": 45,
+      "storageNumber": 43,
+      "model": "Dell Latitude 7310",
+      "stock": 12,
+      "layout": "QWERTY US",
+      "sku": "NB10128E1NL",
+      "linkedModels": "0",
+      "notes": "Staat QWERTZ maar is NL"
+    },
+    {
+      "sourceRow": 46,
+      "storageNumber": 44,
+      "model": "Dell precision 7720",
+      "stock": 22,
+      "layout": "QWERTY US",
+      "sku": "NB10127E1NL",
+      "linkedModels": "Dell Precision 7510, Dell Precision 7520, Dell Precision 7710, Dell Precision 7720",
+      "notes": ""
+    },
+    {
+      "sourceRow": 47,
+      "storageNumber": 45,
+      "model": "HP Probook 650 G8",
+      "stock": 16,
+      "layout": "QWERTY US",
+      "sku": "NB10123E1NL",
+      "linkedModels": "HP ProBook 650 G8, HP ProBook 655 G8, HP EliteBook 650 G9",
+      "notes": ""
+    },
+    {
+      "sourceRow": 48,
+      "storageNumber": 46,
+      "model": "Dell Precision 3530",
+      "stock": 20,
+      "layout": "QWERTY US",
+      "sku": "NB10136E1NL",
+      "linkedModels": "Dell Precision 3530, Dell Precision 3540, Dell Precision 3550, Dell Precision 3560, Dell Latitude 5590, Dell Latitude 5591",
+      "notes": ""
+    },
+    {
+      "sourceRow": 49,
+      "storageNumber": 47,
+      "model": "HP Elitebook X360 1030 G7",
+      "stock": 21,
+      "layout": "QWERTY US",
+      "sku": "NB10130E1NL",
+      "linkedModels": "HP EliteBook x360 1030 G7, HP EliteBook x360 1030 G8",
+      "notes": ""
+    },
+    {
+      "sourceRow": 50,
+      "storageNumber": 48,
+      "model": "HP Zbook Firefly 14 G9",
+      "stock": 14,
+      "layout": "QWERTY US",
+      "sku": "NB10132E1NL",
+      "linkedModels": "HP EliteBook 830 G9, HP EliteBook 840 G9, HP EliteBook 845 G9, HP EliteBook 850 G9, HP ZBook Firefly 14 G9",
+      "notes": ""
+    },
+    {
+      "sourceRow": 51,
+      "storageNumber": 49,
+      "model": "HP Zbook 15 G6",
+      "stock": 11,
+      "layout": "QWERTY US",
+      "sku": "NB10122E1NL",
+      "linkedModels": "HP ZBook 15 G5, HP ZBook 17 G5, HP ZBook 15 G6, HP ZBook 17 G6",
+      "notes": ""
+    },
+    {
+      "sourceRow": 52,
+      "storageNumber": 50,
+      "model": "HP Zbook 15 G4",
+      "stock": 17,
+      "layout": "QWERTY US",
+      "sku": "NB10124E1NL",
+      "linkedModels": "HP ZBook 15 G3, HP ZBook 15 G4, HP ZBook 17 G3, HP ZBook 17 G4",
+      "notes": ""
+    },
+    {
+      "sourceRow": 53,
+      "storageNumber": 51,
+      "model": "HP Elitebook 840 G6",
+      "stock": 17,
+      "layout": "QWERTY US",
+      "sku": "NB10133E1NL",
+      "linkedModels": "HP EliteBook 850 G5, HP EliteBook 855 G5",
+      "notes": ""
+    },
+    {
+      "sourceRow": 54,
+      "storageNumber": 52,
+      "model": "HP Elitebook 850 G5",
+      "stock": 13,
+      "layout": "QWERTY US",
+      "sku": "NB10121E1NL",
+      "linkedModels": "HP EliteBook 850 G6, HP EliteBook 855 G5, HP EliteBook 755 G5, HP ZBook 15u G5, HP ZBook 15u G6",
+      "notes": ""
+    },
+    {
+      "sourceRow": 55,
+      "storageNumber": 53,
+      "model": "Dell Latitude 5591",
+      "stock": 28,
+      "layout": "QWERTY US",
+      "sku": "NB10126E1NL",
+      "linkedModels": "Dell Latitude 5590, Dell Latitude 5580, Dell Latitude E5550, Dell Latitude E5570, Dell Precision 3510, Dell Precision 3520, Dell Precision 7510, Dell Precision 7520, Dell Precision 7710, Dell Precision 7720",
+      "notes": ""
+    },
+    {
+      "sourceRow": 56,
+      "storageNumber": 54,
+      "model": "HP Zbook Studio G4",
+      "stock": 24,
+      "layout": "QWERTY US",
+      "sku": "NB10104E1NL",
+      "linkedModels": "Geen gevonden",
+      "notes": ""
+    },
+    {
+      "sourceRow": 57,
+      "storageNumber": 55,
+      "model": "Dynabook Tecra A40-G",
+      "stock": 27,
+      "layout": "QWERTY US",
+      "sku": "NB10113E1NL",
+      "linkedModels": "\\",
+      "notes": ""
+    },
+    {
+      "sourceRow": 58,
+      "storageNumber": 56,
+      "model": "HP Zbook Fury 15 G8",
+      "stock": 14,
+      "layout": "QWERTY US",
+      "sku": "NB10117E1NL",
+      "linkedModels": "HP ZBook Fury 15 G8, H,",
+      "notes": ""
+    },
+    {
+      "sourceRow": 59,
+      "storageNumber": 57,
+      "model": "HP Zbook 15u G4",
+      "stock": 23,
+      "layout": "QWERTY US",
+      "sku": "NB10105E1NL",
+      "linkedModels": "HP ZBook 15u G4, HP ZBook 15u G5",
+      "notes": ""
+    },
+    {
+      "sourceRow": 60,
+      "storageNumber": 58,
+      "model": "Lenovo Thinkpad E495",
+      "stock": 20,
+      "layout": "QWERTY US",
+      "sku": "NB10110E1NL",
+      "linkedModels": "Lenovo ThinkPad E480, Lenovo ThinkPad E490, Lenovo ThinkPad E495",
+      "notes": ""
+    },
+    {
+      "sourceRow": 61,
+      "storageNumber": 59,
+      "model": "HP Elitebook 640 G9",
+      "stock": 29,
+      "layout": "QWERTY US",
+      "sku": "NB10109E1NL",
+      "linkedModels": "HP EliteBook 640 G10, HP EliteBook 645 G9, HP EliteBook 645 G10, HP ProBook 640 G8, HP ProBook 640 G9, HP ProBook 645 G8, HP ProBook 645 G9",
+      "notes": ""
+    },
+    {
+      "sourceRow": 62,
+      "storageNumber": 60,
+      "model": "HP Elitebook 840 G7",
+      "stock": 16,
+      "layout": "QWERTY US",
+      "sku": "NB10107E1NL",
+      "linkedModels": "HP EliteBook 840 G7, HP EliteBook 845 G7, HP EliteBook 845 G8, HP EliteBook 745 G7, HP EliteBook 745 G8, HP ZBook Firefly 14 G7, HP ZBook Firefly 14 G8",
+      "notes": ""
+    },
+    {
+      "sourceRow": 63,
+      "storageNumber": 61,
+      "model": "Lenovo V330-14ARR",
+      "stock": 21,
+      "layout": "QWERTY US",
+      "sku": "NB10120E1NL",
+      "linkedModels": "Lenovo V130-14IKB, Lenovo V330-14IKB, Lenovo V330-14ISK, Lenovo V330-14IGM, Lenovo 330C-14IKB, Lenovo V530S-14IKB",
+      "notes": ""
+    },
+    {
+      "sourceRow": 64,
+      "storageNumber": 62,
+      "model": "Dell Precision 7550",
+      "stock": 18,
+      "layout": "QWERTY US",
+      "sku": "NB10111E1NL",
+      "linkedModels": "Dell Precision 7550, Dell Precision 7560, Dell Precision 7750, Dell Precision 7760",
+      "notes": ""
+    },
+    {
+      "sourceRow": 65,
+      "storageNumber": 63,
+      "model": "Dell Precision 7540",
+      "stock": 11,
+      "layout": "QWERTY US",
+      "sku": "",
+      "linkedModels": "Dell Precision 7530, Dell Precision 7540, Dell Precision 7730, Dell Precision 7740",
+      "notes": ""
+    },
+    {
+      "sourceRow": 66,
+      "storageNumber": 64,
+      "model": "Dell Latitude 7390",
+      "stock": 7,
+      "layout": "QWERTY US",
+      "sku": "NB10112E1NL",
+      "linkedModels": "Dell Latitude 7280, Dell Latitude 7290, Dell Latitude 7380, Dell Latitude 7390",
+      "notes": "op stikkervel staat bij taal QWERTZ maar stikker is NL"
+    },
+    {
+      "sourceRow": 67,
+      "storageNumber": 65,
+      "model": "Dell Latitude 5411",
+      "stock": 30,
+      "layout": "QWERTY US",
+      "sku": "NB10116E1NL",
+      "linkedModels": "Dell Latitude 5480, Dell Latitude 5490, Dell Latitude 5495, Dell Latitude 7480, Dell Latitude 7490, Dell Latitude 5411, Dell Latitude 7490",
+      "notes": ""
+    },
+    {
+      "sourceRow": 68,
+      "storageNumber": 66,
+      "model": "Dell XPS 13 7390",
+      "stock": 11,
+      "layout": "QWERTY US",
+      "sku": "NB10115E1NL",
+      "linkedModels": "Dell XPS 13 7390, Dell XPS 13 9305, Dell XPS 13 9310, Dell XPS 13 9370, Dell XPS 13 9380, Dell XPS 13 7390 2-in-1, Dell XPS 13 9310 2-in-1",
+      "notes": ""
+    },
+    {
+      "sourceRow": 69,
+      "storageNumber": 67,
+      "model": "HP Probook 455 G7",
+      "stock": 17,
+      "layout": "QWERTY US",
+      "sku": "NB10108E1NL",
+      "linkedModels": "HP ProBook 455 G6, HP ProBook 455 G7, HP ProBook 450 G6, HP ProBook 450 G7, HP ProBook 455R G6, HP ProBook 455R G7, HP ProBook 450R G6, HP ProBook 450R G7",
+      "notes": ""
+    },
+    {
+      "sourceRow": 70,
+      "storageNumber": 68,
+      "model": "HP Zbook 15u G3",
+      "stock": 13,
+      "layout": "QWERTY US",
+      "sku": "NB10125E1NL",
+      "linkedModels": "HP ZBook 15u G3, HP ZBook 15u G4, HP EliteBook 850 G3, HP EliteBook 850 G4, HP EliteBook 755 G3, HP EliteBook 755 G4",
+      "notes": ""
+    },
+    {
+      "sourceRow": 71,
+      "storageNumber": 69,
+      "model": "Dell Precision 3541",
+      "stock": 10,
+      "layout": "QWERTY US",
+      "sku": "NB10165E1NL",
+      "linkedModels": "Geen gevonden",
+      "notes": ""
+    },
+    {
+      "sourceRow": 72,
+      "storageNumber": 70,
+      "model": "HP Zbook 15u G5",
+      "stock": 14,
+      "layout": "QWERTY US",
+      "sku": "NB10119E1NL",
+      "linkedModels": "HP ZBook 15u G5, HP ZBook 15u G6, HP EliteBook 850 G5, HP EliteBook 850 G6, HP EliteBook 855 G5, HP EliteBook 855 G6",
+      "notes": ""
+    },
+    {
+      "sourceRow": 73,
+      "storageNumber": 71,
+      "model": "Dell Latitude 5290",
+      "stock": 16,
+      "layout": "QWERTY US",
+      "sku": "NB10153E1NL",
+      "linkedModels": "Dell Latitude 5280, Dell Latitude 5288, Dell Latitude 5289, Dell Latitude 5290, Dell Latitude 7280, Dell Latitude 7290, Dell Latitude 7380, Dell Latitude 7389, Dell Latitude 7390",
+      "notes": ""
+    },
+    {
+      "sourceRow": 74,
+      "storageNumber": 72,
+      "model": "Dell Latitude 5310",
+      "stock": 21,
+      "layout": "QWERTY US",
+      "sku": "NB10150E1NL",
+      "linkedModels": "Dell Latitude 5300, Dell Latitude 5310, Dell Latitude 7300, Dell Latitude 7310, Dell Latitude 7320, Dell Latitude 7320 2-in-1, Dell Latitude 7320 Chromebook Enterprise",
+      "notes": ""
+    },
+    {
+      "sourceRow": 75,
+      "storageNumber": 73,
+      "model": "Fujitsu Lifebook U938",
+      "stock": 21,
+      "layout": "QWERTY US",
+      "sku": "NB10154E1NL",
+      "linkedModels": "Fujitsu LifeBook U937, Fujitsu LifeBook U938, Fujitsu LifeBook U939",
+      "notes": ""
+    },
+    {
+      "sourceRow": 76,
+      "storageNumber": 74,
+      "model": "Dell Precision 5520",
+      "stock": 16,
+      "layout": "QWERTY US",
+      "sku": "NB10167E1NL",
+      "linkedModels": "Dell Precision 5520, Dell Precision 5530, Dell Precision 5540, Dell XPS 15 9550, Dell XPS 15 9560, Dell XPS 15 9570",
+      "notes": ""
+    },
+    {
+      "sourceRow": 77,
+      "storageNumber": 75,
+      "model": "Dell Latitude 5420",
+      "stock": 25,
+      "layout": "QWERTY US",
+      "sku": "NB10172E1NL",
+      "linkedModels": "Dell Latitude 5420, Dell Latitude 7420, Dell Latitude 7520, Dell Latitude 5421, Dell Latitude 7430, Dell Latitude 7530, Dell Latitude 5430",
+      "notes": ""
+    },
+    {
+      "sourceRow": 78,
+      "storageNumber": 76,
+      "model": "Lenovo ThinkPad L390",
+      "stock": 12,
+      "layout": "QWERTY US",
+      "sku": "NB10141E1NL",
+      "linkedModels": "Lenovo ThinkPad L380, Lenovo ThinkPad L390, Lenovo ThinkPad L390 Yoga, Lenovo ThinkPad L480, Lenovo ThinkPad L490, Lenovo ThinkPad L580, Lenovo ThinkPad L590, Lenovo ThinkPad E480, Lenovo ThinkPad E490, Lenovo ThinkPad E495, Lenovo ThinkPad T480, Lenovo ThinkPad T480s, Lenovo ThinkPad T490, Lenovo ThinkPad T495",
+      "notes": ""
+    },
+    {
+      "sourceRow": 79,
+      "storageNumber": 77,
+      "model": "HP ZBook 14u G4",
+      "stock": 20,
+      "layout": "QWERTY US",
+      "sku": "NB10146E1NL",
+      "linkedModels": "-",
+      "notes": ""
+    },
+    {
+      "sourceRow": 80,
+      "storageNumber": 78,
+      "model": "Fujitsu Lifebook U749",
+      "stock": 17,
+      "layout": "QWERTY US",
+      "sku": "NB10166E1NL",
+      "linkedModels": "Fujitsu LifeBook U747, Fujitsu LifeBook U748, Fujitsu LifeBook U749",
+      "notes": ""
+    },
+    {
+      "sourceRow": 81,
+      "storageNumber": 79,
+      "model": "HP ZBook 14u G6",
+      "stock": 24,
+      "layout": "QWERTY US",
+      "sku": "NB10149E1NL",
+      "linkedModels": "HP ZBook 14u G5, HP ZBook 14u G6",
+      "notes": ""
+    },
+    {
+      "sourceRow": 82,
+      "storageNumber": 80,
+      "model": "Dell Latitude 7200",
+      "stock": 21,
+      "layout": "QWERTY US",
+      "sku": "NB10171E1NL",
+      "linkedModels": "Dell Latitude 7200, Dell Latitude 7210",
+      "notes": ""
+    },
+    {
+      "sourceRow": 83,
+      "storageNumber": 81,
+      "model": "HP EliteBook 745 G5",
+      "stock": 16,
+      "layout": "QWERTY US",
+      "sku": "NB10142E1NL",
+      "linkedModels": "HP EliteBook 745 G5, HP EliteBook 745 G6, HP EliteBook 840 G5, HP EliteBook 840 G6, HP EliteBook 846 G5, HP EliteBook 846 G6, HP ZBook 14u G5, HP ZBook 14u G6",
+      "notes": ""
+    },
+    {
+      "sourceRow": 84,
+      "storageNumber": 82,
+      "model": "Dell Latitude 3490",
+      "stock": 29,
+      "layout": "QWERTY US",
+      "sku": "NB10157E1NL",
+      "linkedModels": "Geen gevonden",
+      "notes": ""
+    },
+    {
+      "sourceRow": 85,
+      "storageNumber": 83,
+      "model": "Dell Precision 5550",
+      "stock": 33,
+      "layout": "QWERTY US",
+      "sku": "NB10129E1NL",
+      "linkedModels": "Dell Precision 5550, Dell Precision 5560, Dell Precision 5750, Dell Precision 5760, Dell XPS 15 9500, Dell XPS 15 9510, Dell XPS 17 9700, Dell XPS 17 9710",
+      "notes": ""
+    },
+    {
+      "sourceRow": 86,
+      "storageNumber": 84,
+      "model": "Dell Latitude 9510",
+      "stock": 17,
+      "layout": "QWERTY US",
+      "sku": "NB10138E1NL",
+      "linkedModels": "Dell Latitude 9510, Dell Latitude 9520",
+      "notes": ""
+    },
+    {
+      "sourceRow": 87,
+      "storageNumber": 85,
+      "model": "HP ProBook 440 G7",
+      "stock": 25,
+      "layout": "QWERTY US",
+      "sku": "NB10131E1NL",
+      "linkedModels": "HP ProBook 440 G7",
+      "notes": ""
+    },
+    {
+      "sourceRow": 88,
+      "storageNumber": 86,
+      "model": "HP EliteBook 830 G8",
+      "stock": 30,
+      "layout": "QWERTY US",
+      "sku": "NB10139E1NL",
+      "linkedModels": "HP EliteBook 830 G8, HP EliteBook 830 G7",
+      "notes": ""
+    },
+    {
+      "sourceRow": 89,
+      "storageNumber": 87,
+      "model": "Dell Latitude 7290",
+      "stock": 8,
+      "layout": "QWERTY US",
+      "sku": "NB10134E1NL",
+      "linkedModels": "Dell Latitude 7280, Dell Latitude 7290, Dell Latitude 7380, Dell Latitude 7389, Dell Latitude 7390",
+      "notes": ""
+    },
+    {
+      "sourceRow": 90,
+      "storageNumber": 88,
+      "model": "Lenovo ThinkPad L490",
+      "stock": 20,
+      "layout": "QWERTY US",
+      "sku": "NB10135E1NL",
+      "linkedModels": "Lenovo ThinkPad L480, Lenovo ThinkPad L490, Lenovo ThinkPad L480s, Lenovo ThinkPad L490s, Lenovo ThinkPad L580,",
+      "notes": ""
+    },
+    {
+      "sourceRow": 91,
+      "storageNumber": 89,
+      "model": "HP ZBook 14u G5",
+      "stock": 19,
+      "layout": "QWERTY US",
+      "sku": "NB10148E1NL",
+      "linkedModels": "HP ZBook 14u G5, HP ZBook 14u G6, HP EliteBook 745 G5, HP EliteBook 745 G6, HP EliteBook 840 G5, HP EliteBook 840 G6, HP EliteBook 846 G5, HP EliteBook 846 G6",
+      "notes": ""
+    },
+    {
+      "sourceRow": 92,
+      "storageNumber": 90,
+      "model": "Lenovo ThinkPad E490",
+      "stock": 15,
+      "layout": "QWERTY US",
+      "sku": "NB10145E1NL",
+      "linkedModels": "Lenovo ThinkPad E480, Lenovo ThinkPad E485, Lenovo ThinkPad E490, Lenovo ThinkPad E495, Lenovo ThinkPad L480, Lenovo ThinkPad L490, Lenovo ThinkPad L495, Lenovo ThinkPad L580,",
+      "notes": ""
+    },
+    {
+      "sourceRow": 93,
+      "storageNumber": 91,
+      "model": "Lenovo ThinkPad L14 G1",
+      "stock": 8,
+      "layout": "QWERTY US",
+      "sku": "NB10144E1NL",
+      "linkedModels": "Lenovo ThinkPad L14 Gen 1, Lenovo ThinkPad L14 Gen 2,",
+      "notes": ""
+    },
+    {
+      "sourceRow": 94,
+      "storageNumber": 92,
+      "model": "Microsoft Surface Laptop 3",
+      "stock": 7,
+      "layout": "QWERTY US",
+      "sku": "NB10021E1NL",
+      "linkedModels": "Microsoft Surface Laptop 4, Microsoft Surface Laptop 5",
+      "notes": ""
+    },
+    {
+      "sourceRow": 95,
+      "storageNumber": 93,
+      "model": "Microsoft Surface Laptop 3 Platinum",
+      "stock": 23,
+      "layout": "QWERTY US",
+      "sku": "NB10086E1NL",
+      "linkedModels": "Microsoft Surface Laptop 3",
+      "notes": ""
+    },
+    {
+      "sourceRow": 96,
+      "storageNumber": 94,
+      "model": "Dell Precision7530",
+      "stock": 18,
+      "layout": "QWERTY US",
+      "sku": "NB10158E1NL",
+      "linkedModels": "Dell Precision 7540, Dell Precision 7730, Dell Precision 7740",
+      "notes": ""
+    },
+    {
+      "sourceRow": 97,
+      "storageNumber": 95,
+      "model": "Fujitsu Lifebook E559",
+      "stock": 19,
+      "layout": "QWERTY US",
+      "sku": "NB10159E1NL",
+      "linkedModels": "Fujitsu Lifebook U757, Fujitsu Lifebook U758, Fujitsu Lifebook U759, Fujitsu Lifebook E558",
+      "notes": ""
+    },
+    {
+      "sourceRow": 98,
+      "storageNumber": 96,
+      "model": "HP EliteBook 855 G7",
+      "stock": 18,
+      "layout": "QWERTY US",
+      "sku": "NB10170E1NL",
+      "linkedModels": "A",
+      "notes": "Q"
+    },
+    {
+      "sourceRow": 99,
+      "storageNumber": 97,
+      "model": "HP ZBook Fury 17 G7",
+      "stock": 18,
+      "layout": "QWERTY US",
+      "sku": "NB10168E1NL",
+      "linkedModels": "HP ZBook Fury 17 G7, HP ZBook Fury 17 G8",
+      "notes": ""
+    },
+    {
+      "sourceRow": 100,
+      "storageNumber": 98,
+      "model": "Lenovo ThinkPad X13 Yoga",
+      "stock": 24,
+      "layout": "QWERTY US",
+      "sku": "NB10143E1NL",
+      "linkedModels": "Lenovo ThinkPad X13 Yoga Gen 2, Lenovo ThinkPad X13 Gen 2, Lenovo ThinkPad L13 Gen 2, Lenovo ThinkPad L13 Yoga Gen 2",
+      "notes": ""
+    },
+    {
+      "sourceRow": 101,
+      "storageNumber": 99,
+      "model": "Lenovo ThinkPad A485",
+      "stock": 15,
+      "layout": "QWERTY US",
+      "sku": "NB10137E1NL",
+      "linkedModels": "Lenovo ThinkPad T480, Lenovo ThinkPad A475, Lenovo ThinkPad A485",
+      "notes": ""
+    },
+    {
+      "sourceRow": 102,
+      "storageNumber": 100,
+      "model": "Lenovo ThinkPad L380",
+      "stock": 27,
+      "layout": "QWERTY US",
+      "sku": "NB10151E1NL",
+      "linkedModels": "Lenovo ThinkPad L380, Lenovo ThinkPad L390, Lenovo ThinkPad L390 Yoga, Lenovo ThinkPad L480, Lenovo ThinkPad L490, Lenovo ThinkPad L580, Lenovo ThinkPad E480, Lenovo ThinkPad E490, Lenovo ThinkPad E495, Lenovo ThinkPad T480, Lenovo ThinkPad T480s, Lenovo ThinkPad T490, Lenovo ThinkPad T495",
+      "notes": ""
+    },
+    {
+      "sourceRow": 103,
+      "storageNumber": 101,
+      "model": "HP Zbook 15u G6",
+      "stock": 20,
+      "layout": "QWERTY US",
+      "sku": "NB10140E1NL",
+      "linkedModels": "HP ZBook 15u G6, HP EliteBook 850 G5, HP EliteBook 850 G6, HP EliteBook 855 G5, HP EliteBook 855 G6",
+      "notes": ""
+    },
+    {
+      "sourceRow": 104,
+      "storageNumber": 102,
+      "model": "HP EliteBook 850 G8",
+      "stock": 18,
+      "layout": "QWERTY US",
+      "sku": "NB10147E1NL",
+      "linkedModels": "HP EliteBook 745 G7, HP EliteBook 745 G8",
+      "notes": ""
+    },
+    {
+      "sourceRow": 105,
+      "storageNumber": 103,
+      "model": "Lenovo ThinkPad E15",
+      "stock": 20,
+      "layout": "QWERTY US",
+      "sku": "NB10169E1NL",
+      "linkedModels": "Lenovo ThinkPad E15 Gen 2, Lenovo ThinkPad E15 Gen 1",
+      "notes": ""
+    },
+    {
+      "sourceRow": 106,
+      "storageNumber": 104,
+      "model": "Toshiba Dynabook Satellite Pro A50-EC",
+      "stock": 25,
+      "layout": "QWERTY US",
+      "sku": "NB10160E1NL",
+      "linkedModels": "",
+      "notes": ""
+    },
+    {
+      "sourceRow": 107,
+      "storageNumber": 105,
+      "model": "Mircorsoft Surface Laptop 2",
+      "stock": 49,
+      "layout": "QWERTY US",
+      "sku": "NB10021E1NL",
+      "linkedModels": "Microsoft Surface Laptop 1",
+      "notes": ""
+    },
+    {
+      "sourceRow": 108,
+      "storageNumber": 106,
+      "model": "Dell Precision 5480",
+      "stock": 23,
+      "layout": "QWERTY US",
+      "sku": "NB10196E1NL",
+      "linkedModels": "",
+      "notes": ""
+    },
+    {
+      "sourceRow": 109,
+      "storageNumber": 107,
+      "model": "Fujitsu Lifebook U7310",
+      "stock": 15,
+      "layout": "QWERTY US",
+      "sku": "NB10223E1NL",
+      "linkedModels": ", Fujitsu Lifebook U9310",
+      "notes": ""
+    },
+    {
+      "sourceRow": 110,
+      "storageNumber": 108,
+      "model": "HP 250 G8",
+      "stock": 20,
+      "layout": "QWERTY US",
+      "sku": "NB10195E2NL",
+      "linkedModels": "",
+      "notes": ""
+    },
+    {
+      "sourceRow": 111,
+      "storageNumber": 109,
+      "model": "HP Probook 450 G5",
+      "stock": 12,
+      "layout": "QWERTY US",
+      "sku": "NB10198E1NL",
+      "linkedModels": "HP Probook 455 G5, HP Probook 470 G5 HP ProBook 450 G7",
+      "notes": ""
+    },
+    {
+      "sourceRow": 112,
+      "storageNumber": 110,
+      "model": "Dell Precision 3560",
+      "stock": 22,
+      "layout": "QWERTY US",
+      "sku": "NB10190E1NL",
+      "linkedModels": "Dell Precision 3560",
+      "notes": ""
+    },
+    {
+      "sourceRow": 113,
+      "storageNumber": 111,
+      "model": "Dell Latitude 5330",
+      "stock": 20,
+      "layout": "QWERTY US",
+      "sku": "NB10188E1NL",
+      "linkedModels": "Dell Latitude 5320",
+      "notes": ""
+    },
+    {
+      "sourceRow": 114,
+      "storageNumber": 112,
+      "model": "Fujitsu Lifebook U7410",
+      "stock": 0,
+      "layout": "QWERTY US",
+      "sku": "NB10210E1NL",
+      "linkedModels": "Fujitsu Lifebook U7411, Fujitsu Lifebook U9310",
+      "notes": ""
+    },
+    {
+      "sourceRow": 115,
+      "storageNumber": 113,
+      "model": "Lenovo Thinkpad E15 G2",
+      "stock": 19,
+      "layout": "QWERTY US",
+      "sku": "NB10218E1NL",
+      "linkedModels": "Lenovo ThinkPad E15, Lenovo ThinkPad E15 G4",
+      "notes": ""
+    },
+    {
+      "sourceRow": 116,
+      "storageNumber": 114,
+      "model": "Dell Precision 3551",
+      "stock": 15,
+      "layout": "QWERTY US",
+      "sku": "NB10213E1NL",
+      "linkedModels": "Dell Precision 3560",
+      "notes": ""
+    },
+    {
+      "sourceRow": 117,
+      "storageNumber": 115,
+      "model": "HP Elitebook 645 G9",
+      "stock": 27,
+      "layout": "QWERTY US",
+      "sku": "NB10202E1NL",
+      "linkedModels": "",
+      "notes": ""
+    },
+    {
+      "sourceRow": 118,
+      "storageNumber": 116,
+      "model": "Lenovo Thinkpad T490s",
+      "stock": 12,
+      "layout": "QWERTY US",
+      "sku": "NB10207E1NL",
+      "linkedModels": "",
+      "notes": ""
+    },
+    {
+      "sourceRow": 119,
+      "storageNumber": 117,
+      "model": "Lenovo Thinkpad E15 G4",
+      "stock": 24,
+      "layout": "QWERTY US",
+      "sku": "NB10217E1NL",
+      "linkedModels": "Lenovo ThinkPad E15, Lenovo ThinkPad E15 G2",
+      "notes": ""
+    },
+    {
+      "sourceRow": 120,
+      "storageNumber": 118,
+      "model": "HP Probook 430 G8",
+      "stock": 31,
+      "layout": "QWERTY US",
+      "sku": "NB10204E1NL",
+      "linkedModels": "HP ProBook 445 G9",
+      "notes": ""
+    },
+    {
+      "sourceRow": 121,
+      "storageNumber": 119,
+      "model": "HP Elitebook 630 G10",
+      "stock": 22,
+      "layout": "QWERTY US",
+      "sku": "NB10201E1NL",
+      "linkedModels": "",
+      "notes": ""
+    },
+    {
+      "sourceRow": 122,
+      "storageNumber": 120,
+      "model": "Dell Vostro 5590",
+      "stock": 24,
+      "layout": "QWERTY US",
+      "sku": "NB10192E1NL",
+      "linkedModels": "Dell Latitude 5590",
+      "notes": ""
+    },
+    {
+      "sourceRow": 123,
+      "storageNumber": 121,
+      "model": "HP Zbook Firefly 15 G8",
+      "stock": 28,
+      "layout": "QWERTY US",
+      "sku": "NB10214E1NL",
+      "linkedModels": "HP ZBook Power G8",
+      "notes": ""
+    },
+    {
+      "sourceRow": 124,
+      "storageNumber": 122,
+      "model": "HP Zbook Power G8",
+      "stock": 20,
+      "layout": "QWERTY US",
+      "sku": "NB10215E1NL",
+      "linkedModels": "HP ZBook Firefly 15 G8",
+      "notes": ""
+    },
+    {
+      "sourceRow": 125,
+      "storageNumber": 123,
+      "model": "Dell Latitude 9520",
+      "stock": 20,
+      "layout": "QWERTY US",
+      "sku": "NB10191E1NL",
+      "linkedModels": "",
+      "notes": ""
+    },
+    {
+      "sourceRow": 126,
+      "storageNumber": 124,
+      "model": "Dell Latitude 5320",
+      "stock": 9,
+      "layout": "QWERTY US",
+      "sku": "NB10187E1NL",
+      "linkedModels": "Dell Latitude 5330",
+      "notes": ""
+    },
+    {
+      "sourceRow": 127,
+      "storageNumber": 125,
+      "model": "HP Probook 445 G8",
+      "stock": 31,
+      "layout": "QWERTY US",
+      "sku": "NB10193E1NL",
+      "linkedModels": "HP ProBook 440 G9",
+      "notes": ""
+    },
+    {
+      "sourceRow": 128,
+      "storageNumber": 126,
+      "model": "Lenovo Thinkpad E14",
+      "stock": 21,
+      "layout": "QWERTY US",
+      "sku": "NB10211E1NL",
+      "linkedModels": "",
+      "notes": ""
+    },
+    {
+      "sourceRow": 129,
+      "storageNumber": 127,
+      "model": "Dell Latitude 5590",
+      "stock": 22,
+      "layout": "QWERTY US",
+      "sku": "NB10212E1NL",
+      "linkedModels": "Dell Vostro 5590",
+      "notes": ""
+    },
+    {
+      "sourceRow": 130,
+      "storageNumber": 128,
+      "model": "Fujitsu Lifebook E5510",
+      "stock": 19,
+      "layout": "QWERTY US",
+      "sku": "NB10208E1NL",
+      "linkedModels": "Fujitsu Lifebook E5410",
+      "notes": ""
+    },
+    {
+      "sourceRow": 131,
+      "storageNumber": 129,
+      "model": "HP Probook 450 G7",
+      "stock": 15,
+      "layout": "QWERTY US",
+      "sku": "NB10199E1NL",
+      "linkedModels": "HP ProBook 450 G5",
+      "notes": ""
+    },
+    {
+      "sourceRow": 132,
+      "storageNumber": 130,
+      "model": "HP Probook 630 G8",
+      "stock": 24,
+      "layout": "QWERTY US",
+      "sku": "NB10194E1NL",
+      "linkedModels": "",
+      "notes": ""
+    },
+    {
+      "sourceRow": 133,
+      "storageNumber": 131,
+      "model": "Fujitsu Lifebook E5410",
+      "stock": 31,
+      "layout": "QWERTY US",
+      "sku": "NB10209E1NL",
+      "linkedModels": "Fujitsu Lifebook E5510, Fujitsu lifebook E5411",
+      "notes": ""
+    },
+    {
+      "sourceRow": 134,
+      "storageNumber": 132,
+      "model": "Lenovo Thinkbook 14 G2",
+      "stock": 20,
+      "layout": "QWERTY US",
+      "sku": "NB10216E1NL",
+      "linkedModels": "Lenovo ThinkBook 15 G2, Lenovo ThinkBook 13s G2",
+      "notes": ""
+    },
+    {
+      "sourceRow": 135,
+      "storageNumber": 133,
+      "model": "Dell Precision 5560",
+      "stock": 19,
+      "layout": "QWERTY US",
+      "sku": "NB10190E1NL",
+      "linkedModels": "",
+      "notes": ""
+    },
+    {
+      "sourceRow": 136,
+      "storageNumber": 134,
+      "model": "Dell Latitude 9430",
+      "stock": 22,
+      "layout": "QWERTY US",
+      "sku": "NB10186E1NL",
+      "linkedModels": "",
+      "notes": ""
+    },
+    {
+      "sourceRow": 137,
+      "storageNumber": 135,
+      "model": "Fujitsu Lifebook U9310",
+      "stock": 14,
+      "layout": "QWERTY US",
+      "sku": "NB10219E1NL",
+      "linkedModels": "",
+      "notes": ""
+    },
+    {
+      "sourceRow": 138,
+      "storageNumber": 136,
+      "model": "HP Probook 440 G9",
+      "stock": 10,
+      "layout": "QWERTY US",
+      "sku": "NB10197E1NL",
+      "linkedModels": "HP ProBook 445 G8, HP PRobook 440 g10",
+      "notes": ""
+    },
+    {
+      "sourceRow": 139,
+      "storageNumber": 137,
+      "model": "Acer Travelmate P214-53",
+      "stock": 12,
+      "layout": "QWERTY US",
+      "sku": "NB10206E1NL",
+      "linkedModels": "",
+      "notes": ""
+    },
+    {
+      "sourceRow": 140,
+      "storageNumber": 138,
+      "model": "HP Elitebook X360 830 G7",
+      "stock": 20,
+      "layout": "QWERTY US",
+      "sku": "NB10203E1NL",
+      "linkedModels": "",
+      "notes": ""
+    },
+    {
+      "sourceRow": 141,
+      "storageNumber": 139,
+      "model": "Fujitsu Lifebook U7310",
+      "stock": 12,
+      "layout": "QWERTY US",
+      "sku": "NB10220E1NL",
+      "linkedModels": "Fujitsu Lifebook U9310",
+      "notes": ""
+    },
+    {
+      "sourceRow": 142,
+      "storageNumber": 140,
+      "model": "HP 240 G8",
+      "stock": 2,
+      "layout": "QWERTY US",
+      "sku": "NB10200E2NL",
+      "linkedModels": "",
+      "notes": ""
+    },
+    {
+      "sourceRow": 143,
+      "storageNumber": 141,
+      "model": "Lenovo Thinkbook 15 G2",
+      "stock": 25,
+      "layout": "QWERTY US",
+      "sku": "NB10221E1NL",
+      "linkedModels": "Lenovo ThinkBook 14 G2, Lenovo ThinkBook 13s G2",
+      "notes": ""
+    },
+    {
+      "sourceRow": 144,
+      "storageNumber": 142,
+      "model": "Lenovo Thinkbook 13s G2",
+      "stock": 22,
+      "layout": "QWERTY US",
+      "sku": "NB10205E1NL",
+      "linkedModels": "Lenovo ThinkBook 14 G2, Lenovo ThinkBook 15 G2",
+      "notes": ""
+    },
+    {
+      "sourceRow": 145,
+      "storageNumber": 143,
+      "model": "Microsoft Surface Laptop 4",
+      "stock": 17,
+      "layout": "QWERTY US",
+      "sku": "NB10222E1NL",
+      "linkedModels": "",
+      "notes": ""
+    },
+    {
+      "sourceRow": 146,
+      "storageNumber": 144,
+      "model": "HP Probook 430 g5",
+      "stock": 86,
+      "layout": "QWERTY US",
+      "sku": "NB10082E1NL",
+      "linkedModels": "HP ProBook 430 G5, HP ProBook 440 G5, HP ProBook 445 G5, HP ProBook 640 G4, HP ProBook 645 G4, HP ProBook 645 G5, HP ProBook X360 440 G1, HP ZHAN 66 Pro G1 black new",
+      "notes": ""
+    },
+    {
+      "sourceRow": 147,
+      "storageNumber": 145,
+      "model": "HP Eelitebook x360 1030 g8",
+      "stock": 27,
+      "layout": "QWERTY US",
+      "sku": "NB10242E1NL",
+      "linkedModels": "HP EliteBook X360 1030 G7, HP EliteBook X360 1030 G8",
+      "notes": ""
+    },
+    {
+      "sourceRow": 148,
+      "storageNumber": 146,
+      "model": "HP Zbook 15 G3",
+      "stock": 4,
+      "layout": "QWERTZ DE",
+      "sku": "NB10043E1DE",
+      "linkedModels": "",
+      "notes": ""
+    },
+    {
+      "sourceRow": 149,
+      "storageNumber": 147,
+      "model": "Microsoft surface pro 7",
+      "stock": 11,
+      "layout": "QWERTY US",
+      "sku": "NB10100E1NL",
+      "linkedModels": "",
+      "notes": ""
+    },
+    {
+      "sourceRow": 150,
+      "storageNumber": 148,
+      "model": "Fujitsu lifebook U7410",
+      "stock": 24,
+      "layout": "QWERTY US",
+      "sku": "",
+      "linkedModels": "",
+      "notes": ""
+    }
+  ]
+}

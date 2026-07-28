@@ -26,11 +26,13 @@ npm run build
 npm run inventory:seed -- "C:\pad\naar\Toetsenbordstickers voorraad.xlsx"
 ```
 
-De generator accepteert alleen de gecontroleerde momentopname met 148 unieke hangmappen en 3.218 vellen en schrijft een checksum-gebonden TypeScriptseed. Regels met ontbrekende of dubbele artikelnummers blijven zichtbaar voor management, maar zijn geblokkeerd voor operationele boekingen.
+De generator accepteert alleen de gecontroleerde momentopname met 148 unieke hangmappen en 3.218 vellen en schrijft een checksum-gebonden TypeScriptseed plus een JSON-bron voor de productiedatabase. Regels met ontbrekende of dubbele artikelnummers blijven zichtbaar voor management, maar zijn geblokkeerd voor operationele boekingen.
 
 ## Centrale productie
 
 De server-API en migraties gebruiken PostgreSQL zodra `DATABASE_URL` is ingesteld. Zonder centrale database draait de live werknemersflow bewust in lokale pilotmodus; de echte order-API en formele fysieke acceptatie blijven aparte go-livevoorwaarden. Zie `../docs/GO_LIVE_INPUTS.md` en `../docs/PRODUCTION_COMPLETION_AUDIT.md`.
+
+De eenmalige productievoorraadroute gebruikt achtereenvolgens `db:migrate`, `db:preflight`, `db:bootstrap:apply` en `db:verify`. De standaardopdracht `db:bootstrap` is een droge broncontrole zonder databasewijziging. Zie `../docs/PRODUCTION_DATABASE_BOOTSTRAP.md`.
 
 De Microsoft Entra ID/OIDC-loginbasis gebruikt app-rollen `KeyFlow.Employee` en `KeyFlow.Management`, synchroniseert persoonlijke accounts met de database en vervangt in productiemodus meegestuurde actor-id's door de beveiligde sessie-identiteit. `/api/health` meldt ontbrekende configuratie zonder secrets te tonen en `/api/readiness` wordt pas groen wanneer ook PostgreSQL bereikbaar is. De private preview blijft in pilotmodus totdat de echte Entra-registratie en productieomgeving zijn ingevuld. Zie `../docs/IDENTITY_AND_SSO.md`.
 

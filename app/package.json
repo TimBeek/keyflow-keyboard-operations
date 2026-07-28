@@ -10,7 +10,11 @@
     "test": "vitest run",
     "import:analyze": "node scripts/analyze-inventory.mjs",
     "inventory:seed": "node scripts/generate-inventory-seed.mjs",
-    "db:migrate": "node scripts/migrate.mjs"
+    "db:migrate": "node scripts/migrate.mjs",
+    "db:preflight": "tsx scripts/preflight-production-database.ts",
+    "db:bootstrap": "tsx scripts/bootstrap-production-inventory.ts",
+    "db:bootstrap:apply": "tsx scripts/bootstrap-production-inventory.ts --apply",
+    "db:verify": "tsx scripts/verify-production-database.ts"
   },
   "dependencies": {
     "drizzle-orm": "^0.45.2",
@@ -30,6 +34,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.2.12",
     "tailwindcss": "^4",
+    "tsx": "^4.23.1",
     "typescript": "^5",
     "vitest": "^4.1.10"
   },
