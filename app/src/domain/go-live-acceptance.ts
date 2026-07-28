@@ -37,6 +37,42 @@ export const goLiveAcceptanceGateLabels: Record<GoLiveAcceptanceGate, {
   },
 };
 
+export const goLiveAcceptanceGateRequirements: Record<
+  GoLiveAcceptanceGate,
+  readonly string[]
+> = {
+  database_recovery: [
+    "Providerback-up buiten productie hersteld",
+    "Gemeten RPO en RTO met providerlog vastgelegd",
+    "Migraties, bronmomentopname en voorraadsluiting gecontroleerd",
+    "Herstelverantwoordelijke heeft het resultaat afgetekend",
+  ],
+  identity_access: [
+    "Productietenant en redirect-URL gecontroleerd",
+    "Werknemer- en managementrol met echte accounts getest",
+    "MFA en Conditional Access aantoonbaar actief",
+    "Uitloggen, sessieverloop en accountblokkade getest",
+  ],
+  order_integration: [
+    "Bekende, onbekende en geblokkeerde testorder uitgevoerd",
+    "Model, bedrag en beide layouts tegen de orderbron gecontroleerd",
+    "Dubbele scan en tijdelijke API-uitval getest",
+    "Systeemeigenaar heeft veldmapping en foutafhandeling goedgekeurd",
+  ],
+  compatibility_evidence: [
+    "Exact model, onderdeelnummer, SKU en E1/E2 vastgelegd",
+    "Goedgekeurde bovenaanzichtfoto herleidbaar opgeslagen",
+    "Afmetingen en vijf vormcontrolepunten bevestigd",
+    "Fysieke droge pastest door management afgetekend",
+  ],
+  workfloor_acceptance: [
+    "Scannerflow zonder muis op het echte werkstation getest",
+    "Hangmapnummer tegen de fysieke wagen gecontroleerd",
+    "Iedere conversiemethode plus minimaal één foutscenario uitgevoerd",
+    "Medewerkers, doorlooptijd en bevindingen vastgelegd",
+  ],
+};
+
 export const goLiveAcceptanceInputSchema = z.object({
   gate: z.enum(goLiveAcceptanceGates),
   ownerName: z.string().trim().min(2).max(160),
@@ -130,5 +166,57 @@ export function goLiveAcceptanceSummary(
     rejected: decisions.filter((decision) => decision === "rejected").length,
     pending: decisions.filter((decision) => decision === "pending").length,
     canRelease: decisions.every((decision) => decision === "approved"),
+  };
+}
+
+export type GoLiveAcceptanceSummary = ReturnType<
+  typeof goLiveAcceptanceSummary
+>;
+
+export type GoLiveAcceptanceDossier = {
+  format: "keyflow-go-live-acceptance";
+  version: 1;
+  generatedAt: string;
+  generatedBy: string;
+  storageMode: "local" | "central";
+  summary: GoLiveAcceptanceSummary;
+  gates: Array<{
+    gate: GoLiveAcceptanceGate;
+    label: string;
+    evidenceHint: string;
+    requirements: readonly string[];
+    currentDecision: GoLiveAcceptanceRecord | null;
+  }>;
+  history: GoLiveAcceptanceRecord[];
+};
+
+export function createGoLiveAcceptanceDossier(
+  records: readonly GoLiveAcceptanceRecord[],
+  metadata: Pick<
+    GoLiveAcceptanceDossier,
+    "generatedAt" | "generatedBy" | "storageMode"
+  >,
+): GoLiveAcceptanceDossier {
+  const generatedAt = z.string().datetime().parse(metadata.generatedAt);
+  const generatedBy = z.string().trim().min(2).max(160)
+    .parse(metadata.generatedBy);
+  const latest = latestGoLiveAcceptanceByGate(records);
+  return {
+    format: "keyflow-go-live-acceptance",
+    version: 1,
+    generatedAt,
+    generatedBy,
+    storageMode: metadata.storageMode,
+    summary: goLiveAcceptanceSummary(records),
+    gates: goLiveAcceptanceGates.map((gate) => ({
+      gate,
+      label: goLiveAcceptanceGateLabels[gate].label,
+      evidenceHint: goLiveAcceptanceGateLabels[gate].evidenceHint,
+      requirements: goLiveAcceptanceGateRequirements[gate],
+      currentDecision: latest.get(gate) ?? null,
+    })),
+    history: [...records].sort(
+      (left, right) => right.recordedAt.localeCompare(left.recordedAt),
+    ),
   };
 }

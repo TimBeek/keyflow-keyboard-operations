@@ -112,7 +112,7 @@ De database-API's zijn daarna beschikbaar via:
 - `POST /api/compatibility/evidence` voor goedgekeurde of afgewezen model/SKU-pastesten;
 - `GET` en `POST /api/operations/recovery-drills` voor managementrapportage en herstelproefbewijs;
 - `GET /api/operations/readiness` voor een geautoriseerde runtimecontrole van migratie, bron, voorraadsluiting en herstelbewijs;
-- `GET` en `POST /api/operations/go-live-acceptance` voor het persoonlijke, centrale `5/5`-vrijgavedossier;
+- `GET` en `POST /api/operations/go-live-acceptance` voor het persoonlijke, centrale `5/5`-vrijgavedossier met serverberekende status;
 - `POST /api/imports/inventory` voor een gecontroleerde `.xlsx`-upload;
 - `GET /api/imports/inventory/{batchId}` voor alle herleidbare bevindingen van een import;
 - `PATCH /api/imports/inventory/{batchId}/issues/{issueId}` voor auditbare afhandeling;

@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
+  createGoLiveAcceptanceDossier,
   createGoLiveAcceptanceRecord,
+  goLiveAcceptanceGateRequirements,
   goLiveAcceptanceSummary,
   latestGoLiveAcceptanceByGate,
   type GoLiveAcceptanceInput,
@@ -79,5 +81,40 @@ describe("go-live acceptatiedossier", () => {
       pending: 5,
       canRelease: false,
     });
+  });
+
+  it("maakt een overdraagbaar dossier met actuele poorten en volledige historie", () => {
+    const approved = createGoLiveAcceptanceRecord(approvedInput, metadata);
+    const dossier = createGoLiveAcceptanceDossier([approved], {
+      generatedAt: "2026-07-28T15:00:00.000Z",
+      generatedBy: "Tim Beek",
+      storageMode: "central",
+    });
+
+    expect(dossier).toMatchObject({
+      format: "keyflow-go-live-acceptance",
+      version: 1,
+      generatedBy: "Tim Beek",
+      storageMode: "central",
+      summary: {
+        approved: 1,
+        pending: 4,
+        canRelease: false,
+      },
+    });
+    expect(dossier.gates).toHaveLength(5);
+    expect(dossier.gates[0]).toMatchObject({
+      gate: "database_recovery",
+      currentDecision: approved,
+    });
+    expect(dossier.history).toEqual([approved]);
+  });
+
+  it("beschrijft voor iedere poort concrete bewijseisen", () => {
+    expect(Object.values(goLiveAcceptanceGateRequirements)).toHaveLength(5);
+    expect(Object.values(goLiveAcceptanceGateRequirements)
+      .every((requirements) => requirements.length >= 4)).toBe(true);
+    expect(goLiveAcceptanceGateRequirements.workfloor_acceptance)
+      .toContain("Hangmapnummer tegen de fysieke wagen gecontroleerd");
   });
 });

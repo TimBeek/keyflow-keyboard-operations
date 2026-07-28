@@ -35,6 +35,8 @@ De huidige 7% voor database/back-up omvat naast de pilotpersistentie en het data
 
 Het productieacceptatieproces is nu compleet aangestuurd: management heeft vijf expliciete vrijgavepoorten, verplichte vierpuntscontrole, bewijsreferentie en -datum, persoonlijke audit, afwijzing met vervolgactie en een harde `5/5`-vrijgaveblokkade. Pilotdata en centrale Entra-data blijven gescheiden. Dit maakt de echte acceptatie aantoonbaar uitvoerbaar, maar markeert geen enkele externe test automatisch als geslaagd.
 
+Iedere poort bevat daarnaast een eigen vierpunts-bewijschecklist. De centrale API levert een serverberekende vrijgavestatus, de interface bundelt alle open acties en management kan de actuele stand als versieerbare JSON of afdrukbaar PDF-dossier overdragen. Deze bouwbare ondersteuning verhoogt het percentage bewust niet: alleen werkelijk uitgevoerde externe acceptaties vullen de resterende 4%.
+
 De huidige 4% voor persoonlijke authenticatie omvat de tenantgebonden Microsoft Entra ID/OIDC-flow, achtuurs JWT-sessies, expliciete `KeyFlow.Employee`- en `KeyFlow.Management`-app-rollen, automatische databasegebruikerssynchronisatie, server-side vervanging van actor-id's en de nu werkelijk sessiegebonden centrale herstel-/readiness-synchronisatie. Pilotdata kan deze centrale historie niet overschrijven. De echte tenantregistratie, toegewezen gebruikers/groepen, MFA/Conditional Access en operationele acceptatie ontbreken nog.
 
 Het percentage wordt alleen verhoogd nadat een onderdeel is geïmplementeerd, getest, naar GitHub gepusht en in de private live-omgeving gepubliceerd.

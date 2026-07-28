@@ -2,7 +2,9 @@
 
 import { useMemo, useState } from "react";
 import {
+  createGoLiveAcceptanceDossier,
   goLiveAcceptanceGateLabels,
+  goLiveAcceptanceGateRequirements,
   goLiveAcceptanceGates,
   goLiveAcceptanceSummary,
   latestGoLiveAcceptanceByGate,
@@ -53,16 +55,49 @@ export function GoLiveAcceptanceCenter({
   });
   const [notes, setNotes] = useState("");
   const [message, setMessage] = useState("");
+  const [exportMessage, setExportMessage] = useState("");
+  const [reportGeneratedAt, setReportGeneratedAt] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const latest = useMemo(() => latestGoLiveAcceptanceByGate(records), [records]);
   const summary = useMemo(() => goLiveAcceptanceSummary(records), [records]);
-  const recentRecords = useMemo(
+  const sortedRecords = useMemo(
     () => [...records]
-      .sort((left, right) => right.recordedAt.localeCompare(left.recordedAt))
-      .slice(0, 20),
+      .sort((left, right) => right.recordedAt.localeCompare(left.recordedAt)),
     [records],
   );
+  const openGates = useMemo(
+    () => goLiveAcceptanceGates.filter(
+      (acceptanceGate) => latest.get(acceptanceGate)?.decision !== "approved",
+    ),
+    [latest],
+  );
+
+  function downloadDossier() {
+    const generatedAt = new Date().toISOString();
+    const dossier = createGoLiveAcceptanceDossier(records, {
+      generatedAt,
+      generatedBy: actorName,
+      storageMode: sync.mode,
+    });
+    const blob = new Blob([JSON.stringify(dossier, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `keyflow-go-live-dossier-${generatedAt.slice(0, 10)}.json`;
+    link.click();
+    URL.revokeObjectURL(url);
+    setExportMessage("Controleerbaar JSON-dossier gedownload.");
+  }
+
+  function printDossier() {
+    const generatedAt = new Date().toISOString();
+    setReportGeneratedAt(generatedAt);
+    setExportMessage("Kies in het afdrukvenster ‘Opslaan als PDF’ voor een PDF-dossier.");
+    window.setTimeout(() => window.print(), 0);
+  }
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -107,6 +142,16 @@ export function GoLiveAcceptanceCenter({
 
   return (
     <div className="operations-tab-content release-center">
+      <header className="release-print-header">
+        <span>KEYFLOW · FORMEEL GO-LIVEDOSSIER</span>
+        <h1>Productievrijgave</h1>
+        <p>
+          Gegenereerd door {actorName}
+          {reportGeneratedAt ? ` op ${formatDate(reportGeneratedAt)}` : ""}
+          {" · "}{sync.mode === "central" ? "centrale PostgreSQL-bron" : "lokale pilotbron"}
+        </p>
+      </header>
+
       <section className={`release-sync-banner ${sync.status}`}>
         <div>
           <span>{sync.mode === "central" ? "CENTRAAL GO-LIVEDOSSIER" : "PILOT GO-LIVEDOSSIER"}</span>
@@ -122,8 +167,17 @@ export function GoLiveAcceptanceCenter({
               Opnieuw laden
             </button>
           )}
+          <button className="secondary-button" type="button" onClick={downloadDossier}>
+            JSON-dossier
+          </button>
+          <button className="secondary-button" type="button" onClick={printDossier}>
+            Afdrukken / PDF
+          </button>
         </div>
       </section>
+      {exportMessage && (
+        <div className="release-export-note" role="status">{exportMessage}</div>
+      )}
 
       <section className={`release-decision-banner ${summary.canRelease ? "approved" : "blocked"}`}>
         <div>
@@ -132,6 +186,36 @@ export function GoLiveAcceptanceCenter({
           <small>{summary.approved} goedgekeurd · {summary.pending} open · {summary.rejected} afgewezen</small>
         </div>
         <b>{summary.approved}/{summary.total}</b>
+      </section>
+
+      <section className={`release-open-actions ${summary.canRelease ? "approved" : ""}`}>
+        <div>
+          <span>{summary.canRelease ? "VRIJGAVEBESLUIT" : "OPEN ACTIES"}</span>
+          <strong>
+            {summary.canRelease
+              ? "Geen openstaande vrijgavepoort"
+              : `${openGates.length} ${openGates.length === 1 ? "poort vereist" : "poorten vereisen"} nog aantoonbare actie`}
+          </strong>
+        </div>
+        {summary.canRelease ? (
+          <p>De vijf actuele besluiten voldoen aan de formele vrijgaveregel.</p>
+        ) : (
+          <ul>
+            {openGates.map((acceptanceGate) => {
+              const record = latest.get(acceptanceGate);
+              return (
+                <li key={acceptanceGate}>
+                  <strong>{goLiveAcceptanceGateLabels[acceptanceGate].label}</strong>
+                  <span>
+                    {record?.decision === "rejected"
+                      ? `Afgewezen · ${record.notes || "oorzaak en vervolgactie controleren"}`
+                      : "Nog geen actuele goedkeuring met volledig bewijs"}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </section>
 
       <section className="release-gate-grid">
@@ -145,7 +229,11 @@ export function GoLiveAcceptanceCenter({
               </span>
               <h3>{goLiveAcceptanceGateLabels[acceptanceGate].label}</h3>
               <p>{goLiveAcceptanceGateLabels[acceptanceGate].evidenceHint}</p>
+              <b>{goLiveAcceptanceGateRequirements[acceptanceGate].length} concrete bewijspunten</b>
               <small>{record ? `${record.ownerName} · ${formatDate(record.recordedAt)}` : "Nog geen besluit vastgelegd"}</small>
+              <button className="release-gate-select" type="button" onClick={() => setGate(acceptanceGate)}>
+                Open in formulier
+              </button>
             </article>
           );
         })}
@@ -167,6 +255,15 @@ export function GoLiveAcceptanceCenter({
             </select>
             <small>{goLiveAcceptanceGateLabels[gate].evidenceHint}</small>
           </label>
+          <section className="release-requirements">
+            <span>Poortspecifiek bewijs</span>
+            <strong>Controleer deze punten in het echte acceptatierapport</strong>
+            <ol>
+              {goLiveAcceptanceGateRequirements[gate].map((requirement) => (
+                <li key={requirement}>{requirement}</li>
+              ))}
+            </ol>
+          </section>
           <label>
             <span>Verantwoordelijke eigenaar</span>
             <input value={ownerName} onChange={(event) => setOwnerName(event.target.value)} placeholder="Naam van systeemeigenaar of procesverantwoordelijke" required />
@@ -207,14 +304,14 @@ export function GoLiveAcceptanceCenter({
           <div className="workspace-card-heading">
             <div><h3>Besluithistorie</h3><p>Ieder nieuw besluit vervangt alleen de actuele status van dezelfde poort.</p></div>
           </div>
-          {recentRecords.length === 0 ? (
+          {sortedRecords.length === 0 ? (
             <div className="empty">Nog geen acceptatiebesluiten geregistreerd.</div>
           ) : (
             <div className="table-wrap">
               <table className="operations-table">
                 <thead><tr><th>Moment</th><th>Poort</th><th>Eigenaar</th><th>Bewijs</th><th>Besluit</th><th>Beoordelaar</th></tr></thead>
                 <tbody>
-                  {recentRecords.map((record) => (
+                  {sortedRecords.map((record) => (
                     <tr key={record.id}>
                       <td><strong>{formatDate(record.recordedAt)}</strong></td>
                       <td><strong>{goLiveAcceptanceGateLabels[record.gate].label}</strong><span>{record.notes || "Geen bijzonderheden"}</span></td>

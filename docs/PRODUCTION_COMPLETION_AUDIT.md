@@ -25,7 +25,7 @@ Deze matrix toetst de actuele applicatie aan de oorspronkelijke projectprompt en
 | AI-ondersteunde modelgroepen | Wachtrij gereed | Herleidbare voorstellen, bronconflicten, score, verplichte E1/E2-/onderdeelnummer-/foto-/pastestcontrole, lokale audit en geautoriseerde idempotente PostgreSQL-API | Echte bewijsvelden verzamelen, migratie 0011 uitvoeren en eventuele externe AI-bronnen aansluiten |
 | Fysieke compatibiliteitsbibliotheek | Flow gereed | Per exact model/SKU: onderdeelnummer, afmetingen, foto, vijf controlepunten, goedkeuring/afwijzing, lokale audit en centrale API; laatste afwijzing blokkeert werknemersadvies | Echte pastesten uitvoeren, foto's opslaan, migratie 0012 uitvoeren en management laten aftekenen |
 | Private live-uitrol en GitHub | Gereed per gepubliceerde versie | Private Sites-productie-URL en private GitHub-branch/PR | Nieuwe versie na iedere wijziging blijven publiceren |
-| Formeel go-livedossier | Flow en blokkade gereed | Vijf poorten, verplichte controles, bewijsreferentie/-datum, persoonlijke audit, idempotente centrale API en alleen vrijgave bij 5/5 actuele goedkeuringen | Echte eigenaars laten testen en hun bewijs laten registreren |
+| Formeel go-livedossier | Flow, export en blokkade gereed | Vijf poorten met eigen bewijschecklist, open-actiesamenvatting, JSON-/PDF-overdracht, bewijsreferentie/-datum, persoonlijke audit, centrale status en alleen vrijgave bij 5/5 actuele goedkeuringen | Echte eigenaars laten testen en hun bewijs laten registreren |
 | Werkvloeracceptatie | Niet gereed | Desktop- en mobiel browserpad getest | Echte scanners, tablet, hangmappenwagen, medewerkers en timingmeting |
 
 ## Conclusie
