@@ -92,6 +92,23 @@ describe("operationele pilotopslag", () => {
         recordedAt: "2026-07-28T09:00:00.000Z",
         recordedBy: "Tim Beek",
       }],
+      goLiveAcceptanceRecords: [{
+        id: "acceptance-75",
+        gate: "database_recovery",
+        ownerName: "Tim Beek",
+        evidenceReference: "AZURE-RESTORE-2026-07-28",
+        evidenceDate: "2026-07-28T12:00:00.000Z",
+        checks: {
+          scopeConfirmed: true,
+          testCompleted: true,
+          evidenceAttached: true,
+          ownerApproved: true,
+        },
+        decision: "approved",
+        notes: "Restore en integriteitscontrole uitgevoerd.",
+        recordedAt: "2026-07-28T13:00:00.000Z",
+        reviewedBy: "Tim Beek",
+      }],
     }, "2026-07-27T18:00:00.000Z");
 
     const restored = parseOperationsSnapshot(serializeOperationsSnapshot(snapshot));
@@ -119,6 +136,10 @@ describe("operationele pilotopslag", () => {
         result: "passed",
         rtoMinutes: 42,
       });
+      expect(restored.state.goLiveAcceptanceRecords[0]).toMatchObject({
+        gate: "database_recovery",
+        decision: "approved",
+      });
     }
   });
 
@@ -145,6 +166,7 @@ describe("operationele pilotopslag", () => {
       expect(restored.state.modelGroupDecisions).toEqual([]);
       expect(restored.state.compatibilityEvidenceRecords).toEqual([]);
       expect(restored.state.recoveryDrills).toEqual([]);
+      expect(restored.state.goLiveAcceptanceRecords).toEqual([]);
     }
   });
 

@@ -9,6 +9,7 @@ import { InventoryImportDialog } from "@/components/inventory-import";
 import { InventoryCatalog } from "@/components/inventory-catalog";
 import { InventoryMutationDialog, type InventoryItem } from "@/components/inventory-mutation";
 import { OperationsManagement } from "@/components/operations-management";
+import type { AcceptanceSyncState } from "@/components/go-live-acceptance-center";
 import type { ContinuitySyncState } from "@/components/production-readiness-center";
 import {
   ConversionsWorkspace,
@@ -72,6 +73,11 @@ import {
   type RecoveryDrillInput,
   type RecoveryDrillRecord,
 } from "@/domain/production-readiness";
+import {
+  createGoLiveAcceptanceRecord,
+  type GoLiveAcceptanceInput,
+  type GoLiveAcceptanceRecord,
+} from "@/domain/go-live-acceptance";
 
 type IconName =
   | "home"
@@ -182,6 +188,7 @@ export function Dashboard({
   const [modelGroupDecisions, setModelGroupDecisions] = useState<ModelGroupDecision[]>([]);
   const [compatibilityEvidenceRecords, setCompatibilityEvidenceRecords] = useState<CompatibilityEvidenceRecord[]>([]);
   const [recoveryDrills, setRecoveryDrills] = useState<RecoveryDrillRecord[]>([]);
+  const [goLiveAcceptanceRecords, setGoLiveAcceptanceRecords] = useState<GoLiveAcceptanceRecord[]>([]);
   const [continuitySync, setContinuitySync] = useState<ContinuitySyncState>({
     mode: identity.mode === "entra" ? "central" : "local",
     status: identity.mode === "entra" ? "loading" : "local",
@@ -191,6 +198,14 @@ export function Dashboard({
     centralReadiness: null,
   });
   const [continuityRefreshToken, setContinuityRefreshToken] = useState(0);
+  const [acceptanceSync, setAcceptanceSync] = useState<AcceptanceSyncState>({
+    mode: identity.mode === "entra" ? "central" : "local",
+    status: identity.mode === "entra" ? "loading" : "local",
+    message: identity.mode === "entra"
+      ? "Persoonlijke sessie wordt met het centrale go-livedossier verbonden."
+      : "Acceptatiebesluiten worden opgenomen in de lokale pilotback-up.",
+  });
+  const [acceptanceRefreshToken, setAcceptanceRefreshToken] = useState(0);
   const [persistenceReady, setPersistenceReady] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [persistenceMessage, setPersistenceMessage] = useState("Lokale pilotopslag laden…");
@@ -249,6 +264,7 @@ export function Dashboard({
         setCompatibilityEvidenceRecords(restored.state.compatibilityEvidenceRecords);
         if (identity.mode === "pilot") {
           setRecoveryDrills(restored.state.recoveryDrills);
+          setGoLiveAcceptanceRecords(restored.state.goLiveAcceptanceRecords);
         }
         setStockItems((items) => items.map((item) => ({
           ...item,
@@ -307,6 +323,40 @@ export function Dashboard({
   }, [continuityRefreshToken, identity.mode, identity.role]);
 
   useEffect(() => {
+    if (identity.mode !== "entra" || identity.role !== "management") return;
+    const controller = new AbortController();
+    setAcceptanceSync({
+      mode: "central",
+      status: "loading",
+      message: "Het centrale go-livedossier wordt geladen.",
+    });
+    fetch("/api/operations/go-live-acceptance", { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(await responseErrorMessage(response));
+        return response.json() as Promise<{ records: GoLiveAcceptanceRecord[] }>;
+      })
+      .then(({ records }) => {
+        setGoLiveAcceptanceRecords(records);
+        setAcceptanceSync({
+          mode: "central",
+          status: "ready",
+          message: "Besluiten komen uit PostgreSQL en zijn aan de persoonlijke sessie gekoppeld.",
+        });
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        setAcceptanceSync({
+          mode: "central",
+          status: "error",
+          message: error instanceof Error
+            ? error.message
+            : "Het centrale go-livedossier kon niet worden geladen.",
+        });
+      });
+    return () => controller.abort();
+  }, [acceptanceRefreshToken, identity.mode, identity.role]);
+
+  useEffect(() => {
     if (!persistenceReady) return;
     let savedAt: string | null = null;
     let message = "Lokale opslag is niet gelukt. Download een back-up via Beheer & analyse.";
@@ -317,6 +367,10 @@ export function Dashboard({
       const locallyStoredRecoveryDrills =
         existingLocalState?.success && existingLocalState.state
           ? existingLocalState.state.recoveryDrills
+          : [];
+      const locallyStoredGoLiveAcceptanceRecords =
+        existingLocalState?.success && existingLocalState.state
+          ? existingLocalState.state.goLiveAcceptanceRecords
           : [];
       const snapshot = createOperationsSnapshot({
         catalogQuantities,
@@ -329,6 +383,9 @@ export function Dashboard({
         recoveryDrills: identity.mode === "pilot"
           ? recoveryDrills
           : locallyStoredRecoveryDrills,
+        goLiveAcceptanceRecords: identity.mode === "pilot"
+          ? goLiveAcceptanceRecords
+          : locallyStoredGoLiveAcceptanceRecords,
       });
       writeOperationsState(window.localStorage, snapshot);
       savedAt = snapshot.savedAt;
@@ -351,6 +408,7 @@ export function Dashboard({
     transactions,
     verificationReports,
     recoveryDrills,
+    goLiveAcceptanceRecords,
     identity.mode,
   ]);
 
@@ -620,6 +678,64 @@ export function Dashboard({
     }
   }
 
+  async function recordGoLiveAcceptance(input: GoLiveAcceptanceInput) {
+    if (identity.mode === "pilot") {
+      const record = createGoLiveAcceptanceRecord(input, {
+        id: crypto.randomUUID(),
+        recordedAt: new Date().toISOString(),
+        reviewedBy: actorName,
+      });
+      setGoLiveAcceptanceRecords((current) => [...current, record]);
+      setLastAction(
+        `${record.gate} als ${record.decision} in het lokale go-livedossier vastgelegd.`,
+      );
+      return record;
+    }
+
+    setAcceptanceSync((current) => ({
+      ...current,
+      status: "saving",
+      message: "Acceptatiebesluit wordt met de persoonlijke sessie centraal opgeslagen.",
+    }));
+    try {
+      const response = await fetch("/api/operations/go-live-acceptance", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          ...input,
+          idempotencyKey: `go-live-acceptance:${crypto.randomUUID()}`,
+        }),
+      });
+      if (!response.ok) throw new Error(await responseErrorMessage(response));
+      const result = await response.json() as {
+        record: GoLiveAcceptanceRecord;
+        duplicate: boolean;
+      };
+      setGoLiveAcceptanceRecords((current) => [
+        result.record,
+        ...current.filter(({ id }) => id !== result.record.id),
+      ]);
+      setAcceptanceSync({
+        mode: "central",
+        status: "ready",
+        message: "Acceptatiebesluit is centraal en auditbaar opgeslagen.",
+      });
+      setLastAction(
+        `${result.record.gate} als ${result.record.decision} centraal vastgelegd door ${actorName}.`,
+      );
+      return result.record;
+    } catch (error) {
+      setAcceptanceSync((current) => ({
+        ...current,
+        status: "error",
+        message: error instanceof Error
+          ? error.message
+          : "Centrale acceptatieregistratie is mislukt.",
+      }));
+      throw error;
+    }
+  }
+
   function switchRole(nextRole: UserRole) {
     if (!demoAccess) return;
     setRole(nextRole);
@@ -636,6 +752,10 @@ export function Dashboard({
       existingLocalState?.success && existingLocalState.state
         ? existingLocalState.state.recoveryDrills
         : [];
+    const locallyStoredGoLiveAcceptanceRecords =
+      existingLocalState?.success && existingLocalState.state
+        ? existingLocalState.state.goLiveAcceptanceRecords
+        : [];
     const snapshot = createOperationsSnapshot({
       catalogQuantities,
       transactions,
@@ -647,6 +767,9 @@ export function Dashboard({
       recoveryDrills: identity.mode === "pilot"
         ? recoveryDrills
         : locallyStoredRecoveryDrills,
+      goLiveAcceptanceRecords: identity.mode === "pilot"
+        ? goLiveAcceptanceRecords
+        : locallyStoredGoLiveAcceptanceRecords,
     });
     const blob = new Blob([serializeOperationsSnapshot(snapshot)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -674,6 +797,7 @@ export function Dashboard({
     setCompatibilityEvidenceRecords(restored.state.compatibilityEvidenceRecords);
     if (identity.mode === "pilot") {
       setRecoveryDrills(restored.state.recoveryDrills);
+      setGoLiveAcceptanceRecords(restored.state.goLiveAcceptanceRecords);
     }
     setStockItems((items) => items.map((item) => ({
       ...item,
@@ -695,6 +819,7 @@ export function Dashboard({
     setCompatibilityEvidenceRecords([]);
     if (identity.mode === "pilot") {
       setRecoveryDrills([]);
+      setGoLiveAcceptanceRecords([]);
     }
     setStockItems(initialLowStock);
     setLastSavedAt(null);
@@ -873,8 +998,8 @@ export function Dashboard({
           </section>
         </div>
         <section className="roadmap-panel">
-          <div className="roadmap-heading"><div><span className="workspace-kicker">PRODUCTIEROADMAP</span><h2>KeyFlow is 95% compleet</h2><p>Voortgang naar de volledige live productieversie.</p></div><strong>95%</strong></div>
-          <div className="roadmap-track"><span style={{ width: "95%" }} /></div>
+          <div className="roadmap-heading"><div><span className="workspace-kicker">PRODUCTIEROADMAP</span><h2>KeyFlow is 96% compleet</h2><p>Voortgang naar de volledige live productieversie.</p></div><strong>96%</strong></div>
+          <div className="roadmap-track"><span style={{ width: "96%" }} /></div>
           <div className="roadmap-steps">
             <span className="done">Basis & UX</span><span className="done">Excel-import</span><span className="done">Voorraad & planning</span><span className="current">Rollen & uitvoering</span><span>Database live</span><span>SSO & integraties</span><span>Productieacceptatie</span>
           </div>
@@ -920,13 +1045,17 @@ export function Dashboard({
             modelGroupDecisions={modelGroupDecisions}
             compatibilityEvidenceRecords={compatibilityEvidenceRecords}
             recoveryDrills={recoveryDrills}
+            goLiveAcceptanceRecords={goLiveAcceptanceRecords}
             actorName={actorName}
             continuitySync={continuitySync}
+            acceptanceSync={acceptanceSync}
             onRefreshContinuity={() => setContinuityRefreshToken((current) => current + 1)}
+            onRefreshAcceptance={() => setAcceptanceRefreshToken((current) => current + 1)}
             onRecordStockCount={recordStockCount}
             onReviewModelGroup={reviewModelGroup}
             onRecordCompatibilityEvidence={recordCompatibilityEvidence}
             onRecordRecoveryDrill={recordRecoveryDrill}
+            onRecordGoLiveAcceptance={recordGoLiveAcceptance}
             onPolicyChange={(nextPolicy) => {
               setOperationsPolicy(nextPolicy);
               setLastAction(`Conversiebeleid bijgewerkt · grens €${nextPolicy.thresholdEur}`);
@@ -945,7 +1074,7 @@ export function Dashboard({
 
         <footer className="app-footer">
           <span><i /> {persistenceReady ? `Lokaal bewaard${lastSavedAt ? ` · ${formatPersistenceTime(lastSavedAt)}` : ""}` : "Opslag laden…"}</span>
-          <span>{lastAction || `Productieroadmap 95% · ${role === "management" ? "managementweergave" : "werknemersuitvoering"}`}</span>
+          <span>{lastAction || `Productieroadmap 96% · ${role === "management" ? "managementweergave" : "werknemersuitvoering"}`}</span>
         </footer>
         <ConversionAdvisor open={advisorOpen} onClose={() => setAdvisorOpen(false)} />
         <AccessManagementDialog

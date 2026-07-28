@@ -8,6 +8,7 @@ import type { StockCountRecord } from "@/domain/cycle-count";
 import type { ModelGroupDecision } from "@/domain/model-grouping";
 import type { StickerVerificationReport } from "@/domain/sticker-verification";
 import type { RecoveryDrillRecord } from "@/domain/production-readiness";
+import type { GoLiveAcceptanceRecord } from "@/domain/go-live-acceptance";
 
 export const OPERATIONS_STORAGE_KEY = "keyflow.operations-state.v1";
 
@@ -143,6 +144,30 @@ const recoveryDrillRecordSchema = z.object({
   recordedBy: z.string().min(1),
 });
 
+const goLiveAcceptanceRecordSchema = z.object({
+  id: z.string().min(1),
+  gate: z.enum([
+    "database_recovery",
+    "identity_access",
+    "order_integration",
+    "compatibility_evidence",
+    "workfloor_acceptance",
+  ]),
+  ownerName: z.string().min(2).max(160),
+  evidenceReference: z.string().max(300),
+  evidenceDate: z.string().datetime().nullable(),
+  checks: z.object({
+    scopeConfirmed: z.boolean(),
+    testCompleted: z.boolean(),
+    evidenceAttached: z.boolean(),
+    ownerApproved: z.boolean(),
+  }),
+  decision: z.enum(["pending", "approved", "rejected"]),
+  notes: z.string().max(1200),
+  recordedAt: z.string().datetime(),
+  reviewedBy: z.string().min(1),
+});
+
 const persistedOperationsStateSchema = z.object({
   format: z.literal("keyflow-operations"),
   version: z.literal(1),
@@ -155,6 +180,7 @@ const persistedOperationsStateSchema = z.object({
   modelGroupDecisions: z.array(modelGroupDecisionSchema).max(2500).default([]),
   compatibilityEvidenceRecords: z.array(compatibilityEvidenceRecordSchema).max(2500).default([]),
   recoveryDrills: z.array(recoveryDrillRecordSchema).max(250).default([]),
+  goLiveAcceptanceRecords: z.array(goLiveAcceptanceRecordSchema).max(500).default([]),
 });
 
 export type PersistedOperationsState = {
@@ -169,13 +195,15 @@ export type PersistedOperationsState = {
   modelGroupDecisions: ModelGroupDecision[];
   compatibilityEvidenceRecords: CompatibilityEvidenceRecord[];
   recoveryDrills: RecoveryDrillRecord[];
+  goLiveAcceptanceRecords: GoLiveAcceptanceRecord[];
 };
 
 export type OperationsStateInput = Omit<
   PersistedOperationsState,
-  "format" | "version" | "savedAt" | "recoveryDrills"
+  "format" | "version" | "savedAt" | "recoveryDrills" | "goLiveAcceptanceRecords"
 > & {
   recoveryDrills?: RecoveryDrillRecord[];
+  goLiveAcceptanceRecords?: GoLiveAcceptanceRecord[];
 };
 
 type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem">;
