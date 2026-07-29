@@ -200,6 +200,7 @@ export function OperationsManagement({
   // besluiten genomen, dan is er niets meer te starten en staan ze meteen open.
   const [groupsGenerated, setGroupsGenerated] = useState(modelGroupDecisions.length > 0);
   const [showEvidenceFields, setShowEvidenceFields] = useState(false);
+  const [excludedModels, setExcludedModels] = useState<string[]>([]);
   const [evidenceCatalogKey, setEvidenceCatalogKey] = useState("hangmap-075");
   const [evidenceModel, setEvidenceModel] = useState("Dell Latitude 5420");
   const [evidenceStatus, setEvidenceStatus] = useState<CompatibilityEvidenceRecord["status"]>("approved");
@@ -359,6 +360,7 @@ export function OperationsManagement({
     setModelGroupEvidence(
       currentDecision?.evidence ?? emptyModelGroupEvidence,
     );
+    setExcludedModels(currentDecision?.excludedModels ?? []);
     setModelGroupMessage("");
   }
 
@@ -368,6 +370,16 @@ export function OperationsManagement({
     setPhotoReference("");
     setModelGroupNotes("");
     setModelGroupEvidence(emptyModelGroupEvidence);
+    setExcludedModels([]);
+    setModelGroupMessage("");
+  }
+
+  function toggleExcludedModel(model: string) {
+    setExcludedModels((current) => (
+      current.includes(model)
+        ? current.filter((name) => name !== model)
+        : [...current, model]
+    ));
     setModelGroupMessage("");
   }
 
@@ -391,6 +403,7 @@ export function OperationsManagement({
         photoReference,
         notes: modelGroupNotes,
         evidence: modelGroupEvidence,
+        excludedModels,
       });
       setModelGroupMessage(
         decision.status === "approved"
@@ -878,11 +891,28 @@ export function OperationsManagement({
 
                   <div className="model-group-evidence-grid">
                     <div>
-                      <span>Voorgestelde modellen</span>
-                      <ul>
-                        {selectedModelGroup.models.map((model) => (
-                          <li key={model}>{model}</li>
-                        ))}
+                      <span>
+                        Modellen in deze groep
+                        {excludedModels.length > 0 && ` · ${excludedModels.length} eruit`}
+                      </span>
+                      <ul className="model-group-models">
+                        {selectedModelGroup.models.map((model) => {
+                          const removed = excludedModels.includes(model);
+                          return (
+                            <li key={model} className={removed ? "removed" : ""}>
+                              <span>{model}</span>
+                              <button
+                                type="button"
+                                onClick={() => toggleExcludedModel(model)}
+                                aria-label={removed
+                                  ? `${model} terugzetten in de groep`
+                                  : `${model} uit de groep halen`}
+                              >
+                                {removed ? "Terug" : "Eruit"}
+                              </button>
+                            </li>
+                          );
+                        })}
                       </ul>
                     </div>
                     <div>

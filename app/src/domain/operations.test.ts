@@ -9,6 +9,43 @@ import {
   type InventoryTransactionEntry,
 } from "./operations";
 
+describe("QWERTY NL vindt dezelfde hangmappen als QWERTY US", () => {
+  it("levert bij QWERTY NL hetzelfde vel op als bij QWERTY US", () => {
+    const viaUs = findNoviplySku("Dell Latitude 7400", "QWERTY US", inventoryCatalog, {});
+    const viaNl = findNoviplySku("Dell Latitude 7400", "QWERTY NL", inventoryCatalog, {});
+
+    expect(viaUs.status).toBe("matched");
+    expect(viaNl.status).toBe("matched");
+    if (viaUs.status !== "matched" || viaNl.status !== "matched") return;
+    expect(viaNl.item.sku).toBe(viaUs.item.sku);
+    expect(viaNl.item.storageNumber).toBe(viaUs.item.storageNumber);
+  });
+});
+
+describe("Entervorm van de medewerker", () => {
+  it("laat het vel zien wanneer de gekozen entervorm klopt", () => {
+    const match = findNoviplySku("Dell Latitude 7400", "QWERTY US", inventoryCatalog, {}, "E1");
+
+    expect(match.status).toBe("matched");
+    if (match.status !== "matched") return;
+    expect(match.variant).toBe("E1");
+  });
+
+  it("geeft nooit stilzwijgend de andere entervorm terug", () => {
+    const match = findNoviplySku("Dell Latitude 7400", "QWERTY US", inventoryCatalog, {}, "E2");
+
+    expect(match.status).toBe("other_variant");
+    if (match.status !== "other_variant") return;
+    expect(match.availableVariants).toEqual(["E1"]);
+  });
+
+  it("zoekt alleen op model wanneer de medewerker het niet weet", () => {
+    const match = findNoviplySku("Dell Latitude 7400", "QWERTY US", inventoryCatalog, {}, "");
+
+    expect(match.status).toBe("matched");
+  });
+});
+
 describe("Land van de sticker", () => {
   it("leest de landcode achteraan het artikelnummer", () => {
     expect(extractStickerCountry("NB10052E1NL")).toBe("NL");

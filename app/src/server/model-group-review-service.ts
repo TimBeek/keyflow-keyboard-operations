@@ -26,6 +26,7 @@ export const reviewModelGroupSchema = z.object({
   manufacturerPartNumber: z.string().max(100).default(""),
   photoReference: z.string().max(200).default(""),
   notes: z.string().max(500).default(""),
+  excludedModels: z.array(z.string().max(200)).max(200).default([]),
   evidence: evidenceSchema,
   idempotencyKey: z.string().min(8).max(200),
   actorId: databaseUuidSchema,
@@ -58,6 +59,7 @@ export async function reviewModelGroup(rawInput: ReviewModelGroupInput) {
       photoReference: input.photoReference,
       notes: input.notes,
       evidence: input.evidence,
+      excludedModels: input.excludedModels,
     },
     {
       id: input.idempotencyKey,
@@ -193,6 +195,7 @@ export async function reviewModelGroup(rawInput: ReviewModelGroupInput) {
         manufacturer_part_number,
         photo_reference,
         evidence,
+        excluded_models,
         notes,
         reviewed_by
       )
@@ -203,6 +206,7 @@ export async function reviewModelGroup(rawInput: ReviewModelGroupInput) {
         ${input.manufacturerPartNumber.trim() || null},
         ${input.photoReference.trim() || null},
         ${JSON.stringify(input.evidence)}::jsonb,
+        ${JSON.stringify(input.excludedModels)}::jsonb,
         ${input.notes.trim() || null},
         ${input.actorId}::uuid
       )

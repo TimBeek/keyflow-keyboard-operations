@@ -82,6 +82,7 @@ describe("modelgroepvoorstellen", () => {
           photoConfirmed: false,
           dryFitPassed: false,
         },
+        excludedModels: [],
       },
       {
         id: "decision-1",
@@ -110,6 +111,7 @@ describe("modelgroepvoorstellen", () => {
           photoConfirmed: false,
           dryFitPassed: false,
         },
+        excludedModels: [],
       },
       {
         id: "decision-2",
@@ -140,6 +142,7 @@ describe("modelgroepvoorstellen", () => {
           photoConfirmed: false,
           dryFitPassed: false,
         },
+        excludedModels: [],
       },
       {
         id: "decision-3",
@@ -149,6 +152,40 @@ describe("modelgroepvoorstellen", () => {
     );
 
     expect(decision.status).toBe("rejected");
+  });
+
+  it("houdt alleen modellen over die de beoordelaar laat staan", () => {
+    const proposal = createModelGroupProposals([baseItem])[0];
+
+    const decision = createModelGroupDecision(
+      proposal,
+      {
+        status: "approved",
+        manufacturerPartNumber: "",
+        photoReference: "",
+        notes: "",
+        evidence: {
+          exactVariantConfirmed: false,
+          manufacturerPartNumberConfirmed: false,
+          photoConfirmed: false,
+          dryFitPassed: false,
+        },
+        // Dubbel, met spaties, plus een model dat niet in het voorstel zit.
+        excludedModels: [
+          "  Dell Precision 3470  ",
+          "Dell Precision 3470",
+          "HP EliteBook 840",
+          "",
+        ],
+      },
+      {
+        id: "decision-4",
+        decidedAt: "2026-07-28T13:00:00.000Z",
+        reviewer: "Tim Beek",
+      },
+    );
+
+    expect(decision.excludedModels).toEqual(["Dell Precision 3470"]);
   });
 
   it("bewaart een volledige goedkeuring en kiest steeds het laatste besluit", () => {
@@ -166,6 +203,7 @@ describe("modelgroepvoorstellen", () => {
           photoConfirmed: true,
           dryFitPassed: true,
         },
+        excludedModels: [],
       },
       {
         id: "decision-1",
@@ -186,6 +224,7 @@ describe("modelgroepvoorstellen", () => {
           photoConfirmed: false,
           dryFitPassed: false,
         },
+        excludedModels: [],
       },
       {
         id: "decision-2",

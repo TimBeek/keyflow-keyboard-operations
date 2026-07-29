@@ -79,6 +79,12 @@ export type NoviplySkuMatch =
       candidates: InventoryCatalogItem[];
     }
   | {
+      // Het model staat er wel, maar niet in de gekozen entervorm.
+      status: "other_variant";
+      candidates: InventoryCatalogItem[];
+      availableVariants: string[];
+    }
+  | {
       status: "not_found";
       candidates: [];
     };
@@ -88,6 +94,7 @@ export function findNoviplySku(
   targetLayout: string,
   catalog: InventoryCatalogItem[],
   quantities: Record<string, number>,
+  wantedVariant?: string,
 ): NoviplySkuMatch {
   const candidates = catalog.filter(
     (item) =>
@@ -100,11 +107,28 @@ export function findNoviplySku(
     return { status: "not_found", candidates: [] };
   }
 
-  if (candidates.length > 1) {
-    return { status: "ambiguous", candidates };
+  // De entervorm bepaalt uit welke hangmap het vel komt. Kiest de medewerker er
+  // een, dan mag alleen die vorm terugkomen — nooit stilzwijgend de andere.
+  const wanted = wantedVariant?.trim().toUpperCase() ?? "";
+  const matchingVariant = wanted
+    ? candidates.filter((item) => extractStickerVariant(item.sku) === wanted)
+    : candidates;
+
+  if (wanted && matchingVariant.length === 0) {
+    return {
+      status: "other_variant",
+      candidates,
+      availableVariants: [
+        ...new Set(candidates.map((item) => extractStickerVariant(item.sku))),
+      ],
+    };
   }
 
-  const item = candidates[0];
+  if (matchingVariant.length > 1) {
+    return { status: "ambiguous", candidates: matchingVariant };
+  }
+
+  const item = matchingVariant[0];
   const currentStock = inventoryQuantity(quantities, item);
   const variant = extractStickerVariant(item.sku);
 
@@ -203,6 +227,14 @@ export function calculateAbcAnalysis(
   });
 }
 
+// Een Nederlands toetsenbord is fysiek US International. De voorraadvellen staan
+// daarom als "QWERTY US" in de bron, met NL achteraan het artikelnummer. Zonder
+// deze gelijkstelling levert de keuze "QWERTY NL" geen enkele hangmap op.
+const layoutAliases: Record<string, string> = {
+  "qwerty nl": "qwerty us",
+};
+
 function normalizeLayout(value: string) {
-  return value.trim().toLowerCase().replace(/\s+/g, " ");
+  const normalized = value.trim().toLowerCase().replace(/\s+/g, " ");
+  return layoutAliases[normalized] ?? normalized;
 }

@@ -12,6 +12,7 @@ import {
   recommendConversion,
   type ConversionMethodId,
 } from "@/domain/conversion-policy";
+import Image from "next/image";
 import {
   findNoviplySku,
   layoutWithCountry,
@@ -70,6 +71,28 @@ const failureOptions: { value: StickerVerificationFailureReason; label: string }
 
 type Tab = "advice" | "receive";
 
+/**
+ * De Enter-toets verraadt de entervorm, en die bepaalt uit welke hangmap het vel
+ * komt. "Weet ik niet" blijft mogelijk: dan zoekt KeyFlow gewoon op model.
+ */
+type EnterShapeId = "" | "E1" | "E2";
+
+const enterShapeChoices: { id: EnterShapeId; label: string; detail: string; image?: string }[] = [
+  {
+    id: "E1",
+    label: "E1",
+    detail: "Rechthoekige Enter",
+    image: "/keyboard-reference-e1-dell-v3.png",
+  },
+  {
+    id: "E2",
+    label: "E2",
+    detail: "Hoge, omgekeerde L",
+    image: "/keyboard-reference-e2-dell-v3.png",
+  },
+  { id: "", label: "Weet ik niet", detail: "Zoek alleen op model" },
+];
+
 type Props = {
   catalog: InventoryCatalogItem[];
   actorName: string;
@@ -98,6 +121,7 @@ export function EmployeeWorkspace({
   const [chosenModel, setChosenModel] = useState<string | null>(null);
   const [targetLayout, setTargetLayout] = useState("QWERTY US");
   const [saleBandId, setSaleBandId] = useState<SaleValueBandId>("200_299");
+  const [enterShape, setEnterShape] = useState<EnterShapeId>("");
   const [orderReference, setOrderReference] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [adviceMessage, setAdviceMessage] = useState<{ tone: "ok" | "warn"; text: string } | null>(null);
@@ -115,8 +139,8 @@ export function EmployeeWorkspace({
   const saleValue = policyValueForBand(saleBand, policy.thresholdEur);
 
   const noviplyMatch = useMemo(
-    () => findNoviplySku(model, targetLayout, catalog, quantities),
-    [catalog, model, quantities, targetLayout],
+    () => findNoviplySku(model, targetLayout, catalog, quantities, enterShape),
+    [catalog, enterShape, model, quantities, targetLayout],
   );
   const matched = noviplyMatch.status === "matched" ? noviplyMatch : null;
 
@@ -354,6 +378,26 @@ export function EmployeeWorkspace({
                 ))}
               </div>
             </fieldset>
+
+            <fieldset className="worker-variants">
+              <legend>4 · Welke Enter-toets zit erop?</legend>
+              <div>
+                {enterShapeChoices.map((choice) => (
+                  <button
+                    key={choice.id}
+                    type="button"
+                    className={choice.id === enterShape ? "active" : ""}
+                    onClick={() => { setEnterShape(choice.id); setConfirmed(false); }}
+                  >
+                    {choice.image && (
+                      <Image src={choice.image} alt="" width={132} height={66} unoptimized />
+                    )}
+                    <strong>{choice.label}</strong>
+                    <small>{choice.detail}</small>
+                  </button>
+                ))}
+              </div>
+            </fieldset>
           </div>
 
           {!hasAnswer && (
@@ -411,6 +455,13 @@ export function EmployeeWorkspace({
 
               {noviplyMatch.status === "out_of_stock" && (
                 <p className="answer-warning">Dit vel is op. Meld het bij je teamleider en gebruik zolang een andere methode.</p>
+              )}
+              {noviplyMatch.status === "other_variant" && (
+                <p className="answer-warning">
+                  Voor dit model ligt geen {enterShape}-vel in de hangmappen, alleen{" "}
+                  {noviplyMatch.availableVariants.join(" en ")}. Controleer de Enter-toets nog
+                  eens, of vraag je teamleider.
+                </p>
               )}
               {evidence?.status === "rejected" && (
                 <p className="answer-warning">Dit vel is eerder afgekeurd voor dit model. Gebruik het niet.</p>

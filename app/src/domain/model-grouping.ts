@@ -31,6 +31,8 @@ export type ModelGroupReviewInput = {
   photoReference: string;
   notes: string;
   evidence: ModelGroupEvidence;
+  /** Modellen die er niet bij horen; de rest van de groep blijft bruikbaar. */
+  excludedModels: string[];
 };
 
 export type ModelGroupDecision = ModelGroupReviewInput & {
@@ -129,6 +131,12 @@ export function createModelGroupDecision(
     throw new ModelGroupReviewError("Een persoonlijke beoordelaar is verplicht.");
   }
 
+  // Alleen modellen die daadwerkelijk in het voorstel zitten kunnen eruit,
+  // zodat een besluit nooit naar een model verwijst dat er niet in stond.
+  const excludedModels = [...new Set(
+    input.excludedModels.map((model) => model.trim()).filter(Boolean),
+  )].filter((model) => proposal.models.includes(model));
+
   // Bewijs blokkeert de beslissing niet: goedkeuren of afwijzen is één handeling.
   // Onderdeelnummer, foto en pastest mogen later worden aangevuld en komen dan
   // alsnog in het besluit terecht.
@@ -137,6 +145,7 @@ export function createModelGroupDecision(
     manufacturerPartNumber: input.manufacturerPartNumber.trim(),
     photoReference: input.photoReference.trim(),
     notes: input.notes.trim(),
+    excludedModels,
     id: metadata.id,
     proposalId: proposal.id,
     decidedAt: metadata.decidedAt,
