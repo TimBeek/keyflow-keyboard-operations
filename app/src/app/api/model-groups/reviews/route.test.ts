@@ -13,6 +13,8 @@ const validRequest = {
     photoConfirmed: true,
     dryFitPassed: true,
   },
+  excludedModels: [],
+  addedModels: [],
   idempotencyKey: "model-group-review-hangmap-1",
   actorId: "00000000-0000-0000-0000-000000000001",
 };

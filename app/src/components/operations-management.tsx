@@ -201,6 +201,8 @@ export function OperationsManagement({
   const [groupsGenerated, setGroupsGenerated] = useState(modelGroupDecisions.length > 0);
   const [showEvidenceFields, setShowEvidenceFields] = useState(false);
   const [excludedModels, setExcludedModels] = useState<string[]>([]);
+  const [addedModels, setAddedModels] = useState<string[]>([]);
+  const [modelToAdd, setModelToAdd] = useState("");
   const [evidenceCatalogKey, setEvidenceCatalogKey] = useState("hangmap-075");
   const [evidenceModel, setEvidenceModel] = useState("Dell Latitude 5420");
   const [evidenceStatus, setEvidenceStatus] = useState<CompatibilityEvidenceRecord["status"]>("approved");
@@ -254,6 +256,11 @@ export function OperationsManagement({
   const modelGroupProposals = useMemo(
     () => (groupsGenerated ? createModelGroupProposals(inventoryCatalog) : []),
     [groupsGenerated],
+  );
+  // Alle modelnamen die de catalogus kent, zodat toevoegen niet op typfouten stukloopt.
+  const modelSuggestions = useMemo(
+    () => [...new Set(inventoryCatalog.flatMap((item) => item.modelAliases))].sort(),
+    [],
   );
   const latestGroupDecisions = useMemo(
     () => latestModelGroupDecisions(modelGroupDecisions),
@@ -361,6 +368,8 @@ export function OperationsManagement({
       currentDecision?.evidence ?? emptyModelGroupEvidence,
     );
     setExcludedModels(currentDecision?.excludedModels ?? []);
+    setAddedModels(currentDecision?.addedModels ?? []);
+    setModelToAdd("");
     setModelGroupMessage("");
   }
 
@@ -371,6 +380,25 @@ export function OperationsManagement({
     setModelGroupNotes("");
     setModelGroupEvidence(emptyModelGroupEvidence);
     setExcludedModels([]);
+    setAddedModels([]);
+    setModelToAdd("");
+    setModelGroupMessage("");
+  }
+
+  function addModelToGroup() {
+    const model = modelToAdd.trim();
+    if (!model) return;
+    if (selectedModelGroup?.models.includes(model) || addedModels.includes(model)) {
+      setModelGroupMessage("Dit model staat al in de groep.");
+      return;
+    }
+    setAddedModels((current) => [...current, model]);
+    setModelToAdd("");
+    setModelGroupMessage("");
+  }
+
+  function removeAddedModel(model: string) {
+    setAddedModels((current) => current.filter((name) => name !== model));
     setModelGroupMessage("");
   }
 
@@ -404,6 +432,7 @@ export function OperationsManagement({
         notes: modelGroupNotes,
         evidence: modelGroupEvidence,
         excludedModels,
+        addedModels,
       });
       setModelGroupMessage(
         decision.status === "approved"
@@ -913,7 +942,39 @@ export function OperationsManagement({
                             </li>
                           );
                         })}
+                        {addedModels.map((model) => (
+                          <li key={model} className="added">
+                            <span>{model}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeAddedModel(model)}
+                              aria-label={`${model} weer weghalen`}
+                            >
+                              Weghalen
+                            </button>
+                          </li>
+                        ))}
                       </ul>
+                      <div className="model-group-add">
+                        <input
+                          list="model-group-add-options"
+                          value={modelToAdd}
+                          onChange={(event) => setModelToAdd(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key !== "Enter") return;
+                            event.preventDefault();
+                            addModelToGroup();
+                          }}
+                          placeholder="Model toevoegen…"
+                          maxLength={200}
+                        />
+                        <datalist id="model-group-add-options">
+                          {modelSuggestions.map((option) => (
+                            <option key={option} value={option} />
+                          ))}
+                        </datalist>
+                        <button type="button" onClick={addModelToGroup}>Toevoegen</button>
+                      </div>
                     </div>
                     <div>
                       <span>Herleidbaar bronbewijs</span>

@@ -7,6 +7,7 @@ export type IdentityMode = (typeof identityModes)[number];
 export const entraAppRoles: Record<UserRole, string> = {
   employee: "KeyFlow.Employee",
   management: "KeyFlow.Management",
+  noviply: "KeyFlow.Noviply",
 };
 
 export type KeyFlowIdentity = {
@@ -62,6 +63,7 @@ export function roleFromEntraAppRoles(rawRoles: unknown): UserRole {
   }
   if (roles.data.includes(entraAppRoles.management)) return "management";
   if (roles.data.includes(entraAppRoles.employee)) return "employee";
+  if (roles.data.includes(entraAppRoles.noviply)) return "noviply";
   throw new IdentityClaimsError(
     "ROLE_NOT_ASSIGNED",
     "Je Microsoft-account heeft nog geen KeyFlow.Employee- of KeyFlow.Management-rol.",

@@ -33,6 +33,8 @@ export type ModelGroupReviewInput = {
   evidence: ModelGroupEvidence;
   /** Modellen die er niet bij horen; de rest van de groep blijft bruikbaar. */
   excludedModels: string[];
+  /** Modellen die de bron miste maar wel dezelfde sticker gebruiken. */
+  addedModels: string[];
 };
 
 export type ModelGroupDecision = ModelGroupReviewInput & {
@@ -137,6 +139,14 @@ export function createModelGroupDecision(
     input.excludedModels.map((model) => model.trim()).filter(Boolean),
   )].filter((model) => proposal.models.includes(model));
 
+  // Toevoegen kan alleen wat er nog niet in staat, en niet wat je zojuist
+  // eruit hebt gehaald — anders spreekt het besluit zichzelf tegen.
+  const addedModels = [...new Set(
+    input.addedModels.map((model) => model.trim()).filter(Boolean),
+  )].filter((model) => (
+    !proposal.models.includes(model) && !excludedModels.includes(model)
+  ));
+
   // Bewijs blokkeert de beslissing niet: goedkeuren of afwijzen is één handeling.
   // Onderdeelnummer, foto en pastest mogen later worden aangevuld en komen dan
   // alsnog in het besluit terecht.
@@ -146,6 +156,7 @@ export function createModelGroupDecision(
     photoReference: input.photoReference.trim(),
     notes: input.notes.trim(),
     excludedModels,
+    addedModels,
     id: metadata.id,
     proposalId: proposal.id,
     decidedAt: metadata.decidedAt,

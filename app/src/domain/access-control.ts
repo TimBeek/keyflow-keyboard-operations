@@ -1,4 +1,4 @@
-export const roles = ["management", "employee"] as const;
+export const roles = ["management", "employee", "noviply"] as const;
 export type UserRole = (typeof roles)[number];
 
 export const permissions = [
@@ -13,6 +13,7 @@ export const permissions = [
   "reports.view",
   "users.manage",
   "policies.manage",
+  "print.fulfil",
 ] as const;
 
 export type Permission = (typeof permissions)[number];
@@ -23,6 +24,12 @@ const rolePermissions: Record<UserRole, ReadonlySet<Permission>> = {
     "inventory.view",
     "inventory.mutate",
     "conversion.execute",
+  ]),
+  // Noviply is een partner, geen collega: meekijken met voorraad en de
+  // bestellijst afhandelen, verder niets.
+  noviply: new Set([
+    "inventory.view",
+    "print.fulfil",
   ]),
 };
 
