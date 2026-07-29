@@ -1,0 +1,78 @@
+name: Publish preview to GitHub Pages
+
+# Publiceert de statische KeyFlow-preview naar GitHub Pages bij elke push naar main,
+# zodat de live meekijkversie meebeweegt met de repository.
+# Let op: dit is dezelfde preview als de Sites-build — client-side, zonder database
+# en zonder Microsoft-login (KEYFLOW_AUTH_MODE staat niet op "entra", dus pilotmodus).
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Eén publicatie tegelijk; een lopende deploy niet halverwege afbreken.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - name: Configure Pages
+        id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Build static preview
+        # base_path is leeg voor een gebruikerssite en /<repo> voor een projectsite.
+        run: npm run build
+        env:
+          KEYFLOW_BASE_PATH: ${{ steps.pages.outputs.base_path }}
+
+      - name: Use the app as 404 fallback
+        # Pages heeft geen router-worker: elke onbekende URL komt op 404.html uit.
+        # De app zelf teruggeven houdt diepe links werkend, net als de Sites-preview.
+        run: cp dist/assets/index.html dist/assets/404.html
+
+      - name: Skip Jekyll processing
+        # Zonder dit bestand negeert Pages alle mappen die met een underscore
+        # beginnen — precies waar Next zijn assets neerzet (_next/).
+        run: touch dist/assets/.nojekyll
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: app/dist/assets
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
