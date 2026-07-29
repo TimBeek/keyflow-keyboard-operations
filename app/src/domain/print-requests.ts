@@ -120,7 +120,7 @@ export function printRequestTotals(records: PrintRequestRecord[]) {
 }
 
 export function printRequestStatusLabel(status: PrintRequestStatus) {
-  if (status === "printed") return "Geprint";
-  if (status === "not_printable") return "Kan niet";
-  return "Nog te doen";
+  if (status === "printed") return "Printed";
+  if (status === "not_printable") return "Cannot print";
+  return "To do";
 }

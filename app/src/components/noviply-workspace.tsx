@@ -14,7 +14,10 @@ import {
   type PrintRequestStatus,
 } from "@/domain/print-requests";
 
+export type NoviplyTab = "orders" | "stock";
+
 type Props = {
+  tab: NoviplyTab;
   printRequests: PrintRequestRecord[];
   quantities: Record<string, number>;
   onSettlePrintRequest: (
@@ -36,11 +39,11 @@ function formatMoment(value: string) {
 }
 
 export function NoviplyWorkspace({
+  tab,
   printRequests,
   quantities,
   onSettlePrintRequest,
 }: Props) {
-  const [tab, setTab] = useState<"orders" | "stock">("orders");
   const [blockedId, setBlockedId] = useState("");
   const [blockedNote, setBlockedNote] = useState("");
   const [message, setMessage] = useState("");
@@ -80,10 +83,10 @@ export function NoviplyWorkspace({
       setBlockedId("");
       setBlockedNote("");
       setMessage(status === "printed"
-        ? `${record.model} afgevinkt als geprint.`
-        : `${record.model} gemeld als niet te printen.`);
+        ? `${record.model} marked as printed.`
+        : `${record.model} reported as not printable.`);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Opslaan is niet gelukt.");
+      setMessage(error instanceof Error ? error.message : "Saving failed.");
     }
   }
 
@@ -91,57 +94,36 @@ export function NoviplyWorkspace({
     <div className="noviply-workspace">
       <div className="noviply-totals">
         <article>
-          <span>NOG TE DOEN</span>
+          <span>TO DO</span>
           <strong className={totals.open > 0 ? "attention" : ""}>{totals.open}</strong>
-          <small>aanvragen wachten op printen</small>
+          <small>requests waiting to be printed</small>
         </article>
         <article>
-          <span>GEPRINT</span>
+          <span>PRINTED</span>
           <strong>{totals.printed}</strong>
-          <small>afgerond in deze pilot</small>
+          <small>completed in this pilot</small>
         </article>
         <article>
-          <span>KAN NIET</span>
+          <span>CANNOT PRINT</span>
           <strong>{totals.notPrintable}</strong>
-          <small>met opgegeven reden</small>
+          <small>with a stated reason</small>
         </article>
         <article>
-          <span>NAZENDEN</span>
+          <span>RESUPPLY</span>
           <strong className={running.length > 0 ? "attention" : ""}>{running.length}</strong>
-          <small>hangmappen onder hun minimum</small>
+          <small>folders below their minimum</small>
         </article>
-      </div>
-
-      <div className="noviply-tabs" role="tablist">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === "orders"}
-          className={tab === "orders" ? "active" : ""}
-          onClick={() => setTab("orders")}
-        >
-          Bestellijst{totals.open > 0 ? ` · ${totals.open}` : ""}
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={tab === "stock"}
-          className={tab === "stock" ? "active" : ""}
-          onClick={() => setTab("stock")}
-        >
-          Voorraad die leeg loopt{running.length > 0 ? ` · ${running.length}` : ""}
-        </button>
       </div>
 
       {tab === "orders" && (
       <section className="noviply-panel">
         <div className="noviply-panel-head">
           <div>
-            <h3>Bestellijst</h3>
+            <h3>Print request list</h3>
             <p>
-              De ochtendronde voor buitenlandse orders loopt automatisch. Hier staat
-              alleen wat er extra bij moet — verkeerde layout, of een oudere order die
-              opnieuw langskomt.
+              The morning run for foreign orders is automatic. This list only holds
+              the extras — a layout that does not match, or an older order coming
+              past again.
             </p>
           </div>
         </div>
@@ -149,12 +131,12 @@ export function NoviplyWorkspace({
           <table className="operations-table">
             <thead>
               <tr>
-                <th>Merk / model</th>
-                <th>Taal</th>
+                <th>Brand / model</th>
+                <th>Language</th>
                 <th>Enter</th>
-                <th>Ordernummer</th>
-                <th>Aangevraagd</th>
-                <th>Actie</th>
+                <th>Order number</th>
+                <th>Requested</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -174,7 +156,7 @@ export function NoviplyWorkspace({
                         <input
                           value={blockedNote}
                           onChange={(event) => setBlockedNote(event.target.value)}
-                          placeholder="Waarom kan dit niet?"
+                          placeholder="Why can this not be printed?"
                           maxLength={200}
                           autoFocus
                         />
@@ -215,7 +197,7 @@ export function NoviplyWorkspace({
             </tbody>
           </table>
           {open.length === 0 && (
-            <div className="empty">Niets extra aangevraagd. De ochtendronde dekt alles.</div>
+            <div className="empty">Nothing extra requested. The morning run covers everything.</div>
           )}
         </div>
         {message && <div className="policy-saved" role="status">{message}</div>}
@@ -226,25 +208,25 @@ export function NoviplyWorkspace({
       <section className="noviply-panel">
         <div className="noviply-panel-head">
           <div>
-            <h3>Voorraad die leeg loopt</h3>
-            <p>Hangmappen waarvan de voorraad onder het rekenkundig minimum zakt.</p>
+            <h3>Stock running low</h3>
+            <p>Folders whose stock has dropped below the calculated minimum.</p>
           </div>
         </div>
         <div className="table-wrap">
           <table className="operations-table">
             <thead>
               <tr>
-                <th>Hangmap</th>
-                <th>Artikelnummer</th>
+                <th>Folder</th>
+                <th>Part number</th>
                 <th>Layout</th>
-                <th>Voorraad</th>
-                <th>Tekort</th>
+                <th>Stock</th>
+                <th>Shortfall</th>
               </tr>
             </thead>
             <tbody>
               {running.map(({ item, stock, threshold, shortfall }) => (
                 <tr key={item.catalogKey}>
-                  <td><strong className="storage-number">Nr. {item.storageNumber}</strong><span>{item.model}</span></td>
+                  <td><strong className="storage-number">No. {item.storageNumber}</strong><span>{item.model}</span></td>
                   <td>{item.sku}</td>
                   <td>{layoutWithCountry(item.layout, item.sku)}</td>
                   <td><b className={stock === 0 ? "zero" : ""}>{stock}</b><span> / min. {threshold}</span></td>
@@ -254,7 +236,7 @@ export function NoviplyWorkspace({
             </tbody>
           </table>
           {running.length === 0 && (
-            <div className="empty">Alle hangmappen zitten boven hun minimum.</div>
+            <div className="empty">All folders are above their minimum.</div>
           )}
         </div>
       </section>
@@ -263,12 +245,12 @@ export function NoviplyWorkspace({
       {tab === "orders" && (
         <section className="noviply-panel">
           <div className="noviply-panel-head">
-            <div><h3>Geschiedenis</h3><p>Wat je hebt afgevinkt blijft hier staan, met tijdstip.</p></div>
+            <div><h3>History</h3><p>Everything you tick off stays here, with the time.</p></div>
           </div>
           <div className="table-wrap">
             <table className="operations-table">
               <thead>
-                <tr><th>Merk / model</th><th>Taal</th><th>Uitkomst</th><th>Afgehandeld</th></tr>
+                <tr><th>Brand / model</th><th>Language</th><th>Outcome</th><th>Handled</th></tr>
               </thead>
               <tbody>
                 {handled.map((request) => (
@@ -287,7 +269,7 @@ export function NoviplyWorkspace({
               </tbody>
             </table>
             {handled.length === 0 && (
-              <div className="empty">Nog niets afgevinkt in deze pilot.</div>
+              <div className="empty">Nothing ticked off yet in this pilot.</div>
             )}
           </div>
         </section>

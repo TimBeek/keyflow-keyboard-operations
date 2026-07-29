@@ -372,22 +372,6 @@ export function EmployeeWorkspace({
               </select>
             </label>
 
-            <fieldset className="worker-bands">
-              <legend>4 · Wat kost de laptop?</legend>
-              <div>
-                {saleValueBands.map((band) => (
-                  <button
-                    key={band.id}
-                    type="button"
-                    className={band.id === saleBandId ? "active" : ""}
-                    onClick={() => { setSaleBandId(band.id); setConfirmed(false); }}
-                  >
-                    {band.shortLabel}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
-
             <fieldset className="worker-variants">
               <legend>
                 3 · Welke Enter-toets zit erop?
@@ -410,6 +394,22 @@ export function EmployeeWorkspace({
                   >
                     <strong>{choice.label}</strong>
                     <small>{choice.detail}</small>
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+
+            <fieldset className="worker-bands">
+              <legend>4 · Wat kost de laptop?</legend>
+              <div>
+                {saleValueBands.map((band) => (
+                  <button
+                    key={band.id}
+                    type="button"
+                    className={band.id === saleBandId ? "active" : ""}
+                    onClick={() => { setSaleBandId(band.id); setConfirmed(false); }}
+                  >
+                    {band.shortLabel}
                   </button>
                 ))}
               </div>

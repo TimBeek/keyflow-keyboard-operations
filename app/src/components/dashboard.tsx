@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ConversionAdvisor } from "@/components/conversion-advisor";
 import { AccessManagementDialog } from "@/components/access-management";
 import { EmployeeWorkspace } from "@/components/employee-workspace";
-import { NoviplyWorkspace } from "@/components/noviply-workspace";
+import { NoviplyWorkspace, type NoviplyTab } from "@/components/noviply-workspace";
 import { ImportReviewDialog } from "@/components/import-review";
 import { InventoryImportDialog } from "@/components/inventory-import";
 import { InventoryCatalog } from "@/components/inventory-catalog";
@@ -218,6 +218,7 @@ export function Dashboard({
   const [verificationReports, setVerificationReports] = useState<StickerVerificationReport[]>([]);
   const [stockCounts, setStockCounts] = useState<StockCountRecord[]>([]);
   const [printRequests, setPrintRequests] = useState<PrintRequestRecord[]>([]);
+  const [noviplyTab, setNoviplyTab] = useState<NoviplyTab>("orders");
   const [modelGroupDecisions, setModelGroupDecisions] = useState<ModelGroupDecision[]>([]);
   const [compatibilityEvidenceRecords, setCompatibilityEvidenceRecords] = useState<CompatibilityEvidenceRecord[]>([]);
   const [recoveryDrills, setRecoveryDrills] = useState<RecoveryDrillRecord[]>([]);
@@ -1022,7 +1023,21 @@ export function Dashboard({
           <div><strong>KeyFlow</strong><span>Keyboard Operations</span></div>
         </div>
         <nav aria-label="Hoofdnavigatie">
-          {(role === "management"
+          {/* Noviply is een partner met twee taken; die staan als eigen
+              bestemmingen in de zijbalk in plaats van als tabbladen. */}
+          {role === "noviply" && ([
+            { id: "orders" as const, label: "Print requests", icon: "orders" as const },
+            { id: "stock" as const, label: "Stock running low", icon: "stock" as const },
+          ]).map((item) => (
+            <button
+              key={item.id}
+              className={`nav-item ${noviplyTab === item.id ? "active" : ""}`}
+              onClick={() => setNoviplyTab(item.id)}
+            >
+              <Icon name={item.icon} /><span>{item.label}</span>
+            </button>
+          ))}
+          {role !== "noviply" && (role === "management"
             ? [...navItems, ...(showParked ? parkedNavItems : [])]
             : [{ id: "overview" as const, label: "Uitvoering", icon: "convert" as const }]
           ).map((item) => (
@@ -1072,12 +1087,14 @@ export function Dashboard({
             <h1>{role === "employee"
               ? "Uitvoering keyboardconversies"
               : role === "noviply"
-                ? "Bestellijst en voorraad"
+                ? (noviplyTab === "orders" ? "Print request list" : "Stock running low")
                 : viewHeadings[activeView].title}</h1>
             <p>{role === "employee"
               ? "Eén duidelijke taak tegelijk, met automatisch methodeadvies."
               : role === "noviply"
-                ? "Wat er extra geprint moet worden en welke hangmappen leeg lopen."
+                ? (noviplyTab === "orders"
+                    ? "Extra sticker sheets to print for today."
+                    : "Folders that need resupplying.")
                 : viewHeadings[activeView].subtitle}</p>
           </div>
           <div className="top-actions">
@@ -1113,6 +1130,7 @@ export function Dashboard({
 
         {role === "noviply" && (
           <NoviplyWorkspace
+            tab={noviplyTab}
             printRequests={printRequests}
             quantities={catalogQuantities}
             onSettlePrintRequest={settlePrintRequestRecord}
