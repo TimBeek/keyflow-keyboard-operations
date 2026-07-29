@@ -1,6 +1,14 @@
 import { access, cp, mkdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+// Deze stap maakt de losse bestanden voor GitHub Pages. Op Vercel draait de app
+// als server en is er niets te kopiëren; doorgaan zou de build alleen kunnen
+// laten struikelen op iets wat daar toch niet gebruikt wordt.
+if (process.env.VERCEL === "1") {
+  console.log("Vercel-build: statische Sites-preview overgeslagen.");
+  process.exit(0);
+}
+
 const appDirectory = process.cwd();
 const outputDirectory = path.join(appDirectory, "dist");
 const nextDirectory = path.join(appDirectory, ".next");

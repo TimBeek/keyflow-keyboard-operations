@@ -10,8 +10,12 @@ if (basePath && !basePath.startsWith("/")) {
   throw new Error("KEYFLOW_BASE_PATH moet met een schuine streep beginnen, bijvoorbeeld /keyflow.");
 }
 
+// Vercel bouwt en serveert Next.js zelf. "standalone" is bedoeld voor eigen
+// hosting en zou daar alleen in de weg zitten.
+const onVercel = process.env.VERCEL === "1";
+
 const nextConfig: NextConfig = {
-  output: "standalone",
+  ...(onVercel ? {} : { output: "standalone" as const }),
   ...(basePath ? { basePath, assetPrefix: basePath } : {}),
   // Gewone <img>-tags krijgen het basispad niet automatisch mee. Componenten
   // die een bestand uit /public tonen plakken dit er zelf voor.
