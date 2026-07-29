@@ -25,22 +25,32 @@ describe("POST /api/model-groups/reviews", () => {
     else process.env.DATABASE_URL = originalDatabaseUrl;
   });
 
-  it("blokkeert een goedkeuring met onvolledig bewijs vóór databasegebruik", async () => {
+  it("laat een goedkeuring zonder bewijs door tot aan de database", async () => {
+    delete process.env.DATABASE_URL;
     const response = await POST(new Request(
       "http://localhost/api/model-groups/reviews",
       {
         method: "POST",
         body: JSON.stringify({
           ...validRequest,
-          evidence: { ...validRequest.evidence, dryFitPassed: false },
+          manufacturerPartNumber: "",
+          photoReference: "",
+          notes: "",
+          evidence: {
+            exactVariantConfirmed: false,
+            manufacturerPartNumberConfirmed: false,
+            photoConfirmed: false,
+            dryFitPassed: false,
+          },
         }),
         headers: { "content-type": "application/json" },
       },
     ));
 
-    expect(response.status).toBe(409);
+    // Bewijs blokkeert de beslissing niet meer; het verzoek strandt pas op de database.
+    expect(response.status).toBe(503);
     expect(await response.json()).toMatchObject({
-      error: "MODEL_GROUP_EVIDENCE_INCOMPLETE",
+      error: "DATABASE_NOT_CONFIGURED",
     });
   });
 

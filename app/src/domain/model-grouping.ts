@@ -46,13 +46,6 @@ type DecisionMetadata = {
   reviewer: string;
 };
 
-const requiredApprovalEvidence: (keyof ModelGroupEvidence)[] = [
-  "exactVariantConfirmed",
-  "manufacturerPartNumberConfirmed",
-  "photoConfirmed",
-  "dryFitPassed",
-];
-
 export function createModelGroupProposals(
   catalog: InventoryCatalogItem[],
 ): ModelGroupProposal[] {
@@ -136,39 +129,14 @@ export function createModelGroupDecision(
     throw new ModelGroupReviewError("Een persoonlijke beoordelaar is verplicht.");
   }
 
-  const manufacturerPartNumber = input.manufacturerPartNumber.trim();
-  const photoReference = input.photoReference.trim();
-  const notes = input.notes.trim();
-
-  if (input.status === "approved") {
-    if (proposal.conflictingModels.length > 0 && notes.length < 10) {
-      throw new ModelGroupReviewError(
-        "Beschrijf bij conflicterende modellen waarom deze combinatie toch is goedgekeurd.",
-      );
-    }
-    if (manufacturerPartNumber.length < 3) {
-      throw new ModelGroupReviewError("Vul het gecontroleerde fabrikantonderdeelnummer in.");
-    }
-    if (photoReference.length < 3) {
-      throw new ModelGroupReviewError("Vul een herleidbare foto- of documentreferentie in.");
-    }
-    const missingCheck = requiredApprovalEvidence.find(
-      (key) => !input.evidence[key],
-    );
-    if (missingCheck) {
-      throw new ModelGroupReviewError(
-        "Goedkeuren kan pas nadat variant, onderdeelnummer, foto en droge pastest zijn bevestigd.",
-      );
-    }
-  } else if (notes.length < 5) {
-    throw new ModelGroupReviewError("Leg bij afwijzen kort vast waarom het voorstel niet klopt.");
-  }
-
+  // Bewijs blokkeert de beslissing niet: goedkeuren of afwijzen is één handeling.
+  // Onderdeelnummer, foto en pastest mogen later worden aangevuld en komen dan
+  // alsnog in het besluit terecht.
   return {
     ...input,
-    manufacturerPartNumber,
-    photoReference,
-    notes,
+    manufacturerPartNumber: input.manufacturerPartNumber.trim(),
+    photoReference: input.photoReference.trim(),
+    notes: input.notes.trim(),
     id: metadata.id,
     proposalId: proposal.id,
     decidedAt: metadata.decidedAt,

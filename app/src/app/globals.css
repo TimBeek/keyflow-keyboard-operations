@@ -1610,3 +1610,17 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 }
 .nav-more:hover { background: transparent !important; color: var(--rail-text) !important; }
 .nav-more svg { width: 16px; height: 16px; }
+
+/* Fase 3 — layoutgroepen met één knop. Genereren is de eerste handeling,
+   bewijs vastleggen mag daarna en zit daarom achter een schakelaar. */
+.model-group-start { display: grid; justify-items: start; gap: 12px; max-width: 620px; margin: 8px 0; padding: 26px; border: 1px solid var(--signal-soft); border-radius: 16px; background: linear-gradient(135deg, var(--signal-soft), var(--surface)); }
+.model-group-start h3 { margin: 0; color: var(--text); font-size: 19px; letter-spacing: -0.01em; }
+.model-group-start p { margin: 0; color: var(--text-2); font-size: 12.5px; line-height: 1.6; }
+.model-group-start .primary-button { min-height: 46px; padding: 0 22px; font-size: 13.5px; }
+.model-group-start small { color: var(--muted); font-size: 11.5px; }
+
+.model-group-regenerate { margin-left: auto; color: var(--text-2); }
+
+.model-group-evidence-toggle { justify-self: start; margin-top: 12px; min-height: 32px; padding: 0 11px; border: 1px dashed var(--line); border-radius: 10px; background: transparent; color: var(--text-2); font-size: 11.5px; font-weight: 800; }
+.model-group-evidence-toggle:hover { border-color: var(--signal); color: var(--signal); }
+.model-group-evidence-optional { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line-soft); }

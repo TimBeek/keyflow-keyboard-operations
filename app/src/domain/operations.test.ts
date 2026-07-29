@@ -2,10 +2,38 @@ import { describe, expect, it } from "vitest";
 import { inventoryCatalog } from "../data/inventory-catalog";
 import {
   calculateAbcAnalysis,
+  extractStickerCountry,
   extractStickerVariant,
   findNoviplySku,
+  layoutWithCountry,
   type InventoryTransactionEntry,
 } from "./operations";
+
+describe("Land van de sticker", () => {
+  it("leest de landcode achteraan het artikelnummer", () => {
+    expect(extractStickerCountry("NB10052E1NL")).toBe("NL");
+    expect(extractStickerCountry("NB10043E1DE")).toBe("DE");
+    expect(extractStickerCountry("NB10077E2FR")).toBe("FR");
+  });
+
+  it("geeft niets terug bij lege of onbruikbare importregels", () => {
+    expect(extractStickerCountry("")).toBe("");
+    expect(extractStickerCountry(",,,,,,,,,,")).toBe("");
+  });
+
+  it("vult QWERTY US aan met het land, want die layout noemt het niet zelf", () => {
+    expect(layoutWithCountry("QWERTY US", "NB10052E1NL")).toBe("QWERTY US NL");
+  });
+
+  it("herhaalt het land niet als de layout het al noemt", () => {
+    expect(layoutWithCountry("QWERTZ DE", "NB10043E1DE")).toBe("QWERTZ DE");
+    expect(layoutWithCountry("AZERTY FR", "NB10077E2FR")).toBe("AZERTY FR");
+  });
+
+  it("laat de layout ongemoeid zonder bruikbaar artikelnummer", () => {
+    expect(layoutWithCountry("QWERTY US", "")).toBe("QWERTY US");
+  });
+});
 
 describe("Noviply SKU matching", () => {
   it("vindt het exacte stickernummer en behoudt de E-variant", () => {

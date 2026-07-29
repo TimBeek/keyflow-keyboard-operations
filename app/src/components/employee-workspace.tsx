@@ -14,6 +14,7 @@ import {
 } from "@/domain/conversion-policy";
 import {
   findNoviplySku,
+  layoutWithCountry,
   type InventoryMutationOutcome,
   type InventoryMutationRequest,
   type OperationsPolicy,
@@ -385,7 +386,7 @@ export function EmployeeWorkspace({
                 <div>
                   <span>DIT MOET JE GEBRUIKEN</span>
                   <h2>{methodLabel(recommendation.primary)}</h2>
-                  <p>{model} · {targetLayout}</p>
+                  <p>{model} · {matched ? layoutWithCountry(matched.item.layout, matched.item.sku) : targetLayout}</p>
                 </div>
                 {usesSheet && storageNumber !== null && (
                   <div className="answer-slot">
@@ -527,7 +528,7 @@ export function EmployeeWorkspace({
                 <div>
                   <span>LEG ZE HIER NEER</span>
                   <h2>{receiveItem.model}</h2>
-                  <p>{receiveItem.sku} · {receiveItem.layout}</p>
+                  <p>{receiveItem.sku} · {layoutWithCountry(receiveItem.layout, receiveItem.sku)}</p>
                 </div>
                 <div className="answer-slot">
                   <span>HANGMAP</span>

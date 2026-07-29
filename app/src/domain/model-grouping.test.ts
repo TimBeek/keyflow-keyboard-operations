@@ -66,20 +66,20 @@ describe("modelgroepvoorstellen", () => {
     expect(proposals[1].conflictingModels).toContain("Dell Latitude 5420");
   });
 
-  it("blokkeert goedkeuring zonder alle fysieke bewijsvelden", () => {
+  it("keurt goed zonder vooraf bewijs te eisen", () => {
     const proposal = createModelGroupProposals([baseItem])[0];
 
-    expect(() => createModelGroupDecision(
+    const decision = createModelGroupDecision(
       proposal,
       {
         status: "approved",
-        manufacturerPartNumber: "0A12345",
-        photoReference: "FOTO-75",
+        manufacturerPartNumber: "",
+        photoReference: "",
         notes: "",
         evidence: {
-          exactVariantConfirmed: true,
-          manufacturerPartNumberConfirmed: true,
-          photoConfirmed: true,
+          exactVariantConfirmed: false,
+          manufacturerPartNumberConfirmed: false,
+          photoConfirmed: false,
           dryFitPassed: false,
         },
       },
@@ -88,7 +88,67 @@ describe("modelgroepvoorstellen", () => {
         decidedAt: "2026-07-28T10:00:00.000Z",
         reviewer: "Tim Beek",
       },
-    )).toThrow(/droge pastest/);
+    );
+
+    expect(decision.status).toBe("approved");
+    expect(decision.proposalId).toBe(proposal.id);
+  });
+
+  it("bewaart bewijs dat later alsnog wordt aangevuld", () => {
+    const proposal = createModelGroupProposals([baseItem])[0];
+
+    const decision = createModelGroupDecision(
+      proposal,
+      {
+        status: "approved",
+        manufacturerPartNumber: "  0A12345  ",
+        photoReference: "  FOTO-75  ",
+        notes: "  Onderdeelnummer achteraf gecontroleerd.  ",
+        evidence: {
+          exactVariantConfirmed: true,
+          manufacturerPartNumberConfirmed: true,
+          photoConfirmed: false,
+          dryFitPassed: false,
+        },
+      },
+      {
+        id: "decision-2",
+        decidedAt: "2026-07-28T11:00:00.000Z",
+        reviewer: "Tim Beek",
+      },
+    );
+
+    expect(decision.manufacturerPartNumber).toBe("0A12345");
+    expect(decision.photoReference).toBe("FOTO-75");
+    expect(decision.notes).toBe("Onderdeelnummer achteraf gecontroleerd.");
+    expect(decision.evidence.photoConfirmed).toBe(false);
+  });
+
+  it("wijst af zonder een verplichte reden", () => {
+    const proposal = createModelGroupProposals([baseItem])[0];
+
+    const decision = createModelGroupDecision(
+      proposal,
+      {
+        status: "rejected",
+        manufacturerPartNumber: "",
+        photoReference: "",
+        notes: "",
+        evidence: {
+          exactVariantConfirmed: false,
+          manufacturerPartNumberConfirmed: false,
+          photoConfirmed: false,
+          dryFitPassed: false,
+        },
+      },
+      {
+        id: "decision-3",
+        decidedAt: "2026-07-28T12:00:00.000Z",
+        reviewer: "Tim Beek",
+      },
+    );
+
+    expect(decision.status).toBe("rejected");
   });
 
   it("bewaart een volledige goedkeuring en kiest steeds het laatste besluit", () => {

@@ -23,6 +23,7 @@ import {
 } from "@/domain/model-grouping";
 import {
   calculateAbcAnalysis,
+  layoutWithCountry,
   type InventoryTransactionEntry,
   type OperationsPolicy,
   type OperationalMethodId,
@@ -195,6 +196,10 @@ export function OperationsManagement({
     emptyModelGroupEvidence,
   );
   const [modelGroupMessage, setModelGroupMessage] = useState("");
+  // Groepen worden pas getoond nadat je op de knop hebt gedrukt. Zijn er al
+  // besluiten genomen, dan is er niets meer te starten en staan ze meteen open.
+  const [groupsGenerated, setGroupsGenerated] = useState(modelGroupDecisions.length > 0);
+  const [showEvidenceFields, setShowEvidenceFields] = useState(false);
   const [evidenceCatalogKey, setEvidenceCatalogKey] = useState("hangmap-075");
   const [evidenceModel, setEvidenceModel] = useState("Dell Latitude 5420");
   const [evidenceStatus, setEvidenceStatus] = useState<CompatibilityEvidenceRecord["status"]>("approved");
@@ -244,9 +249,10 @@ export function OperationsManagement({
   const recentCounts = [...stockCounts]
     .sort((left, right) => right.occurredAt.localeCompare(left.occurredAt))
     .slice(0, 20);
+  // Pas groeperen nadat op de knop is gedrukt; daarvoor valt er niets te tonen.
   const modelGroupProposals = useMemo(
-    () => createModelGroupProposals(inventoryCatalog),
-    [],
+    () => (groupsGenerated ? createModelGroupProposals(inventoryCatalog) : []),
+    [groupsGenerated],
   );
   const latestGroupDecisions = useMemo(
     () => latestModelGroupDecisions(modelGroupDecisions),
@@ -388,8 +394,8 @@ export function OperationsManagement({
       });
       setModelGroupMessage(
         decision.status === "approved"
-          ? "Modelgroep goedgekeurd en met alle bewijsvelden in de audit opgeslagen."
-          : "Voorstel afgewezen. De reden blijft beschikbaar voor volgende analyses.",
+          ? "Groep goedgekeurd. Bewijs kun je hier later alsnog toevoegen."
+          : "Groep afgewezen.",
       );
     } catch (error) {
       setModelGroupMessage(
@@ -725,16 +731,34 @@ export function OperationsManagement({
 
         {tab === "model_groups" && (
           <div className="operations-tab-content model-groups-workspace">
+            {!groupsGenerated && (
+              <section className="model-group-start">
+                <h3>Layoutgroepen genereren</h3>
+                <p>
+                  KeyFlow zoekt uit welke laptopmodellen dezelfde sticker kunnen gebruiken,
+                  op basis van gedeelde SKU&apos;s, layouts en E1/E2-varianten uit je eigen voorraad.
+                </p>
+                <button
+                  className="primary-button"
+                  type="button"
+                  onClick={() => setGroupsGenerated(true)}
+                >
+                  Genereer layoutgroepen
+                </button>
+                <small>{inventoryCatalog.length} hangmappen worden vergeleken.</small>
+              </section>
+            )}
+
+            {groupsGenerated && (
             <section className="model-group-intro">
               <div>
-                <span className="workspace-kicker">MENSELIJKE GOEDKEURING VERPLICHT</span>
-                <h3>Modelgroepvoorstellen uit de bestaande brondata</h3>
+                <h3>Voorgestelde layoutgroepen</h3>
                 <p>
-                  KeyFlow vergelijkt gedeelde SKU&apos;s, layouts, E1/E2 en modelnamen.
-                  Een voorstel verandert nooit zelfstandig de werknemersroute of compatibiliteit.
+                  Elke groep is een set modellen die dezelfde sticker kan gebruiken.
+                  Keur goed of wijs af; bewijs vastleggen mag daarna.
                 </p>
               </div>
-              <div className="model-group-summary" aria-label="Status modelgroepvoorstellen">
+              <div className="model-group-summary" aria-label="Status layoutgroepen">
                 <button
                   className={modelGroupFilter === "pending" ? "active pending" : ""}
                   onClick={() => {
@@ -764,7 +788,9 @@ export function OperationsManagement({
                 </button>
               </div>
             </section>
+            )}
 
+            {groupsGenerated && (
             <div className="model-group-toolbar">
               <label>
                 <span className="sr-only">Modelgroepvoorstellen zoeken</span>
@@ -787,8 +813,20 @@ export function OperationsManagement({
                 Alle voorstellen
               </button>
               <span>{filteredModelGroupProposals.length} zichtbaar</span>
+              <button
+                className="model-group-regenerate"
+                type="button"
+                onClick={() => {
+                  clearModelGroupReview();
+                  setGroupsGenerated(false);
+                }}
+              >
+                Opnieuw genereren
+              </button>
             </div>
+            )}
 
+            {groupsGenerated && (
             <div className="model-group-review-layout">
               <section className="model-group-queue" aria-label="Modelgroepvoorstellen">
                 {filteredModelGroupProposals.slice(0, 80).map((proposal) => {
@@ -832,7 +870,7 @@ export function OperationsManagement({
                       </span>
                       <h3>{selectedModelGroup.proposedName}</h3>
                       <p>
-                        {selectedModelGroup.sku} · {selectedModelGroup.layout} · {selectedModelGroup.variant} · hangmap {selectedModelGroup.storageNumber}
+                        {selectedModelGroup.sku} · {layoutWithCountry(selectedModelGroup.layout, selectedModelGroup.sku)} · {selectedModelGroup.variant} · hangmap {selectedModelGroup.storageNumber}
                       </p>
                     </div>
                     <strong>{selectedModelGroup.confidence}%</strong>
@@ -867,8 +905,37 @@ export function OperationsManagement({
                     </div>
                   )}
 
+                  <div className="model-group-actions">
+                    <button
+                      className="primary-button"
+                      type="button"
+                      onClick={() => reviewModelGroup("approved")}
+                    >
+                      Groep goedkeuren
+                    </button>
+                    <button
+                      className="danger-ghost-button"
+                      type="button"
+                      onClick={() => reviewModelGroup("rejected")}
+                    >
+                      Afwijzen
+                    </button>
+                  </div>
+
+                  <button
+                    className="model-group-evidence-toggle"
+                    type="button"
+                    onClick={() => setShowEvidenceFields((current) => !current)}
+                  >
+                    {showEvidenceFields
+                      ? "Bewijs verbergen"
+                      : "Bewijs vastleggen (optioneel, mag later)"}
+                  </button>
+
+                  {showEvidenceFields && (
+                  <div className="model-group-evidence-optional">
                   <div className="model-group-required">
-                    <strong>Nog als fysiek bewijs vastleggen</strong>
+                    <strong>Nog vast te leggen</strong>
                     <span>{selectedModelGroup.missingEvidence.join(" · ")}</span>
                   </div>
 
@@ -900,7 +967,7 @@ export function OperationsManagement({
                   </div>
 
                   <fieldset className="model-group-checks">
-                    <legend>Verplichte goedkeuringscontrole</legend>
+                    <legend>Fysieke controle</legend>
                     <label>
                       <input
                         type="checkbox"
@@ -948,7 +1015,7 @@ export function OperationsManagement({
                   </fieldset>
 
                   <label className="model-group-notes">
-                    <span>Beoordelingsnotitie</span>
+                    <span>Notitie</span>
                     <textarea
                       value={modelGroupNotes}
                       onChange={(event) => {
@@ -956,31 +1023,15 @@ export function OperationsManagement({
                         setModelGroupMessage("");
                       }}
                       maxLength={500}
-                      placeholder="Verplicht bij afwijzen en bij een bronconflict…"
+                      placeholder="Bijvoorbeeld waarom deze groep wel of niet klopt…"
                     />
                   </label>
-
-                  <div className="model-group-actions">
-                    <button
-                      className="primary-button"
-                      type="button"
-                      onClick={() => reviewModelGroup("approved")}
-                    >
-                      Bewijs compleet · goedkeuren
-                    </button>
-                    <button
-                      className="danger-ghost-button"
-                      type="button"
-                      onClick={() => reviewModelGroup("rejected")}
-                    >
-                      Voorstel afwijzen
-                    </button>
                   </div>
+                  )}
                   {modelGroupMessage && (
                     <div
                       className={
-                        modelGroupMessage.startsWith("Modelgroep")
-                        || modelGroupMessage.startsWith("Voorstel afgewezen")
+                        modelGroupMessage.startsWith("Groep ")
                           ? "policy-saved"
                           : "form-error"
                       }
@@ -999,10 +1050,11 @@ export function OperationsManagement({
                 </section>
               ) : (
                 <section className="model-group-review empty">
-                  Kies links een voorstel om het bronbewijs te beoordelen.
+                  Kies links een groep om te beoordelen.
                 </section>
               )}
             </div>
+            )}
           </div>
         )}
 
@@ -1308,14 +1360,13 @@ export function OperationsManagement({
               {saved && <div className={saved.startsWith("Controleer") ? "form-error" : "policy-saved"}>{saved}</div>}
             </section>
             <section className="ai-readiness">
-              <div><span>AI-ONDERSTEUNING</span><h3>Voorstellen staan in een gecontroleerde wachtrij</h3></div>
-              <p>KeyFlow maakt nu herleidbare kandidaatgroepen uit de brondata. Geen voorstel wordt automatisch compatibel: management moet E1/E2, onderdeelnummer, foto en droge pastest expliciet bevestigen.</p>
+              <div><span>AI-ONDERSTEUNING</span><h3>Layoutgroepen met één knop</h3></div>
+              <p>KeyFlow zoekt zelf uit welke modellen dezelfde sticker kunnen gebruiken. Jij keurt een groep goed of af; bewijs vastleggen mag daarna en blokkeert de beslissing niet.</p>
               <ul>
                 <li className="ready">Modelnamen, SKU, layout en hangmap gekoppeld</li>
                 <li className="ready">Bronconflicten automatisch gemarkeerd</li>
                 <li className="ready">Goedkeuring en afwijzing in audit bewaard</li>
-                <li>Fabrikantonderdeelnummers verzamelen</li>
-                <li>Goedgekeurde foto&apos;s en droge pastesten uitvoeren</li>
+                <li>Onderdeelnummers en foto&apos;s achteraf aanvullen</li>
               </ul>
             </section>
             <section className="data-continuity">

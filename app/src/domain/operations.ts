@@ -119,6 +119,20 @@ export function extractStickerVariant(sku: string) {
   return sku.match(/E\d+/i)?.[0]?.toUpperCase() ?? "Variant onbekend";
 }
 
+// Het land van de sticker staat achteraan het artikelnummer: NB10052E1NL is de
+// NL-uitvoering. Lege regels uit de Excel-import leveren geen code op.
+export function extractStickerCountry(sku: string) {
+  return sku.trim().match(/([A-Z]{2})$/i)?.[1]?.toUpperCase() ?? "";
+}
+
+// "QWERTY US" verzwijgt voor welk land het vel is; "AZERTY FR" zegt het al.
+// Daarom alleen aanvullen als de layout de landcode nog niet noemt.
+export function layoutWithCountry(layout: string, sku: string) {
+  const country = extractStickerCountry(sku);
+  if (!country || layout.toUpperCase().endsWith(country)) return layout;
+  return `${layout} ${country}`;
+}
+
 export type AbcAnalysisRow = {
   catalogKey: string;
   storageNumber: number;
