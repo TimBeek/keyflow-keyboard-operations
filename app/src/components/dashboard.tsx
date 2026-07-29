@@ -79,6 +79,10 @@ import {
   postConversion,
   postInventoryMutation,
   postPrintRequest,
+  fetchAccessRole,
+  signInWithPin,
+  lockAccess,
+  type PilotAccount,
   putOperationsPolicy,
   putSkuOverride,
   postStockCount,
@@ -1330,8 +1334,68 @@ export function Dashboard({
     }
   }
 
+  /**
+   * Welke rol de server ons toekent. De browser kan dit niet zelf bepalen: de
+   * knoppen hieronder verbergen alleen wat toch al geweigerd zou worden.
+   */
+  const [unlockedRole, setUnlockedRole] = useState<UserRole>("employee");
+  const [unlockOpen, setUnlockOpen] = useState(false);
+  const [accounts, setAccounts] = useState<PilotAccount[]>([]);
+  const [chosenAccount, setChosenAccount] = useState<string>("");
+  const [unlockCode, setUnlockCode] = useState("");
+  const [signedInName, setSignedInName] = useState("");
+  const [unlockError, setUnlockError] = useState("");
+  const [unlocking, setUnlocking] = useState(false);
+
+  useEffect(() => {
+    if (!demoAccess) return;
+    void fetchAccessRole()
+      .then((access) => {
+        setUnlockedRole(access.role);
+        setRole(access.role);
+        setAccounts(access.accounts);
+        setChosenAccount((current) => current || access.accounts[0]?.id || "");
+      })
+      .catch(() => setUnlockedRole("employee"));
+  }, [demoAccess]);
+
+  async function submitUnlock() {
+    if (!chosenAccount || unlockCode.trim().length !== 4) return;
+    setUnlocking(true);
+    setUnlockError("");
+    try {
+      const result = await signInWithPin(chosenAccount, unlockCode);
+      setUnlockedRole(result.role);
+      setRole(result.role);
+      setSignedInName(result.name);
+      setUnlockOpen(false);
+      setUnlockCode("");
+      setActiveView("overview");
+      await refreshSharedState();
+    } catch (error) {
+      setUnlockError(error instanceof KeyflowApiError
+        ? error.message
+        : "Er is geen verbinding om de code te controleren.");
+    } finally {
+      setUnlocking(false);
+    }
+  }
+
+  async function lockOut() {
+    await lockAccess().catch(() => undefined);
+    setUnlockedRole("employee");
+    setRole("employee");
+    setSignedInName("");
+    setUnlockCode("");
+    setActiveView("overview");
+    await refreshSharedState();
+  }
+
   function switchRole(nextRole: UserRole) {
     if (!demoAccess) return;
+    // Alleen naar een rol die de server ook werkelijk toestaat.
+    if (nextRole === "management" && unlockedRole !== "management") return;
+    if (nextRole === "noviply" && unlockedRole === "employee") return;
     setRole(nextRole);
     setActiveView("overview");
     setQuery("");
@@ -1522,12 +1586,35 @@ export function Dashboard({
           </div>
           <div className="top-actions">
             {demoAccess ? (
-              <div className="role-switcher" aria-label="Demorol kiezen">
-                <span>PILOTTOEGANG</span>
+              <div className="role-switcher" aria-label="Rol kiezen">
+                <span>{unlockedRole === "employee" ? "WERKVLOER" : (signedInName || roleLabel(unlockedRole)).toUpperCase()}</span>
                 <div>
-                  <button className={role === "employee" ? "active" : ""} onClick={() => switchRole("employee")}>Werknemer</button>
-                  <button className={role === "management" ? "active" : ""} onClick={() => switchRole("management")}>Management</button>
-                  <button className={role === "noviply" ? "active" : ""} onClick={() => switchRole("noviply")}>Noviply</button>
+                  <button className={role === "employee" ? "active" : ""} onClick={() => switchRole("employee")}>
+                    Werknemer
+                  </button>
+                  {/* Management ziet ook het Noviply-scherm; Noviply ziet alleen zichzelf. */}
+                  {(unlockedRole === "management" || unlockedRole === "noviply") && (
+                    <button
+                      className={role === "noviply" ? "active" : ""}
+                      onClick={() => switchRole("noviply")}
+                    >
+                      Noviply
+                    </button>
+                  )}
+                  {unlockedRole === "management" && (
+                    <button className={role === "management" ? "active" : ""} onClick={() => switchRole("management")}>
+                      Management
+                    </button>
+                  )}
+                  {unlockedRole === "employee" ? (
+                    <button className="lock-button" onClick={() => setUnlockOpen(true)}>
+                      🔒 Aanmelden
+                    </button>
+                  ) : (
+                    <button className="lock-button" onClick={() => void lockOut()}>
+                      Afmelden
+                    </button>
+                  )}
                 </div>
               </div>
             ) : (
@@ -1761,6 +1848,69 @@ export function Dashboard({
           <span className={`sync-state ${sharedStatus}`}><i /> {syncLabel}</span>
           <span>{lastAction}</span>
         </footer>
+        {unlockOpen && (
+          <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Aanmelden">
+            <div className="modal unlock-modal">
+              <div className="modal-head">
+                <h2>Aanmelden</h2>
+                <button onClick={() => { setUnlockOpen(false); setUnlockError(""); }} aria-label="Sluiten">×</button>
+              </div>
+              <div className="modal-body">
+                <p className="unlock-intro">
+                  De werkvloer heeft geen pincode nodig. Voor management en Noviply wel,
+                  omdat daar beleid, inkoop en een externe partij achter zitten.
+                </p>
+                <div className="unlock-people" role="group" aria-label="Wie ben je?">
+                  {accounts.map((account) => (
+                    <button
+                      key={account.id}
+                      type="button"
+                      className={chosenAccount === account.id ? "active" : ""}
+                      onClick={() => { setChosenAccount(account.id); setUnlockError(""); }}
+                    >
+                      <strong>{account.name}</strong>
+                      <small>{roleLabel(account.role)}</small>
+                    </button>
+                  ))}
+                  {accounts.length === 0 && (
+                    <p className="unlock-empty">Er is nog niemand aangemeld met een pincode.</p>
+                  )}
+                </div>
+                <label className="unlock-field">
+                  <span>Pincode</span>
+                  <input
+                    type="password"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    maxLength={4}
+                    value={unlockCode}
+                    autoFocus
+                    onChange={(event) => {
+                      // Alleen cijfers: dan kan er niets anders in dan wat past.
+                      setUnlockCode(event.target.value.replace(/\D/g, "").slice(0, 4));
+                      setUnlockError("");
+                    }}
+                    onKeyDown={(event) => { if (event.key === "Enter") void submitUnlock(); }}
+                    placeholder="••••"
+                  />
+                </label>
+                {unlockError && <p className="form-error">{unlockError}</p>}
+              </div>
+              <div className="modal-actions">
+                <button className="secondary-button" onClick={() => { setUnlockOpen(false); setUnlockError(""); }}>
+                  Annuleren
+                </button>
+                <button
+                  className="primary-button"
+                  disabled={unlocking || unlockCode.length !== 4 || !chosenAccount}
+                  onClick={() => void submitUnlock()}
+                >
+                  {unlocking ? "Controleren…" : "Aanmelden"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
         <ConversionAdvisor open={advisorOpen} onClose={() => setAdvisorOpen(false)} />
         <AccessManagementDialog
           open={accessOpen}

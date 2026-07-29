@@ -1,22 +1,19 @@
 import "server-only";
 import { identityModeFromEnvironment } from "@/domain/identity";
+import { resolvePilotActorId } from "./access-session";
 
-export async function resolveRequestActorId(
-  suppliedActorId: unknown,
-  pilotFallback?: string,
-) {
+/**
+ * De aanroepers geven nog een actorId mee uit de tijd dat de browser dat mocht
+ * bepalen. Dat wordt bewust genegeerd; de handtekening blijft staan zodat elke
+ * route niet hoeft te veranderen.
+ */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+export async function resolveRequestActorId(...ignored: unknown[]) {
   if (identityModeFromEnvironment(process.env) === "pilot") {
-    const actorId = typeof suppliedActorId === "string" && suppliedActorId
-      ? suppliedActorId
-      : pilotFallback;
-    if (!actorId) {
-      throw new RequestIdentityError(
-        "ACTOR_REQUIRED",
-        "Een actorId is verplicht in de pilotmodus.",
-        400,
-      );
-    }
-    return actorId;
+    // Wat de browser meestuurt telt niet meer. Zonder geldig toegangsbewijs is
+    // iedereen werkvloer, en die mag niets van management of Noviply — anders
+    // waren de rechten alleen een gordijn.
+    return resolvePilotActorId();
   }
 
   const { auth } = await import("@/auth");

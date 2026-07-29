@@ -12,13 +12,15 @@ describe("GET /api/operations/readiness", () => {
     else process.env.KEYFLOW_IMPORT_ACTOR_ID = originalActorId;
   });
 
-  it("vereist in pilotmodus een herleidbare actor", async () => {
+  it("valt zonder aanmelding terug op de werkvloer in plaats van op een meegestuurd id", async () => {
+    // Vroeger mocht de browser zeggen wie hij was; dat was geen slot maar een
+    // gordijn. Zonder geldige aanmelding is iedereen werkvloer, en die komt
+    // niet verder dan de rechtencontrole in de database.
     delete process.env.KEYFLOW_IMPORT_ACTOR_ID;
     const response = await GET(new Request(
-      "http://localhost/api/operations/readiness",
+      "http://localhost/api/operations/readiness?actorId=00000000-0000-0000-0000-000000000001",
     ));
-    expect(response.status).toBe(400);
-    expect(await response.json()).toMatchObject({ error: "ACTOR_REQUIRED" });
+    expect(response.status).not.toBe(200);
   });
 
   it("meldt expliciet wanneer de centrale database niet is aangesloten", async () => {

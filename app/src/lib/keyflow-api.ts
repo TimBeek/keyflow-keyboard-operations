@@ -191,3 +191,26 @@ export function postCompatibilityEvidence(payload: Record<string, unknown>) {
     { method: "POST", body: JSON.stringify(payload) },
   );
 }
+
+/* ---------- toegang ---------- */
+
+export type PilotAccount = { id: string; name: string; role: "management" | "noviply" };
+
+export function fetchAccessRole() {
+  return request<{
+    userId: string;
+    role: "employee" | "management" | "noviply";
+    accounts: PilotAccount[];
+  }>("/api/access", { cache: "no-store" });
+}
+
+export function signInWithPin(userId: string, pin: string) {
+  return request<{ userId: string; role: "management" | "noviply"; name: string }>(
+    "/api/access",
+    { method: "POST", body: JSON.stringify({ userId, pin }) },
+  );
+}
+
+export function lockAccess() {
+  return request<{ role: string }>("/api/access", { method: "DELETE" });
+}

@@ -3,6 +3,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 const authMock = vi.hoisted(() => vi.fn());
 vi.mock("@/auth", () => ({ auth: authMock }));
 
+// De pilotrol komt uit een ondertekende cookie op de server, niet uit het
+// verzoek. In een test is er geen verzoekcontext, dus zetten we hem hier.
+const pilotClaimMock = vi.hoisted(() => vi.fn());
+vi.mock("./access-session", () => ({ resolvePilotActorId: pilotClaimMock }));
+
 import {
   RequestIdentityError,
   resolveRequestActorId,
@@ -12,14 +17,20 @@ const previousAuthMode = process.env.KEYFLOW_AUTH_MODE;
 
 afterEach(() => {
   authMock.mockReset();
+  pilotClaimMock.mockReset();
   if (previousAuthMode === undefined) delete process.env.KEYFLOW_AUTH_MODE;
   else process.env.KEYFLOW_AUTH_MODE = previousAuthMode;
 });
 
 describe("persoonlijke API-actor", () => {
-  it("behoudt de expliciete lokale actor in pilotmodus", async () => {
+  it("negeert wat de browser meestuurt en volgt de aanmelding op de server", async () => {
+    // Anders kon iedereen zich als management voordoen door een ander id mee
+    // te sturen, en waren de rechten alleen een gordijn.
     process.env.KEYFLOW_AUTH_MODE = "pilot";
-    await expect(resolveRequestActorId("pilot-user")).resolves.toBe("pilot-user");
+    pilotClaimMock.mockResolvedValue("00000000-0000-0000-0000-000000000002");
+
+    await expect(resolveRequestActorId("00000000-0000-0000-0000-000000000001"))
+      .resolves.toBe("00000000-0000-0000-0000-000000000002");
     expect(authMock).not.toHaveBeenCalled();
   });
 
