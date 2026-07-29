@@ -11,6 +11,7 @@ import { InventoryCatalog } from "@/components/inventory-catalog";
 import { InventoryMutationDialog, type InventoryItem } from "@/components/inventory-mutation";
 import { OperationsManagement } from "@/components/operations-management";
 import { PrinterCheckPrompt } from "@/components/printer-check-prompt";
+import { SettingsWorkspace } from "@/components/settings-workspace";
 import type { AcceptanceSyncState } from "@/components/go-live-acceptance-center";
 import type { ContinuitySyncState } from "@/components/production-readiness-center";
 import type { WorkfloorSyncState } from "@/components/workfloor-acceptance-center";
@@ -155,7 +156,7 @@ type IconName =
   | "user";
 
 type ViewName =
-  | "overview" | "movers" | "layoutgroups" | "reports"
+  | "overview" | "movers" | "layoutgroups" | "reports" | "settings"
   | "inventory" | "conversions" | "orders" | "models" | "operations";
 
 function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
@@ -195,6 +196,11 @@ const navItems: { id: ViewName; label: string; icon: IconName }[] = [
   { id: "reports", label: "Rapportage", icon: "reports" },
 ];
 
+/** Buiten de vier hoofdtabbladen: hier zet je de regels, niet het dagwerk. */
+const settingsNavItem: { id: ViewName; label: string; icon: IconName } = {
+  id: "settings", label: "Instellingen", icon: "settings",
+};
+
 /** Zichtbaar zodra de beheerdersschakelaar aan staat. Niets is verwijderd. */
 const parkedNavItems: { id: ViewName; label: string; icon: IconName }[] = [
   { id: "inventory", label: "Voorraad", icon: "stock" },
@@ -209,6 +215,7 @@ const viewHeadings: Record<ViewName, { title: string; subtitle: string }> = {
   movers: { title: "Hardlopers", subtitle: "Welke stickervellen hard lopen en welke blijven liggen." },
   layoutgroups: { title: "Layoutgroepen", subtitle: "Laat KeyFlow modellen groeperen die dezelfde sticker delen." },
   reports: { title: "Rapportage", subtitle: "Verbruik, dekking en verloop over de tijd." },
+  settings: { title: "Instellingen", subtitle: "De regels waar de werkvloer op draait." },
   inventory: { title: "Voorraad", subtitle: "Zoek, controleer en plan alle keyboardstickers." },
   conversions: { title: "Conversies", subtitle: "Beheer de methode en voortgang per laptoporder." },
   orders: { title: "Bestellingen", subtitle: "Zet automatisch voorraadadvies om in een gecontroleerd concept." },
@@ -1640,7 +1647,9 @@ export function Dashboard({
             </button>
           ))}
           {role !== "noviply" && (role === "management"
-            ? [...navItems, ...(showParked ? parkedNavItems : [])]
+            // Instellingen staat bewust apart onder de vier dagelijkse
+            // tabbladen: het is waar je de regels zet, niet waar je werkt.
+            ? [...navItems, settingsNavItem, ...(showParked ? parkedNavItems : [])]
             : [{ id: "overview" as const, label: "Uitvoering", icon: "convert" as const }]
           ).map((item) => (
             <button
@@ -1762,6 +1771,8 @@ export function Dashboard({
             quantities={catalogQuantities}
             transactions={transactions}
             printerChecks={printerChecks}
+            resupplyLeadTimeDays={operationsPolicy.resupplyLeadTimeDays}
+            resupplySafetyWeeks={operationsPolicy.resupplySafetyWeeks}
             onAskPrinterCheck={() => void requestPrinterCheck()}
             onSettlePrintRequest={settlePrintRequestRecord}
           />
@@ -2002,6 +2013,13 @@ export function Dashboard({
             onExportBackup={exportPilotBackup}
             onRestoreBackup={restorePilotBackup}
             onResetPilotData={resetPilotData}
+          />
+        )}
+        {role === "management" && activeView === "settings" && (
+          <SettingsWorkspace
+            policy={operationsPolicy}
+            directPrintLayouts={directPrintLayouts}
+            onSave={savePolicy}
           />
         )}
         {role === "management" && activeView === "reports" && (

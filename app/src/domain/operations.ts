@@ -7,6 +7,12 @@ import { modelMatchesCatalogItem } from "./model-catalog";
 // Hoort bij het beleid, niet bij de voorraad; hier alleen doorgegeven.
 export type { OperationalMethodId };
 
+export type LayoutRule = {
+  layout: string;
+  method: OperationalMethodId;
+  note: string;
+};
+
 export type OperationsPolicy = {
   thresholdEur: number;
   workload: "normal" | "busy" | "critical";
@@ -15,6 +21,11 @@ export type OperationsPolicy = {
   employeeCanBookMismatch: boolean;
   abcAThreshold: number;
   abcBThreshold: number;
+  /** Uitzonderingen per doeltaal; die gaan voor op de waarderegel. */
+  layoutRules: LayoutRule[];
+  /** Hoe lang Noviply erover doet, en hoeveel reserve we willen. */
+  resupplyLeadTimeDays: number;
+  resupplySafetyWeeks: number;
 };
 
 export const defaultOperationsPolicy: OperationsPolicy = {
@@ -30,6 +41,9 @@ export const defaultOperationsPolicy: OperationsPolicy = {
   employeeCanBookMismatch: true,
   abcAThreshold: 80,
   abcBThreshold: 95,
+  layoutRules: [],
+  resupplyLeadTimeDays: 14,
+  resupplySafetyWeeks: 1,
 };
 
 export type InventoryTransactionEntry = {

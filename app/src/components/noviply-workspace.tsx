@@ -12,7 +12,6 @@ import {
   calculateResupplyLevel,
   measuredHistoryDays,
   minimumHistoryDays,
-  resupplyLeadTimeDays,
 } from "@/domain/resupply";
 import {
   printRequestStatusLabel,
@@ -40,6 +39,8 @@ type Props = {
   quantities: Record<string, number>;
   transactions: InventoryTransactionEntry[];
   printerChecks: PrinterCheckRecord[];
+  resupplyLeadTimeDays: number;
+  resupplySafetyWeeks: number;
   onAskPrinterCheck: () => void;
   onSettlePrintRequest: (
     record: PrintRequestRecord,
@@ -76,6 +77,8 @@ export function NoviplyWorkspace({
   quantities,
   transactions,
   printerChecks,
+  resupplyLeadTimeDays,
+  resupplySafetyWeeks,
   onAskPrinterCheck,
   onSettlePrintRequest,
 }: Props) {
@@ -108,7 +111,10 @@ export function NoviplyWorkspace({
       const stock = inventoryQuantity(quantities, item);
       // Het minimum volgt het gemeten verbruik: loopt een hangmap harder, dan
       // stijgt zijn minimum mee.
-      const level = calculateResupplyLevel(transactions, item, stock, today, historyDays);
+      const level = calculateResupplyLevel(
+        transactions, item, stock, today, historyDays,
+        resupplyLeadTimeDays, resupplySafetyWeeks,
+      );
       return {
         item,
         stock,
@@ -118,7 +124,7 @@ export function NoviplyWorkspace({
       };
     })
     .sort((left, right) => right.shortfall - left.shortfall || left.stock - right.stock),
-    [historyDays, quantities, today, transactions]);
+    [historyDays, quantities, resupplyLeadTimeDays, resupplySafetyWeeks, today, transactions]);
   const running = stockRows.filter((row) => row.shortfall > 0);
   const withKnownMinimum = stockRows.filter((row) => row.threshold !== null).length;
   const empty = stockRows.filter((row) => row.stock === 0).length;

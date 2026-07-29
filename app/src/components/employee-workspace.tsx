@@ -211,6 +211,7 @@ export function EmployeeWorkspace({
     targetLayout,
     workload: policy.workload,
     available: policy.methodEnabled,
+    layoutRules: policy.layoutRules,
     directPrintLayouts: printScope.status === "unknown" ? directPrintLayouts : printScope.layouts,
     compatible: {
       loose_stickers: true,

@@ -25,6 +25,13 @@ const policySchema = z.object({
   employeeCanBookMismatch: z.boolean(),
   abcAThreshold: z.number().int().min(1).max(98),
   abcBThreshold: z.number().int().min(2).max(99),
+  layoutRules: z.array(z.object({
+    layout: z.string().min(2).max(40),
+    method: z.enum(["loose_stickers", "noviply_sheet", "printed_sticker", "direct_reprint"]),
+    note: z.string().max(200).default(""),
+  })).max(40).default([]),
+  resupplyLeadTimeDays: z.number().int().min(1).max(120),
+  resupplySafetyWeeks: z.number().int().min(0).max(12),
 }).refine((policy) => policy.abcAThreshold < policy.abcBThreshold, {
   message: "De ABC A-grens moet lager liggen dan de B-grens.",
 });
@@ -58,6 +65,9 @@ type PolicyRow = {
   abc_a_threshold: number;
   abc_b_threshold: number;
   direct_print_layouts: string[];
+  layout_rules: { layout: string; method: string; note?: string }[];
+  resupply_lead_time_days: number;
+  resupply_safety_weeks: number;
   version: number;
 };
 
@@ -75,6 +85,13 @@ function toPolicy(row: PolicyRow): OperationsPolicy {
     employeeCanBookMismatch: Boolean(row.employee_permissions.employee_can_book_mismatch),
     abcAThreshold: row.abc_a_threshold,
     abcBThreshold: row.abc_b_threshold,
+    layoutRules: (row.layout_rules ?? []).map((rule) => ({
+      layout: rule.layout,
+      method: rule.method as OperationsPolicy["layoutRules"][number]["method"],
+      note: rule.note ?? "",
+    })),
+    resupplyLeadTimeDays: row.resupply_lead_time_days,
+    resupplySafetyWeeks: row.resupply_safety_weeks,
   };
 }
 
@@ -82,7 +99,8 @@ export async function readOperationsPolicy() {
   const sql = database();
   const [row] = await sql<PolicyRow[]>`
     select threshold_eur, workload, method_enabled, employee_permissions,
-           abc_a_threshold, abc_b_threshold, direct_print_layouts, version
+           abc_a_threshold, abc_b_threshold, direct_print_layouts,
+           layout_rules, resupply_lead_time_days, resupply_safety_weeks, version
     from operations_settings
     where setting_key = 'active'
   `;
@@ -102,7 +120,8 @@ export async function updateOperationsPolicy(rawInput: UpdateOperationsPolicyInp
   return sql.begin(async (transaction) => {
     const [current] = await transaction<PolicyRow[]>`
       select threshold_eur, workload, method_enabled, employee_permissions,
-             abc_a_threshold, abc_b_threshold, direct_print_layouts, version
+             abc_a_threshold, abc_b_threshold, direct_print_layouts,
+           layout_rules, resupply_lead_time_days, resupply_safety_weeks, version
       from operations_settings
       where setting_key = 'active'
       for update
@@ -128,12 +147,16 @@ export async function updateOperationsPolicy(rawInput: UpdateOperationsPolicyInp
           abc_a_threshold = ${input.policy.abcAThreshold},
           abc_b_threshold = ${input.policy.abcBThreshold},
           direct_print_layouts = ${transaction.json([...new Set(input.directPrintLayouts)])},
+          layout_rules = ${transaction.json(input.policy.layoutRules)},
+          resupply_lead_time_days = ${input.policy.resupplyLeadTimeDays},
+          resupply_safety_weeks = ${input.policy.resupplySafetyWeeks},
           version = version + 1,
           updated_by = ${input.actorId},
           updated_at = now()
       where setting_key = 'active'
       returning threshold_eur, workload, method_enabled, employee_permissions,
-                abc_a_threshold, abc_b_threshold, direct_print_layouts, version
+                abc_a_threshold, abc_b_threshold, direct_print_layouts,
+           layout_rules, resupply_lead_time_days, resupply_safety_weeks, version
     `;
     return {
       policy: toPolicy(updated),

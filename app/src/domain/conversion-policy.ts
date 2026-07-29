@@ -35,6 +35,21 @@ export const conversionPolicyInputSchema = z.object({
    * ingevuld — dan houden we alles open in plaats van alles te blokkeren.
    */
   directPrintLayouts: z.array(z.string()).default([]),
+  /**
+   * Uitzonderingen per doeltaal. Zonder deze koos het advies puur op
+   * verkoopwaarde, en dat klopt niet altijd: "Nederlands altijd met de
+   * premiumsticker" is beleid, geen programmeerwerk.
+   */
+  layoutRules: z.array(z.object({
+    layout: z.string().min(2).max(40),
+    method: z.enum([
+      "loose_stickers",
+      "noviply_sheet",
+      "printed_sticker",
+      "direct_reprint",
+    ]),
+    note: z.string().max(200).default(""),
+  })).max(40).default([]),
 });
 
 export type ConversionPolicyInput = z.input<typeof conversionPolicyInputSchema>;
@@ -166,6 +181,28 @@ export function recommendConversion(rawInput: ConversionPolicyInput): Conversion
       warnings: ["Blokkeer de order en laat compatibiliteit, materiaal of printercapaciteit beoordelen."],
       policy: { thresholdEur: input.thresholdEur, rule: "no_usable_method" },
     };
+  }
+
+  // Geldt er een uitzondering voor deze taal, dan gaat die voor op de
+  // waarderegel — mits de methode überhaupt kan.
+  const layoutRule = input.layoutRules.find(
+    (rule) => normalizeLayout(rule.layout) === normalizeLayout(input.targetLayout),
+  );
+  if (layoutRule && usable.includes(layoutRule.method)) {
+    return {
+      primary: layoutRule.method,
+      alternatives: usable.filter((method) => method !== layoutRule.method),
+      reason: layoutRule.note.trim()
+        || `Voor ${input.targetLayout} is ${methodLabel(layoutRule.method)} als vaste keuze ingesteld.`,
+      warnings,
+      policy: { thresholdEur: input.thresholdEur, rule: "layout_rule" },
+    };
+  }
+  if (layoutRule) {
+    warnings.push(
+      `Voor ${input.targetLayout} staat ${methodLabel(layoutRule.method)} ingesteld, `
+      + "maar die is nu niet beschikbaar of niet geschikt.",
+    );
   }
 
   const isPremium = input.saleValueEur >= input.thresholdEur;

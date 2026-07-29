@@ -10,7 +10,11 @@ import type { InventoryCatalogItem } from "@/data/inventory-catalog";
 import type { InventoryTransactionEntry } from "./operations";
 import { dayKey, daysBetween } from "./reporting";
 
-/** Noviply levert in 7 tot 14 dagen. We rekenen met de langste: te laat bijbestellen kost een order. */
+/**
+ * Noviply levert in 7 tot 14 dagen; we rekenen met de langste, want te laat
+ * bijbestellen kost een order. Dit is de beginwaarde — management kan hem in de
+ * instellingen bijstellen zonder nieuwe versie van de app.
+ */
 export const resupplyLeadTimeDays = 14;
 
 /** Een week extra, voor een drukke week of een levering die tegenzit. */
@@ -77,6 +81,10 @@ export function calculateResupplyLevel(
   stock: number,
   today: string,
   historyDays: number,
+  // Levert Noviply sneller of trager, dan hoort dat een instelling te zijn en
+  // geen nieuwe versie van de app.
+  leadTimeDays = resupplyLeadTimeDays,
+  safetyWeeks = resupplySafetyStockWeeks,
 ): ResupplyLevel | null {
   if (historyDays < minimumHistoryDays) return null;
 
@@ -88,9 +96,7 @@ export function calculateResupplyLevel(
   const weeklyDemand = used / (measuredDays / 7);
   if (weeklyDemand <= 0) return null;
 
-  const minimum = Math.ceil(
-    weeklyDemand * (resupplyLeadTimeDays / 7 + resupplySafetyStockWeeks),
-  );
+  const minimum = Math.ceil(weeklyDemand * (leadTimeDays / 7 + safetyWeeks));
 
   return {
     weeklyDemand,
