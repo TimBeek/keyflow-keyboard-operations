@@ -11,6 +11,7 @@ import { InventoryCatalog } from "@/components/inventory-catalog";
 import { InventoryMutationDialog, type InventoryItem } from "@/components/inventory-mutation";
 import { OperationsManagement } from "@/components/operations-management";
 import { PrinterCheckPrompt } from "@/components/printer-check-prompt";
+import { PrintReminderPrompt } from "@/components/print-reminder-prompt";
 import { SettingsWorkspace } from "@/components/settings-workspace";
 import { AddStickerSheetDialog } from "@/components/add-sticker-sheet";
 import type { AcceptanceSyncState } from "@/components/go-live-acceptance-center";
@@ -88,6 +89,8 @@ import {
   askPrinterCheck,
   answerPrinterCheck,
   closePrinterCheck,
+  sendPrintReminder,
+  acknowledgePrintReminder,
   postVerificationReport,
   lockAccess,
   type PilotAccount,
@@ -114,6 +117,7 @@ import {
   openCheck,
   type PrinterCheckRecord,
 } from "@/domain/printer-check";
+import { openReminder, type PrintReminderRecord } from "@/domain/print-reminder";
 import {
   createConversionLogEntry,
   type ConversionLogEntry,
@@ -286,6 +290,7 @@ export function Dashboard({
   // Noviply bedient de premiumstickerprinter op afstand; of hij klaarstaat kan
   // alleen de werkvloer zien.
   const [printerChecks, setPrinterChecks] = useState<PrinterCheckRecord[]>([]);
+  const [printReminders, setPrintReminders] = useState<PrintReminderRecord[]>([]);
   const [noviplyTab, setNoviplyTab] = useState<NoviplyTab>("orders");
   // Regels waar de Excel-import geen bruikbaar artikelnummer opleverde, kunnen
   // hier worden aangevuld zonder de bron aan te passen.
@@ -486,6 +491,7 @@ export function Dashboard({
     setModelGroupDecisions(state.modelGroupDecisions);
     setCompatibilityEvidenceRecords(state.compatibilityEvidenceRecords);
     setPrinterChecks(state.printerChecks);
+    setPrintReminders(state.printReminders);
     setVerificationReports(state.verificationReports);
     if (state.operationsPolicy) setOperationsPolicy(state.operationsPolicy);
     setPolicyVersion(state.operationsPolicyVersion);
@@ -1388,6 +1394,23 @@ export function Dashboard({
     }
   }
 
+  async function remindNoviply() {
+    try {
+      const { alreadySent } = await sendPrintReminder();
+      await refreshSharedState();
+      setLastAction(alreadySent
+        ? "Noviply had dit seintje al gekregen."
+        : "Noviply heeft een seintje gekregen over de wachtrij.");
+    } catch (error) {
+      setLastAction(error instanceof Error ? error.message : "Het seintje is niet verstuurd.");
+    }
+  }
+
+  async function seenReminder(id: string) {
+    await acknowledgePrintReminder(id).catch(() => undefined);
+    await refreshSharedState();
+  }
+
   async function startPrinting(id: string) {
     try {
       await closePrinterCheck(id);
@@ -1835,6 +1858,7 @@ export function Dashboard({
             directPrintLayouts={directPrintLayouts}
             printRequests={printRequests}
             printerChecks={printerChecks}
+            onRemindNoviply={() => void remindNoviply()}
             onRequestPrintSticker={requestPrintSticker}
             onRecordConversion={recordConversion}
             catalog={workingCatalog}
@@ -2092,6 +2116,12 @@ export function Dashboard({
           <span className={`sync-state ${sharedStatus}`}><i /> {syncLabel}</span>
           <span>{lastAction}</span>
         </footer>
+        {role === "noviply" && openReminder(printReminders) && (
+          <PrintReminderPrompt
+            reminder={openReminder(printReminders)!}
+            onSeen={() => seenReminder(openReminder(printReminders)!.id)}
+          />
+        )}
         {role === "employee" && openCheck(printerChecks) && (
           <PrinterCheckPrompt
             check={openCheck(printerChecks)!}

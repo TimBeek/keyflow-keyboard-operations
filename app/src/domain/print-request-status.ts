@@ -41,13 +41,33 @@ export function isFresh(request: PrintRequestRecord, now: Date) {
 }
 
 /**
- * Het aantal dat om aandacht vraagt: klaargelegde stickers die opgehaald
- * kunnen worden, en aanvragen die niet gelukt zijn.
+ * Wat er nog bij Noviply staat. Dat is het getal dat de werkvloer wil zien:
+ * "ik heb er tien uitstaan". Zodra er geprint is valt hij vanzelf weg — een
+ * teller die blijft staan bij wat al gedaan is, telt het verkeerde.
  */
-export function attentionCount(requests: PrintRequestRecord[], now: Date) {
-  return requests.filter(
-    (request) => request.status !== "requested" && isFresh(request, now),
-  ).length;
+export function openCount(requests: PrintRequestRecord[]) {
+  return requests.filter((request) => request.status === "requested").length;
+}
+
+/**
+ * Hoe lang een aanvraag mag wachten voordat het redelijk is Noviply eraan te
+ * herinneren. Korter zou zeuren zijn: zij printen 's ochtends en 's middags.
+ */
+export const reminderAfterHours = 3;
+
+/** De oudste openstaande aanvraag, of null. */
+export function oldestOpen(requests: PrintRequestRecord[]) {
+  return requests
+    .filter((request) => request.status === "requested")
+    .sort((left, right) => left.requestedAt.localeCompare(right.requestedAt))[0] ?? null;
+}
+
+export function waitingTooLong(requests: PrintRequestRecord[], now: Date) {
+  const oldest = oldestOpen(requests);
+  if (!oldest) return false;
+  const asked = new Date(oldest.requestedAt).getTime();
+  if (Number.isNaN(asked)) return false;
+  return now.getTime() - asked > reminderAfterHours * 60 * 60 * 1000;
 }
 
 export function printRequestHeadline(groups: PrintRequestGroups) {

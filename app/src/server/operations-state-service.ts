@@ -8,6 +8,7 @@ import { readOperationsPolicy } from "./operations-policy-service";
 import { readSkuOverrides } from "./sku-override-service";
 import { listPrinterChecks } from "./printer-check-service";
 import { listVerificationReports } from "./verification-report-service";
+import { listPrintReminders } from "./print-reminder-service";
 import {
   listCompatibilityEvidence,
   listModelGroupDecisions,
@@ -82,6 +83,7 @@ export async function readOperationsState(actorId: string) {
     compatibilityEvidenceRecords,
     printerChecks,
     verificationReports,
+    printReminders,
     allSheets,
   ] = await Promise.all([
     sql<BalanceRow[]>`
@@ -111,6 +113,7 @@ export async function readOperationsState(actorId: string) {
     listCompatibilityEvidence(),
     listPrinterChecks(),
     listVerificationReports(),
+    listPrintReminders(),
     // Vellen die na de Excel-import zijn toegevoegd. Die staan alleen in de
     // database, terwijl de werkvloer in de ingebouwde catalogus zoekt — zonder
     // dit zou een nieuw vel onvindbaar blijven tot de volgende import.
@@ -167,6 +170,7 @@ export async function readOperationsState(actorId: string) {
     compatibilityEvidenceRecords,
     printerChecks,
     verificationReports,
+    printReminders,
     // Alleen wat de ingebouwde catalogus niet kent; de rest zit er al in.
     addedSheets: allSheets
       .filter((row) => !knownStorageNumbers.has(row.hanging_file_number))

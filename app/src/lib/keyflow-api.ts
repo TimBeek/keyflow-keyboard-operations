@@ -16,6 +16,7 @@ import type { ModelGroupDecision } from "@/domain/model-grouping";
 import type { InventoryTransactionEntry, OperationsPolicy } from "@/domain/operations";
 import type { PrintRequestRecord, PrintRequestStatus } from "@/domain/print-requests";
 import type { PrinterCheckRecord } from "@/domain/printer-check";
+import type { PrintReminderRecord } from "@/domain/print-reminder";
 import type { StickerVerificationReport } from "@/domain/sticker-verification";
 
 export type SharedOperationsState = {
@@ -35,6 +36,7 @@ export type SharedOperationsState = {
   compatibilityEvidenceRecords: CompatibilityEvidenceRecord[];
   printerChecks: PrinterCheckRecord[];
   verificationReports: StickerVerificationReport[];
+  printReminders: PrintReminderRecord[];
   /** Vellen die na de Excel-import zijn toegevoegd. */
   addedSheets: AddedSheet[];
 };
@@ -314,4 +316,17 @@ export function addStickerSheet(payload: {
     "/api/sticker-sheets",
     { method: "POST", body: JSON.stringify(payload) },
   );
+}
+
+/* ---------- de werkvloer herinnert Noviply aan de wachtrij ---------- */
+
+export function sendPrintReminder() {
+  return request<{ reminder: PrintReminderRecord; alreadySent: boolean }>(
+    "/api/print-reminders",
+    { method: "POST" },
+  );
+}
+
+export function acknowledgePrintReminder(id: string) {
+  return request<{ acknowledged: true }>(`/api/print-reminders/${id}`, { method: "DELETE" });
 }

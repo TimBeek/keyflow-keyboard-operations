@@ -2489,8 +2489,16 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 
 .request-group article strong { display: block; font-size: 14px; color: var(--text); }
 .request-group article span { font-size: 12px; color: var(--text-3); }
+/* Het ordernummer is waar de medewerker de laptop op terugvindt tussen de
+   andere die apart staan. Dat mag niet het kleinste op de regel zijn. */
 .request-order { text-align: right; }
-.request-order b { display: block; font-size: 13px; color: var(--text-2); }
+.request-order b {
+  display: block;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  color: var(--text);
+}
 .request-order small { font-size: 11.5px; color: var(--text-3); }
 
 .request-group.ready article { border-left-color: var(--ok); }
@@ -2707,3 +2715,23 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
   cursor: pointer;
 }
 .answer-escape:hover { border-color: var(--warn); color: var(--warn); }
+
+/* De werkvloer geeft Noviply een seintje dat er te veel blijft liggen. */
+.remind-noviply {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 15px 18px;
+  margin-bottom: 22px;
+  border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
+  border-radius: 12px;
+  background: var(--warn-soft);
+}
+.remind-noviply strong { display: block; font-size: 14px; color: var(--text); }
+.remind-noviply span { color: var(--text-2); font-size: 12.5px; line-height: 1.55; }
+.remind-noviply button { flex: none; }
+
+@media (max-width: 720px) {
+  .remind-noviply { flex-direction: column; align-items: stretch; }
+}

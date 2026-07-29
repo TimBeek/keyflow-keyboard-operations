@@ -42,10 +42,11 @@ import { buildModelChoices, searchModels } from "@/domain/model-search";
 import type { PrintRequestInput, PrintRequestRecord } from "@/domain/print-requests";
 import { printingNow, type PrinterCheckRecord } from "@/domain/printer-check";
 import {
-  attentionCount,
   groupPrintRequests,
   isFresh,
+  openCount,
   printRequestHeadline,
+  waitingTooLong,
 } from "@/domain/print-request-status";
 import type { ConversionLogInput } from "@/domain/conversion-log";
 import { directPrintScopeFor } from "@/domain/direct-print-scope";
@@ -118,6 +119,7 @@ type Props = {
   directPrintLayouts: string[];
   printRequests: PrintRequestRecord[];
   printerChecks: PrinterCheckRecord[];
+  onRemindNoviply: () => void;
   compatibilityEvidenceRecords: CompatibilityEvidenceRecord[];
   onInventoryMutation: (request: InventoryMutationRequest) => Promise<InventoryMutationOutcome>;
   onStickerVerification: (input: StickerVerificationReportInput) => unknown;
@@ -133,6 +135,7 @@ export function EmployeeWorkspace({
   directPrintLayouts,
   printRequests,
   printerChecks,
+  onRemindNoviply,
   compatibilityEvidenceRecords,
   onInventoryMutation,
   onStickerVerification,
@@ -148,7 +151,10 @@ export function EmployeeWorkspace({
   // klok, niet blijven staan op het moment dat het scherm openging.
   const now = new Date();
   const requestGroups = useMemo(() => groupPrintRequests(printRequests), [printRequests]);
-  const needsAttention = attentionCount(printRequests, now);
+  // Wat er nog bij Noviply staat: "ik heb er zoveel uitstaan". Zodra er geprint
+  // is valt het getal vanzelf weg.
+  const openAtNoviply = openCount(printRequests);
+  const tooLong = waitingTooLong(printRequests, now);
 
   /* ---------- tabblad 1: welke sticker? ---------- */
   const modelInputRef = useRef<HTMLInputElement>(null);
@@ -454,7 +460,7 @@ export function EmployeeWorkspace({
         </button>
         <button role="tab" aria-selected={tab === "requests"} className={tab === "requests" ? "active" : ""} onClick={() => setTab("requests")}>
           Bij Noviply
-          {needsAttention > 0 && <span className="tab-badge">{needsAttention}</span>}
+          {openAtNoviply > 0 && <span className="tab-badge">{openAtNoviply}</span>}
         </button>
       </div>
 
@@ -880,6 +886,21 @@ export function EmployeeWorkspace({
                   </div>
                 </article>
               ))}
+            </div>
+          )}
+
+          {tooLong && (
+            <div className="remind-noviply">
+              <div>
+                <strong>Dit staat al een tijdje open</strong>
+                <span>
+                  Noviply print &apos;s ochtends en &apos;s middags. Duurt het langer, laat het
+                  ze weten — ze krijgen het meteen in beeld.
+                </span>
+              </div>
+              <button type="button" className="primary-button" onClick={onRemindNoviply}>
+                Noviply een seintje geven
+              </button>
             </div>
           )}
 
