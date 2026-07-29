@@ -101,7 +101,9 @@ type IconName =
   | "alert"
   | "arrow";
 
-type ViewName = "overview" | "inventory" | "conversions" | "orders" | "models" | "operations" | "reports";
+type ViewName =
+  | "overview" | "movers" | "layoutgroups" | "reports"
+  | "inventory" | "conversions" | "orders" | "models" | "operations";
 
 function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
   const paths: Record<IconName, React.ReactNode> = {
@@ -126,24 +128,37 @@ function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
   );
 }
 
+/**
+ * De vier vragen die management werkelijk stelt: wat is er vandaag gedaan,
+ * welke stickers lopen hard, welke modellen delen een layout, en hoe ziet
+ * het verloop eruit. Al het overige is verplaatst naar `parkedNavItems`.
+ */
 const navItems: { id: ViewName; label: string; icon: IconName }[] = [
-  { id: "overview", label: "Overzicht", icon: "home" },
+  { id: "overview", label: "Vandaag", icon: "home" },
+  { id: "movers", label: "Hardlopers", icon: "stock" },
+  { id: "layoutgroups", label: "Layoutgroepen", icon: "models" },
+  { id: "reports", label: "Rapportage", icon: "reports" },
+];
+
+/** Zichtbaar zodra de beheerdersschakelaar aan staat. Niets is verwijderd. */
+const parkedNavItems: { id: ViewName; label: string; icon: IconName }[] = [
   { id: "inventory", label: "Voorraad", icon: "stock" },
   { id: "conversions", label: "Conversies", icon: "convert" },
   { id: "orders", label: "Bestellingen", icon: "orders" },
   { id: "models", label: "Modellen", icon: "models" },
   { id: "operations", label: "Beheer & analyse", icon: "settings" },
-  { id: "reports", label: "Rapportages", icon: "reports" },
 ];
 
 const viewHeadings: Record<ViewName, { title: string; subtitle: string }> = {
-  overview: { title: "Goedemiddag, Tim", subtitle: "Dit vraagt vandaag je aandacht." },
+  overview: { title: "Vandaag", subtitle: "Wat er vandaag is omgezet en wat aandacht vraagt." },
+  movers: { title: "Hardlopers", subtitle: "Welke stickervellen hard lopen en welke blijven liggen." },
+  layoutgroups: { title: "Layoutgroepen", subtitle: "Laat KeyFlow modellen groeperen die dezelfde sticker delen." },
+  reports: { title: "Rapportage", subtitle: "Verbruik, dekking en verloop over de tijd." },
   inventory: { title: "Voorraad", subtitle: "Zoek, controleer en plan alle keyboardstickers." },
   conversions: { title: "Conversies", subtitle: "Beheer de methode en voortgang per laptoporder." },
   orders: { title: "Bestellingen", subtitle: "Zet automatisch voorraadadvies om in een gecontroleerd concept." },
   models: { title: "Modellen", subtitle: "Beheer compatibiliteit zonder dubbele handmatige invoer." },
   operations: { title: "Beheer & analyse", subtitle: "Configureer uitvoering en analyseer iedere voorraadbeweging." },
-  reports: { title: "Rapportages", subtitle: "Volg verbruik, dekking, trends en komende behoefte." },
 };
 
 const initialLowStockSeed: InventoryItem[] = [
@@ -180,6 +195,7 @@ export function Dashboard({
 }) {
   const [role, setRole] = useState<UserRole>(identity.role);
   const [activeView, setActiveView] = useState<ViewName>("overview");
+  const [showParked, setShowParked] = useState(false);
   const [query, setQuery] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [advisorOpen, setAdvisorOpen] = useState(false);
@@ -971,7 +987,10 @@ export function Dashboard({
           <div><strong>KeyFlow</strong><span>Keyboard Operations</span></div>
         </div>
         <nav aria-label="Hoofdnavigatie">
-          {(role === "management" ? navItems : [{ id: "overview" as const, label: "Uitvoering", icon: "convert" as const }]).map((item) => (
+          {(role === "management"
+            ? [...navItems, ...(showParked ? parkedNavItems : [])]
+            : [{ id: "overview" as const, label: "Uitvoering", icon: "convert" as const }]
+          ).map((item) => (
             <button
               key={item.id}
               className={`nav-item ${activeView === item.id ? "active" : ""}`}
@@ -980,6 +999,22 @@ export function Dashboard({
               <Icon name={item.icon} /><span>{item.label}</span>
             </button>
           ))}
+          {role === "management" && (
+            <button
+              className="nav-item nav-more"
+              aria-expanded={showParked}
+              onClick={() => {
+                const next = !showParked;
+                setShowParked(next);
+                if (!next && parkedNavItems.some((item) => item.id === activeView)) {
+                  setActiveView("overview");
+                }
+              }}
+            >
+              <Icon name="settings" />
+              <span>{showParked ? "Minder tonen" : "Meer beheer"}</span>
+            </button>
+          )}
         </nav>
         <div className="sidebar-footer">
           <button className="nav-item" onClick={() => role === "management" && setAccessOpen(true)}><Icon name="settings" /><span>{role === "management" ? "Toegangsbeheer" : "Hulp"}</span></button>
@@ -1172,8 +1207,14 @@ export function Dashboard({
         {role === "management" && activeView === "conversions" && <ConversionsWorkspace onNew={() => setAdvisorOpen(true)} />}
         {role === "management" && activeView === "orders" && <OrdersWorkspace />}
         {role === "management" && activeView === "models" && <ModelsWorkspace />}
-        {role === "management" && activeView === "operations" && (
+        {role === "management" && (activeView === "operations" || activeView === "movers" || activeView === "layoutgroups") && (
           <OperationsManagement
+            key={activeView}
+            tabs={
+              activeView === "movers" ? ["abc"]
+              : activeView === "layoutgroups" ? ["model_groups"]
+              : undefined
+            }
             quantities={catalogQuantities}
             transactions={transactions}
             policy={operationsPolicy}

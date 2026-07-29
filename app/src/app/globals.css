@@ -1598,3 +1598,15 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
   .answer-head h2 { font-size: 25px; }
   .answer-slot strong { font-size: 44px; }
 }
+
+/* De beheerdersschakelaar is geen bestemming maar een schakelaar:
+   apart gezet en rustiger, zodat de vier hoofdbestemmingen leidend blijven. */
+.nav-more {
+  margin-top: 10px; padding-top: 14px;
+  border-top: 1px solid var(--rail-line) !important;
+  border-radius: 0 !important;
+  color: var(--rail-muted) !important;
+  font-size: 12.5px !important; font-weight: 560 !important;
+}
+.nav-more:hover { background: transparent !important; color: var(--rail-text) !important; }
+.nav-more svg { width: 16px; height: 16px; }
