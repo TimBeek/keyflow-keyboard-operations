@@ -1965,3 +1965,36 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
   .conversion-stack b { display: none; }
   .conversion-column small { font-size: 9px; transform: rotate(-45deg); }
 }
+
+/* Noviply zet de lijst over in hun eigen systeem; de exportknop hoort naast de
+   koptekst, niet eronder waar hij tussen de tabel en de uitleg verdwijnt. */
+.noviply-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.noviply-panel-head > div { flex: 1 1 340px; min-width: 0; }
+
+.noviply-panel-head > button {
+  flex: none;
+  min-height: 34px;
+  padding: 0 15px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+}
+
+.noviply-panel-head > button:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--text-3);
+}
+
+.noviply-panel-head > button:disabled { opacity: .45; cursor: not-allowed; }

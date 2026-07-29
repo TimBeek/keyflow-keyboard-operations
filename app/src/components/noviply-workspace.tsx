@@ -13,6 +13,12 @@ import {
   type PrintRequestRecord,
   type PrintRequestStatus,
 } from "@/domain/print-requests";
+import {
+  createNoviplyPrintRequestCsv,
+  createNoviplyStockCsv,
+  noviplyExportFilename,
+} from "@/domain/noviply-export";
+import { displayStickerSku } from "@/domain/sticker-sku";
 
 export type NoviplyTab = "orders" | "stock";
 
@@ -26,6 +32,17 @@ type Props = {
     note: string,
   ) => void;
 };
+
+/** Overtypen in een ander systeem is werk dat fouten maakt. */
+function downloadCsv(contents: string, filename: string) {
+  const blob = new Blob([contents], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
 
 function formatMoment(value: string) {
   const moment = new Date(value);
@@ -75,6 +92,35 @@ export function NoviplyWorkspace({
     .sort((left, right) => left.stock - right.stock || right.shortfall - left.shortfall),
     [quantities]);
   const running = stockRows.filter((row) => row.shortfall > 0);
+
+  function exportStock() {
+    const moment = new Date().toISOString();
+    downloadCsv(
+      createNoviplyStockCsv(stockRows.map(({ item, stock, threshold, shortfall }) => ({
+        storageNumber: item.storageNumber,
+        model: item.model,
+        sku: item.sku,
+        layout: layoutWithCountry(item.layout, item.sku),
+        stock,
+        threshold,
+        shortfall,
+      }))),
+      noviplyExportFilename("stock", moment),
+    );
+    setMessage(`Downloaded ${stockRows.length} folders as a spreadsheet.`);
+  }
+
+  function exportPrintRequests() {
+    const moment = new Date().toISOString();
+    // Alles, niet alleen wat openstaat: hun eigen administratie wil de
+    // afgehandelde regels er ook bij.
+    downloadCsv(
+      createNoviplyPrintRequestCsv([...printRequests].sort((left, right) =>
+        left.requestedAt.localeCompare(right.requestedAt))),
+      noviplyExportFilename("print-requests", moment),
+    );
+    setMessage(`Downloaded ${printRequests.length} requests as a spreadsheet.`);
+  }
 
   function settle(
     record: PrintRequestRecord,
@@ -129,6 +175,14 @@ export function NoviplyWorkspace({
               past again.
             </p>
           </div>
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={exportPrintRequests}
+            disabled={printRequests.length === 0}
+          >
+            Download for Excel
+          </button>
         </div>
         <div className="table-wrap">
           <table className="operations-table">
@@ -214,6 +268,14 @@ export function NoviplyWorkspace({
             <h3>Stock running low</h3>
             <p>All folders, emptiest first. Flagged rows are below their calculated minimum.</p>
           </div>
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={exportStock}
+            disabled={stockRows.length === 0}
+          >
+            Download for Excel
+          </button>
         </div>
         <div className="table-wrap">
           <table className="operations-table">
@@ -230,7 +292,7 @@ export function NoviplyWorkspace({
               {stockRows.map(({ item, stock, threshold, shortfall }) => (
                 <tr key={item.catalogKey} className={shortfall > 0 ? "stock-low" : ""}>
                   <td><strong className="storage-number">No. {item.storageNumber}</strong><span>{item.model}</span></td>
-                  <td>{item.sku}</td>
+                  <td>{displayStickerSku(item.sku)}</td>
                   <td>{layoutWithCountry(item.layout, item.sku)}</td>
                   <td><b className={stock === 0 ? "zero" : ""}>{stock}</b><span> / min. {threshold}</span></td>
                   <td>

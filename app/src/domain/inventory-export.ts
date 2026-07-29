@@ -1,4 +1,5 @@
 import type { InventoryCatalogItem } from "@/data/inventory-catalog";
+import { toCsv } from "./csv";
 import { inventoryQuantity } from "./inventory-quantities";
 
 const headers = [
@@ -31,13 +32,5 @@ export function createInventoryCsv(
     item.planningDataStatus === "sample" ? "Voorbeeldparameters" : "Niet geconfigureerd",
   ]);
 
-  return `\uFEFF${[headers, ...rows]
-    .map((row) => row.map(csvCell).join(";"))
-    .join("\r\n")}\r\n`;
-}
-
-function csvCell(value: string | number) {
-  if (typeof value === "number") return String(value);
-  const safeValue = /^[=+\-@]/.test(value) ? `'${value}` : value;
-  return `"${safeValue.replaceAll('"', '""')}"`;
+  return toCsv(headers, rows);
 }
