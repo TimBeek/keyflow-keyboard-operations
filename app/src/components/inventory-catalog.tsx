@@ -2,6 +2,12 @@
 
 import { useMemo, useState } from "react";
 import {
+  displayStickerSku,
+  isValidStickerSku,
+  missingSkuLabel,
+  validateStickerSkuInput,
+} from "@/domain/sticker-sku";
+import {
   inventoryCatalog,
   inventoryCatalogSummary,
   planningCatalog,
@@ -15,12 +21,36 @@ type Props = {
   globalQuery: string;
   quantities: Record<string, number>;
   onReceive: (item: InventoryCatalogItem) => void;
+  /** Handmatig aangevulde artikelnummers, per catalogusregel. */
+  skuOverrides: Record<string, string>;
+  onSkuChange: (catalogKey: string, sku: string) => void;
 };
 
 type CatalogStatus = StockAdviceStatus | "data_issue" | "unconfigured";
 type StatusFilter = "all" | CatalogStatus;
 
-export function InventoryCatalog({ globalQuery, quantities, onReceive }: Props) {
+export function InventoryCatalog({
+  globalQuery,
+  quantities,
+  onReceive,
+  skuOverrides,
+  onSkuChange,
+}: Props) {
+  const [editingSkuFor, setEditingSkuFor] = useState("");
+  const [skuDraft, setSkuDraft] = useState("");
+  const [skuError, setSkuError] = useState("");
+
+  function saveSku(catalogKey: string) {
+    try {
+      onSkuChange(catalogKey, validateStickerSkuInput(skuDraft));
+      setEditingSkuFor("");
+      setSkuDraft("");
+      setSkuError("");
+    } catch (error) {
+      setSkuError(error instanceof Error ? error.message : "Opslaan is niet gelukt.");
+    }
+  }
+
   const [layout, setLayout] = useState("all");
   const [status, setStatus] = useState<StatusFilter>("all");
   const [location, setLocation] = useState("all");
@@ -132,7 +162,54 @@ export function InventoryCatalog({ globalQuery, quantities, onReceive }: Props) 
             <tbody>
               {rows.map((item) => (
                 <tr key={item.catalogKey}>
-                  <td><strong>{item.model}</strong><span>{item.sku || "Artikelnummer ontbreekt"} · {item.compatibleModels} gekoppelde modellen</span>{item.dataQualityIssues.map((issue) => <small className="form-error" key={issue}>{issue}</small>)}</td>
+                  <td>
+                    <strong>{item.model}</strong>
+                    {editingSkuFor === item.catalogKey ? (
+                      <span className="sku-edit">
+                        <input
+                          value={skuDraft}
+                          onChange={(event) => { setSkuDraft(event.target.value); setSkuError(""); }}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") { event.preventDefault(); saveSku(item.catalogKey); }
+                            if (event.key === "Escape") { setEditingSkuFor(""); setSkuError(""); }
+                          }}
+                          placeholder="NB10052E1NL"
+                          maxLength={20}
+                          autoFocus
+                        />
+                        <button type="button" onClick={() => saveSku(item.catalogKey)}>Opslaan</button>
+                        <button type="button" onClick={() => { setEditingSkuFor(""); setSkuError(""); }}>Annuleren</button>
+                      </span>
+                    ) : (
+                      <span>
+                        {(() => {
+                          const shown = displayStickerSku(skuOverrides[item.catalogKey] ?? item.sku);
+                          return shown === missingSkuLabel
+                            ? <em className="sku-missing">{shown}</em>
+                            : shown;
+                        })()}
+                        {" · "}{item.compatibleModels} gekoppelde modellen
+                        <button
+                          type="button"
+                          className="sku-edit-open"
+                          onClick={() => {
+                            const current = skuOverrides[item.catalogKey] ?? item.sku;
+                            setEditingSkuFor(item.catalogKey);
+                            setSkuDraft(isValidStickerSku(current) ? current : "");
+                            setSkuError("");
+                          }}
+                        >
+                          {isValidStickerSku(skuOverrides[item.catalogKey] ?? item.sku) ? "Wijzigen" : "Invullen"}
+                        </button>
+                      </span>
+                    )}
+                    {editingSkuFor === item.catalogKey && skuError && (
+                      <small className="form-error">{skuError}</small>
+                    )}
+                    {editingSkuFor !== item.catalogKey && item.dataQualityIssues.map((issue) => (
+                      <small className="form-error" key={issue}>{issue}</small>
+                    ))}
+                  </td>
                   <td><span className="layout-badge">{item.layout}</span><small>{item.location} · nr. {item.storageNumber}</small></td>
                   <td><b className={item.stock === 0 ? "zero" : ""}>{item.stock}</b><span>{item.reserved} gereserveerd</span></td>
                   <td>{item.advice ? <><strong>{item.averageWeeklyDemand.toLocaleString("nl-NL")} / week</strong><span>{item.leadTimeDays} dagen levertijd</span></> : <><strong>Nog niet gemeten</strong><span>Transactiehistorie vereist</span></>}</td>

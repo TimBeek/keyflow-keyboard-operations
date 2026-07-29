@@ -123,6 +123,7 @@ export function EmployeeWorkspace({
 
   /* ---------- tabblad 1: welke sticker? ---------- */
   const modelInputRef = useRef<HTMLInputElement>(null);
+  const orderInputRef = useRef<HTMLInputElement>(null);
   const [modelQuery, setModelQuery] = useState("");
   const [chosenModel, setChosenModel] = useState<string | null>(null);
   const [targetLayout, setTargetLayout] = useState("QWERTY US");
@@ -198,8 +199,14 @@ export function EmployeeWorkspace({
 
   function bookDone() {
     if (!usesSheet) {
-      setAdviceMessage({ tone: "ok", text: "Klaar. Deze methode gebruikt geen voorraadvel, er is niets afgeboekt." });
+      // Ook zonder voorraadvel is de laptop klaar: leegmaken voor de volgende,
+      // anders blijft hij op het scherm staan en weet niemand of het gelukt is.
+      setAdviceMessage({ tone: "ok", text: "Klaar. Deze methode gebruikt geen voorraadvel, er is niets afgeboekt. Pak de volgende laptop." });
       setConfirmed(false);
+      setModelQuery("");
+      setChosenModel(null);
+      setOrderReference("");
+      requestAnimationFrame(() => modelInputRef.current?.focus());
       return;
     }
     if (!matched) {
@@ -458,6 +465,14 @@ export function EmployeeWorkspace({
             </div>
           )}
 
+          {/* De bevestiging moet blijven staan nadat het model is leeggemaakt,
+              anders verdwijnt met de laptop ook het bewijs dat het gelukt is. */}
+          {!hasAnswer && adviceMessage && (
+            <p className={adviceMessage.tone === "ok" ? "answer-done standalone" : "answer-warning standalone"}>
+              {adviceMessage.text}
+            </p>
+          )}
+
           {!hasAnswer && (
             <div className="worker-waiting">
               {resolution.status === "multiple" ? (
@@ -527,6 +542,16 @@ export function EmployeeWorkspace({
                       type="button"
                       className="secondary-button"
                       onClick={() => {
+                        // Noviply kan zonder ordernummer niet zien om welke
+                        // order het gaat, dus hier is het wél verplicht.
+                        if (!orderReference.trim()) {
+                          setAdviceMessage({
+                            tone: "warn",
+                            text: "Vul eerst het ordernummer in — zonder dat weet Noviply niet welke order dit is.",
+                          });
+                          requestAnimationFrame(() => orderInputRef.current?.focus());
+                          return;
+                        }
                         try {
                           onRequestPrintSticker({
                             model,
@@ -535,12 +560,17 @@ export function EmployeeWorkspace({
                               : targetLayout,
                             variant: enterShape,
                             orderReference,
-                            reason: "Lag niet klaar bij de ochtendronde.",
+                            reason: "Not ready during the morning run.",
                           });
                           setAdviceMessage({
-                            tone: "warn",
-                            text: "Op de bestellijst gezet. Noviply print hem in de middagronde; leg de laptop apart.",
+                            tone: "ok",
+                            text: `Aangevraagd bij Noviply voor order ${orderReference.trim()}. Zet deze laptop apart en wacht tot Noviply hem geprint heeft — voor jou is deze sticker klaar.`,
                           });
+                          setConfirmed(false);
+                          setModelQuery("");
+                          setChosenModel(null);
+                          setOrderReference("");
+                          requestAnimationFrame(() => modelInputRef.current?.focus());
                         } catch (error) {
                           setAdviceMessage({
                             tone: "warn",
@@ -589,7 +619,7 @@ export function EmployeeWorkspace({
                 </label>
                 <label className="answer-order">
                   <span>Ordernummer (mag leeg)</span>
-                  <input value={orderReference} onChange={(event) => setOrderReference(event.target.value)} placeholder="1859" />
+                  <input ref={orderInputRef} value={orderReference} onChange={(event) => setOrderReference(event.target.value)} placeholder="1859" />
                 </label>
               </div>
 

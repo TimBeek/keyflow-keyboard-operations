@@ -165,13 +165,13 @@ export function NoviplyWorkspace({
                           className="danger-ghost-button"
                           onClick={() => settle(request, "not_printable", blockedNote)}
                         >
-                          Melden
+                          Report
                         </button>
                         <button
                           type="button"
                           onClick={() => { setBlockedId(""); setBlockedNote(""); }}
                         >
-                          Terug
+                          Back
                         </button>
                       </div>
                     ) : (
@@ -181,13 +181,13 @@ export function NoviplyWorkspace({
                           className="primary-button"
                           onClick={() => settle(request, "printed", "")}
                         >
-                          Geprint
+                          Printed
                         </button>
                         <button
                           type="button"
                           onClick={() => { setBlockedId(request.id); setBlockedNote(""); }}
                         >
-                          Kan niet
+                          Cannot print
                         </button>
                       </div>
                     )}

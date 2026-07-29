@@ -1699,3 +1699,14 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 .worker-variants legend .worker-help { flex: none; width: 20px; min-width: 20px; height: 20px; min-height: 20px; padding: 0; }
 /* De prijsvraag stond zonder eigen ruimte in het raster en viel weg. */
 .worker-bands, .worker-variants { grid-column: 1 / -1; }
+
+/* Bevestiging na "Gedaan": blijft staan terwijl het formulier al leeg is. */
+.answer-done.standalone, .answer-warning.standalone { margin: 14px 0 0; padding: 14px 16px; border-radius: 14px; font-size: 14px; }
+
+/* Artikelnummer aanvullen bij regels die de import niet kon lezen. */
+.sku-missing { color: var(--warn); font-style: normal; font-weight: 700; }
+.sku-edit-open { margin-left: 8px; padding: 1px 7px; border: 1px solid var(--line); border-radius: 7px; background: transparent; color: var(--text-2); font-size: 10.5px; font-weight: 800; cursor: pointer; }
+.sku-edit-open:hover { border-color: var(--signal); color: var(--signal); }
+.sku-edit { display: flex; gap: 5px; align-items: center; margin-top: 3px; }
+.sku-edit input { width: 150px; height: 27px; padding: 0 8px; border: 1px solid var(--signal); border-radius: 8px; background: var(--surface-2); color: var(--text); font-size: 11.5px; }
+.sku-edit button { min-height: 27px; padding: 0 9px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--text-2); font-size: 10.5px; font-weight: 800; cursor: pointer; }

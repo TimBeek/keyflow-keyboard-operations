@@ -219,6 +219,9 @@ export function Dashboard({
   const [stockCounts, setStockCounts] = useState<StockCountRecord[]>([]);
   const [printRequests, setPrintRequests] = useState<PrintRequestRecord[]>([]);
   const [noviplyTab, setNoviplyTab] = useState<NoviplyTab>("orders");
+  // Regels waar de Excel-import geen bruikbaar artikelnummer opleverde, kunnen
+  // hier worden aangevuld zonder de bron aan te passen.
+  const [skuOverrides, setSkuOverrides] = useState<Record<string, string>>({});
   const [modelGroupDecisions, setModelGroupDecisions] = useState<ModelGroupDecision[]>([]);
   const [compatibilityEvidenceRecords, setCompatibilityEvidenceRecords] = useState<CompatibilityEvidenceRecord[]>([]);
   const [recoveryDrills, setRecoveryDrills] = useState<RecoveryDrillRecord[]>([]);
@@ -893,6 +896,10 @@ export function Dashboard({
     }
   }
 
+  function changeCatalogSku(catalogKey: string, sku: string) {
+    setSkuOverrides((current) => ({ ...current, [catalogKey]: sku }));
+  }
+
   function requestPrintSticker(input: PrintRequestInput) {
     const record = createPrintRequest(input, {
       id: crypto.randomUUID(),
@@ -1252,6 +1259,8 @@ export function Dashboard({
 
         {role === "management" && activeView === "inventory" && (
           <InventoryCatalog
+            skuOverrides={skuOverrides}
+            onSkuChange={changeCatalogSku}
             globalQuery={query}
             quantities={catalogQuantities}
             onReceive={(item) => {
