@@ -1,4 +1,5 @@
 import { apiErrorResponse } from "@/server/api-errors";
+import { checkWriteLimit } from "@/server/rate-limit";
 import {
   createPilotAccount,
   deactivateAccount,
@@ -22,6 +23,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    checkWriteLimit(request);
     const { userId } = await resolvePilotClaim();
     const body = await request.json();
     const account = await createPilotAccount(
@@ -39,6 +41,7 @@ export async function POST(request: Request) {
 /** Pincode opnieuw instellen wanneer iemand hem kwijt is. */
 export async function PATCH(request: Request) {
   try {
+    checkWriteLimit(request);
     const { userId } = await resolvePilotClaim();
     const body = await request.json();
     return Response.json(await resetAccountPin(String(body.userId ?? ""), userId));
@@ -50,6 +53,7 @@ export async function PATCH(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    checkWriteLimit(request);
     const { userId } = await resolvePilotClaim();
     const body = await request.json();
     await deactivateAccount(String(body.userId ?? ""), userId);

@@ -1,3 +1,4 @@
+import { checkWriteLimit, RateLimitError } from "@/server/rate-limit";
 import { z } from "zod";
 import { calculateForecastAdvice, ForecastRuleError } from "../../../../domain/forecasting";
 
@@ -18,6 +19,7 @@ const planningRequestSchema = z.object({
 
 export async function POST(request: Request) {
   try {
+    checkWriteLimit(request);
     const input = planningRequestSchema.parse(await request.json());
     return Response.json({
       generatedAt: new Date().toISOString(),
@@ -27,6 +29,12 @@ export async function POST(request: Request) {
       })),
     });
   } catch (error) {
+    if (error instanceof RateLimitError) {
+      return Response.json(
+        { error: "TOO_MANY_REQUESTS", message: error.message },
+        { status: 429 },
+      );
+    }
     if (error instanceof z.ZodError) {
       return Response.json(
         { error: "INVALID_INPUT", details: error.flatten() },

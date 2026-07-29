@@ -1,3 +1,4 @@
+import { checkWriteLimit, RateLimitError } from "@/server/rate-limit";
 import { DatabaseConfigurationError } from "../../../../server/database";
 import {
   compatibilityEvidenceErrorResponse,
@@ -13,6 +14,7 @@ export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   try {
+    checkWriteLimit(request);
     const body = await request.json();
     const result = await recordCompatibilityEvidence({
       ...body,
@@ -20,6 +22,12 @@ export async function POST(request: Request) {
     });
     return Response.json(result, { status: result.duplicate ? 200 : 201 });
   } catch (error) {
+    if (error instanceof RateLimitError) {
+      return Response.json(
+        { error: "TOO_MANY_REQUESTS", message: error.message },
+        { status: 429 },
+      );
+    }
     if (error instanceof RequestIdentityError) {
       const response = requestIdentityErrorResponse(error);
       return Response.json(response.body, { status: response.status });

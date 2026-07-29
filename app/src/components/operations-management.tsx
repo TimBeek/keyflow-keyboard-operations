@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { inventoryCatalog } from "@/data/inventory-catalog";
 import { conversionMethods } from "@/domain/conversion-policy";
 import {
@@ -99,8 +99,6 @@ type Props = {
     message: string;
   };
   onExportBackup: () => void;
-  onRestoreBackup: (file: File) => Promise<{ success: boolean; message: string }>;
-  onResetPilotData: () => void;
   /** Welke tabbladen tonen. Weglaten = alle (oude gedrag). Eén tabblad verbergt de tabbalk. */
   tabs?: Tab[];
 };
@@ -167,11 +165,8 @@ export function OperationsManagement({
   onPolicyChange,
   persistence,
   onExportBackup,
-  onRestoreBackup,
-  onResetPilotData,
   tabs,
 }: Props) {
-  const backupInputRef = useRef<HTMLInputElement>(null);
   /**
    * Zonder `tabs` gedraagt dit scherm zich als vanouds (alle tabbladen).
    * De vernieuwde navigatie geeft één tabblad mee, zodat "Hardlopers" en
@@ -182,8 +177,6 @@ export function OperationsManagement({
   const [tab, setTab] = useState<Tab>(shownTabs[0]);
   const [draft, setDraft] = useState(policy);
   const [saved, setSaved] = useState("");
-  const [backupMessage, setBackupMessage] = useState("");
-  const [resetArmed, setResetArmed] = useState(false);
   const [countStorageNumber, setCountStorageNumber] = useState("75");
   const [countedQuantity, setCountedQuantity] = useState("");
   const [countNotes, setCountNotes] = useState("");
@@ -1458,41 +1451,34 @@ export function OperationsManagement({
             </section>
             <section className="data-continuity">
               <div>
-                <span className="workspace-kicker">PILOTOPSLAG & HERSTEL</span>
-                <h3>Automatisch bewaard op dit apparaat</h3>
-                <p>{persistence.message}</p>
+                <span className="workspace-kicker">WAAR DE GEGEVENS STAAN</span>
+                <h3>Gedeeld met iedereen</h3>
+                <p>
+                  Voorraad, mutaties, de bestellijst en het conversielogboek staan in
+                  de gedeelde database. Wat je hier doet ziet de werkvloer binnen
+                  twintig seconden, en andersom. Een nieuwe versie van de app raakt
+                  die gegevens niet.
+                </p>
               </div>
               <dl>
-                <div><dt>Opslagmodus</dt><dd>Lokale pilot</dd></div>
-                <div><dt>Laatste opslag</dt><dd>{persistence.lastSavedAt ? formatDate(persistence.lastSavedAt) : persistence.ready ? "Nog geen wijziging" : "Laden…"}</dd></div>
-                <div><dt>Teamsynchronisatie</dt><dd className="pending">Wacht op PostgreSQL</dd></div>
+                <div><dt>Opslag</dt><dd>PostgreSQL · Frankfurt</dd></div>
+                <div><dt>Laatst opgehaald</dt><dd>{persistence.lastSavedAt ? formatDate(persistence.lastSavedAt) : persistence.ready ? "Nog niet opgehaald" : "Laden…"}</dd></div>
+                <div><dt>Op dit apparaat</dt><dd>Alleen een kopie voor als de verbinding wegvalt</dd></div>
               </dl>
               <div className="continuity-actions">
-                <button className="secondary-button" onClick={onExportBackup}>Back-up downloaden</button>
-                <button className="secondary-button" onClick={() => backupInputRef.current?.click()}>Back-up herstellen</button>
-                <input
-                  ref={backupInputRef}
-                  type="file"
-                  accept="application/json,.json"
-                  className="sr-only"
-                  onChange={async (event) => {
-                    const file = event.target.files?.[0];
-                    if (!file) return;
-                    const result = await onRestoreBackup(file);
-                    setBackupMessage(result.message);
-                    event.target.value = "";
-                  }}
-                />
-                {!resetArmed ? (
-                  <button className="danger-ghost-button" onClick={() => setResetArmed(true)}>Pilotdata resetten</button>
-                ) : (
-                  <div className="reset-confirmation">
-                    <span>Beginstand herstellen?</span>
-                    <button onClick={() => { onResetPilotData(); setResetArmed(false); setBackupMessage("Pilotdata teruggezet naar de beginstand."); }}>Ja, reset</button>
-                    <button onClick={() => setResetArmed(false)}>Annuleren</button>
-                  </div>
-                )}
-                {backupMessage && <small>{backupMessage}</small>}
+                {/*
+                  "Back-up herstellen" en "Pilotdata resetten" stonden hier nog uit
+                  de tijd dat alles in de browser stond. Ze deden niets aan de
+                  database maar zeiden van wel — en een knop die liegt over
+                  gegevensverlies is gevaarlijker dan geen knop.
+                */}
+                <button className="secondary-button" onClick={onExportBackup}>
+                  Momentopname downloaden
+                </button>
+                <small>
+                  Een leesbaar bestand met de huidige stand, voor je eigen archief.
+                  De database blijft de bron.
+                </small>
               </div>
             </section>
           </div>

@@ -1,4 +1,5 @@
 import { apiErrorResponse } from "@/server/api-errors";
+import { checkWriteLimit } from "@/server/rate-limit";
 import {
   OperationsPolicyConflictError,
   updateOperationsPolicy,
@@ -9,6 +10,7 @@ export const runtime = "nodejs";
 
 export async function PUT(request: Request) {
   try {
+    checkWriteLimit(request);
     const body = await request.json();
     const result = await updateOperationsPolicy({
       ...body,

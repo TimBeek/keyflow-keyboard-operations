@@ -1,3 +1,4 @@
+import { checkWriteLimit, RateLimitError } from "@/server/rate-limit";
 import { DatabaseConfigurationError } from "@/server/database";
 import {
   importInventoryWorkbook,
@@ -19,6 +20,7 @@ const acceptedMimeTypes = new Set([
 
 export async function POST(request: Request) {
   try {
+    checkWriteLimit(request);
     const form = await request.formData();
     const file = form.get("file");
     const suppliedActorId = form.get("actorId");
@@ -62,6 +64,12 @@ export async function POST(request: Request) {
     });
     return Response.json(result, { status: result.duplicate ? 200 : 201 });
   } catch (error) {
+    if (error instanceof RateLimitError) {
+      return Response.json(
+        { error: "TOO_MANY_REQUESTS", message: error.message },
+        { status: 429 },
+      );
+    }
     if (error instanceof RequestIdentityError) {
       const response = requestIdentityErrorResponse(error);
       return Response.json(response.body, { status: response.status });

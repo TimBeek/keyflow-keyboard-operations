@@ -1,3 +1,4 @@
+import { checkWriteLimit, RateLimitError } from "@/server/rate-limit";
 import { DatabaseConfigurationError } from "@/server/database";
 import { goLiveAcceptanceSummary } from "@/domain/go-live-acceptance";
 import {
@@ -25,12 +26,19 @@ export async function GET(request: Request) {
       summary: goLiveAcceptanceSummary(records),
     });
   } catch (error) {
+    if (error instanceof RateLimitError) {
+      return Response.json(
+        { error: "TOO_MANY_REQUESTS", message: error.message },
+        { status: 429 },
+      );
+    }
     return routeErrorResponse(error);
   }
 }
 
 export async function POST(request: Request) {
   try {
+    checkWriteLimit(request);
     const body = await request.json();
     const result = await recordGoLiveAcceptance({
       ...body,
@@ -41,6 +49,12 @@ export async function POST(request: Request) {
     });
     return Response.json(result, { status: result.duplicate ? 200 : 201 });
   } catch (error) {
+    if (error instanceof RateLimitError) {
+      return Response.json(
+        { error: "TOO_MANY_REQUESTS", message: error.message },
+        { status: 429 },
+      );
+    }
     return routeErrorResponse(error);
   }
 }

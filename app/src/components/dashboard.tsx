@@ -67,9 +67,7 @@ import {
   type OperationsPolicy,
 } from "@/domain/operations";
 import {
-  clearOperationsState,
   createOperationsSnapshot,
-  parseOperationsSnapshot,
   readOperationsState,
   serializeOperationsSnapshot,
   trimHistory,
@@ -1645,58 +1643,6 @@ export function Dashboard({
     setLastAction("Lokale KeyFlow-back-up gedownload.");
   }
 
-  async function restorePilotBackup(file: File) {
-    const restored = parseOperationsSnapshot(await file.text());
-    if (!restored.success) return { success: false, message: restored.error };
-    const migratedQuantities = migrateInventoryQuantities(
-      restored.state.catalogQuantities,
-      inventoryCatalog,
-    );
-    setCatalogQuantities(migratedQuantities);
-    setTransactions(restored.state.transactions);
-    setOperationsPolicy(restored.state.operationsPolicy);
-    setVerificationReports(restored.state.verificationReports);
-    setStockCounts(restored.state.stockCounts);
-    setPrintRequests(restored.state.printRequests);
-    setSkuOverrides(restored.state.skuOverrides);
-    setConversionLog(restored.state.conversionLog);
-    setModelGroupDecisions(restored.state.modelGroupDecisions);
-    setCompatibilityEvidenceRecords(restored.state.compatibilityEvidenceRecords);
-    if (identity.mode === "pilot") {
-      setRecoveryDrills(restored.state.recoveryDrills);
-      setGoLiveAcceptanceRecords(restored.state.goLiveAcceptanceRecords);
-      setWorkfloorTrials(restored.state.workfloorTrials);
-    }
-    setStockItems((items) => items.map((item) => ({
-      ...item,
-      stock: quantityForInventoryItem(migratedQuantities, item),
-    })));
-    setLastSavedAt(restored.state.savedAt);
-    setLastAction(`Back-up van ${formatPersistenceTime(restored.state.savedAt)} hersteld.`);
-    return { success: true, message: "Back-up gecontroleerd en hersteld." };
-  }
-
-  function resetPilotData() {
-    clearOperationsState(window.localStorage);
-    setCatalogQuantities({});
-    setTransactions([]);
-    setOperationsPolicy(defaultOperationsPolicy);
-    setVerificationReports([]);
-    setStockCounts([]);
-    setPrintRequests([]);
-    setSkuOverrides({});
-    setConversionLog([]);
-    setModelGroupDecisions([]);
-    setCompatibilityEvidenceRecords([]);
-    if (identity.mode === "pilot") {
-      setRecoveryDrills([]);
-      setGoLiveAcceptanceRecords([]);
-      setWorkfloorTrials([]);
-    }
-    setStockItems(initialLowStock);
-    setLastSavedAt(null);
-    setLastAction("Lokale pilotgegevens teruggezet naar de veilige beginstand.");
-  }
 
   return (
     <div className="app-shell">
@@ -2093,8 +2039,6 @@ export function Dashboard({
               message: persistenceMessage,
             }}
             onExportBackup={exportPilotBackup}
-            onRestoreBackup={restorePilotBackup}
-            onResetPilotData={resetPilotData}
           />
         )}
         {role === "management" && activeView === "settings" && (

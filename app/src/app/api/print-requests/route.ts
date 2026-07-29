@@ -1,4 +1,5 @@
 import { apiErrorResponse } from "@/server/api-errors";
+import { checkWriteLimit } from "@/server/rate-limit";
 import {
   createPrintRequestRecord,
   listPrintRequests,
@@ -22,6 +23,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    checkWriteLimit(request);
     const body = await request.json();
     const result = await createPrintRequestRecord({
       ...body,

@@ -1,4 +1,5 @@
 import { apiErrorResponse } from "@/server/api-errors";
+import { checkWriteLimit } from "@/server/rate-limit";
 import { askPrinterCheck, listPrinterChecks } from "@/server/printer-check-service";
 import { resolveRequestActorId } from "@/server/request-identity";
 
@@ -16,6 +17,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    checkWriteLimit(request);
     const body = await request.json().catch(() => ({}));
     const result = await askPrinterCheck({
       question: typeof body.question === "string" ? body.question : "",

@@ -1,4 +1,5 @@
 import { apiErrorResponse } from "@/server/api-errors";
+import { checkWriteLimit } from "@/server/rate-limit";
 import { settlePrintRequestRecord } from "@/server/print-request-service";
 import { resolveRequestActorId } from "@/server/request-identity";
 
@@ -9,6 +10,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    checkWriteLimit(request);
     const body = await request.json();
     const result = await settlePrintRequestRecord({
       ...body,

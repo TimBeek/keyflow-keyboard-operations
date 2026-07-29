@@ -1,3 +1,4 @@
+import { checkWriteLimit, RateLimitError } from "@/server/rate-limit";
 import { DatabaseConfigurationError } from "@/server/database";
 import {
   inventoryImportErrorResponse,
@@ -16,6 +17,7 @@ export async function PATCH(
   context: { params: Promise<{ batchId: string; issueId: string }> },
 ) {
   try {
+    checkWriteLimit(request);
     const { batchId, issueId } = await context.params;
     const body = await request.json();
     const actorId = await resolveRequestActorId(
@@ -43,6 +45,12 @@ export async function PATCH(
     });
     return Response.json(result);
   } catch (error) {
+    if (error instanceof RateLimitError) {
+      return Response.json(
+        { error: "TOO_MANY_REQUESTS", message: error.message },
+        { status: 429 },
+      );
+    }
     if (error instanceof RequestIdentityError) {
       const response = requestIdentityErrorResponse(error);
       return Response.json(response.body, { status: response.status });

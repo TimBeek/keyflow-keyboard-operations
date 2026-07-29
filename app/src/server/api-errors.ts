@@ -6,6 +6,7 @@ import { StickerSkuError } from "@/domain/sticker-sku";
 import { PrinterCheckError } from "@/domain/printer-check";
 import { AccessCodeError } from "./access-session";
 import { StickerSheetError } from "./sticker-sheet-service";
+import { RateLimitError } from "./rate-limit";
 import { AuthorizationError } from "./authorization-service";
 import { DatabaseConfigurationError } from "./database";
 import { RequestIdentityError } from "./request-identity";
@@ -15,6 +16,12 @@ import { RequestIdentityError } from "./request-identity";
  * herhaalt elke route dezelfde ladder, en dan wijkt er vroeg of laat één af.
  */
 export function apiErrorResponse(error: unknown) {
+  if (error instanceof RateLimitError) {
+    return {
+      status: 429,
+      body: { error: "TOO_MANY_REQUESTS", message: error.message },
+    };
+  }
   if (error instanceof RequestIdentityError) {
     return { status: error.status, body: { error: error.code, message: error.message } };
   }

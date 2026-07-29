@@ -1,4 +1,5 @@
 import { apiErrorResponse } from "@/server/api-errors";
+import { checkWriteLimit } from "@/server/rate-limit";
 import { listConversionLog, logConversion } from "@/server/conversion-log-service";
 import { resolveRequestActorId } from "@/server/request-identity";
 
@@ -19,6 +20,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    checkWriteLimit(request);
     const body = await request.json();
     const result = await logConversion({
       ...body,

@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { apiErrorResponse } from "@/server/api-errors";
+import { checkWriteLimit } from "@/server/rate-limit";
 import {
   ACCESS_COOKIE,
   createAccessToken,
@@ -25,6 +26,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    checkWriteLimit(request);
     const body = await request.json();
     const userId = typeof body.userId === "string" ? body.userId : "";
     const pin = typeof body.pin === "string" ? body.pin : "";

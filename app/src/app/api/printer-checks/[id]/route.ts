@@ -1,4 +1,5 @@
 import { apiErrorResponse } from "@/server/api-errors";
+import { checkWriteLimit } from "@/server/rate-limit";
 import { answerPrinterCheck, closePrinterCheck } from "@/server/printer-check-service";
 import { resolveRequestActorId } from "@/server/request-identity";
 
@@ -9,6 +10,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    checkWriteLimit(request);
     const body = await request.json();
     const result = await answerPrinterCheck({
       id: (await params).id,
@@ -29,6 +31,7 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
+    checkWriteLimit(request);
     return Response.json(await closePrinterCheck(
       (await params).id,
       await resolveRequestActorId(),
