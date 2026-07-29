@@ -59,6 +59,25 @@ export function readyToPrint(checks: PrinterCheckRecord[]) {
   return answer && answer.status === "ready" ? answer : null;
 }
 
+/** Hoe lang "Noviply print nu" op de werkvloer blijft staan. */
+export const printingVisibleMinutes = 45;
+
+/**
+ * Noviply is net begonnen met printen. De werkvloer hoort dat te weten: die
+ * hoort de printer draaien en moet niet denken dat er iets misgaat, en weet
+ * meteen dat er zo iets klaarligt.
+ */
+export function printingNow(checks: PrinterCheckRecord[], now: Date) {
+  return [...checks]
+    .filter((check) => check.status === "ready" && check.closedAt)
+    .sort((left, right) => (right.closedAt ?? "").localeCompare(left.closedAt ?? ""))
+    .find((check) => {
+      const started = new Date(check.closedAt!).getTime();
+      if (Number.isNaN(started)) return false;
+      return now.getTime() - started < printingVisibleMinutes * 60_000;
+    }) ?? null;
+}
+
 export function printerCheckStatusLabel(status: PrinterCheckStatus) {
   if (status === "ready") return "Printer staat klaar";
   if (status === "blocked") return "Printer staat niet klaar";

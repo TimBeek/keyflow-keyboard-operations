@@ -35,6 +35,17 @@ export type SharedOperationsState = {
   compatibilityEvidenceRecords: CompatibilityEvidenceRecord[];
   printerChecks: PrinterCheckRecord[];
   verificationReports: StickerVerificationReport[];
+  /** Vellen die na de Excel-import zijn toegevoegd. */
+  addedSheets: AddedSheet[];
+};
+
+export type AddedSheet = {
+  catalogKey: string;
+  storageNumber: number;
+  sku: string;
+  model: string;
+  layout: string;
+  stock: number;
 };
 
 /** Een fout die de gebruiker iets zegt, tegenover een verbinding die wegviel. */
@@ -282,4 +293,25 @@ export function postVerificationReport(payload: Record<string, unknown>) {
 /** Noviply begint met printen; het antwoord van de werkvloer vervalt daarmee. */
 export function closePrinterCheck(id: string) {
   return request<{ closed: true }>(`/api/printer-checks/${id}`, { method: "DELETE" });
+}
+
+/* ---------- een nieuw stickervel in de voorraad ---------- */
+
+export function fetchNextStorageNumber() {
+  return request<{ nextStorageNumber: number }>("/api/sticker-sheets", { cache: "no-store" });
+}
+
+export function addStickerSheet(payload: {
+  storageNumber: number;
+  sku: string;
+  model: string;
+  layout: string;
+  quantity: number;
+  notes: string;
+  idempotencyKey: string;
+}) {
+  return request<{ duplicate: boolean; storageNumber: number; sku: string }>(
+    "/api/sticker-sheets",
+    { method: "POST", body: JSON.stringify(payload) },
+  );
 }

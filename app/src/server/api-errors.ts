@@ -5,6 +5,7 @@ import { PrintRequestError } from "@/domain/print-requests";
 import { StickerSkuError } from "@/domain/sticker-sku";
 import { PrinterCheckError } from "@/domain/printer-check";
 import { AccessCodeError } from "./access-session";
+import { StickerSheetError } from "./sticker-sheet-service";
 import { AuthorizationError } from "./authorization-service";
 import { DatabaseConfigurationError } from "./database";
 import { RequestIdentityError } from "./request-identity";
@@ -30,7 +31,8 @@ export function apiErrorResponse(error: unknown) {
     || error instanceof ConversionLogError
     || error instanceof StickerSkuError
     || error instanceof AccessCodeError
-    || error instanceof PrinterCheckError) {
+    || error instanceof PrinterCheckError
+    || error instanceof StickerSheetError) {
     return { status: 422, body: { error: "RULE_VIOLATION", message: error.message } };
   }
   if (error instanceof z.ZodError) {

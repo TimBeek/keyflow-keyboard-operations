@@ -12,6 +12,7 @@ import { InventoryMutationDialog, type InventoryItem } from "@/components/invent
 import { OperationsManagement } from "@/components/operations-management";
 import { PrinterCheckPrompt } from "@/components/printer-check-prompt";
 import { SettingsWorkspace } from "@/components/settings-workspace";
+import { AddStickerSheetDialog } from "@/components/add-sticker-sheet";
 import type { AcceptanceSyncState } from "@/components/go-live-acceptance-center";
 import type { ContinuitySyncState } from "@/components/production-readiness-center";
 import type { WorkfloorSyncState } from "@/components/workfloor-acceptance-center";
@@ -98,6 +99,7 @@ import {
   KeyflowApiError,
   KeyflowOfflineError,
   type SharedOperationsState,
+  type AddedSheet,
 } from "@/lib/keyflow-api";
 import {
   addPendingWrite,
@@ -271,6 +273,7 @@ export function Dashboard({
   const [advisorOpen, setAdvisorOpen] = useState(false);
   const [accessOpen, setAccessOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
+  const [addSheetOpen, setAddSheetOpen] = useState(false);
   const [reviewBatchId, setReviewBatchId] = useState<string | null>(null);
   const [stockItems, setStockItems] = useState(initialLowStock);
   const [catalogQuantities, setCatalogQuantities] = useState<Record<string, number>>({});
@@ -326,6 +329,8 @@ export function Dashboard({
   const [policyVersion, setPolicyVersion] = useState(0);
   /** Welke layouts de toetsenbordsprinter aankan; leeg = nog niet ingevuld. */
   const [directPrintLayouts, setDirectPrintLayouts] = useState<string[]>([]);
+  /** Vellen die na de Excel-import zijn toegevoegd; die staan niet in de bron. */
+  const [addedSheets, setAddedSheets] = useState<AddedSheet[]>([]);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [persistenceMessage, setPersistenceMessage] = useState("Lokale pilotopslag laden…");
   const [mutation, setMutation] = useState<{
@@ -344,6 +349,40 @@ export function Dashboard({
         ? "Noviply"
         : "Medewerker";
   const actorInitials = initialsFor(actorName);
+  /**
+   * De ingebouwde catalogus komt uit de Excel. Wat daarna is toegevoegd staat
+   * alleen in de database — zonder samenvoegen zou een nieuw vel voor de
+   * werkvloer onvindbaar blijven tot de volgende import.
+   */
+  const workingCatalog = useMemo(() => {
+    // Een toegevoegd vel vervangt de geblokkeerde bronregel met hetzelfde
+    // hangmapnummer; anders zou de hangmap twee keer voorkomen.
+    const replaced = new Set(addedSheets.map((sheet) => sheet.storageNumber));
+    return [
+    ...inventoryCatalog.filter((item) => !replaced.has(item.storageNumber)),
+    ...addedSheets.map((sheet) => ({
+      catalogKey: sheet.catalogKey,
+      sourceRow: 0,
+      model: sheet.model,
+      modelAliases: [sheet.model],
+      sku: sheet.sku,
+      layout: sheet.layout as InventoryCatalogItem["layout"],
+      stock: sheet.stock,
+      reserved: 0,
+      averageWeeklyDemand: 0,
+      leadTimeDays: 0,
+      safetyStockWeeks: 0,
+      location: "Hangmappenwagen" as const,
+      storageNumber: sheet.storageNumber,
+      supplier: "Noviply" as const,
+      unitCost: 0,
+      compatibleModels: 1,
+      dataQuality: "ready" as const,
+      dataQualityIssues: [],
+      planningDataStatus: "unconfigured" as const,
+    })),
+    ];
+  }, [addedSheets]);
   // In pilotmodus handelt elke rol met een eigen account, zodat de database de
   // rechten kan afdwingen. Zie pilot-actors.ts voor waarom dat eerlijk is.
   // Met een persoonlijke login bepaalt de server zelf wie er handelt; dan mag
@@ -451,6 +490,7 @@ export function Dashboard({
     if (state.operationsPolicy) setOperationsPolicy(state.operationsPolicy);
     setPolicyVersion(state.operationsPolicyVersion);
     setDirectPrintLayouts(state.directPrintLayouts);
+    setAddedSheets(state.addedSheets);
     setStockItems((items) => items.map((item) => ({
       ...item,
       stock: quantityForInventoryItem(state.catalogQuantities, item),
@@ -1794,9 +1834,10 @@ export function Dashboard({
           <EmployeeWorkspace
             directPrintLayouts={directPrintLayouts}
             printRequests={printRequests}
+            printerChecks={printerChecks}
             onRequestPrintSticker={requestPrintSticker}
             onRecordConversion={recordConversion}
-            catalog={inventoryCatalog}
+            catalog={workingCatalog}
             actorName={actorName}
             orders={[]}
             quantities={catalogQuantities}
@@ -1823,6 +1864,11 @@ export function Dashboard({
           <button className="action-card conversion" onClick={() => setAdvisorOpen(true)}>
             <span className="action-icon"><Icon name="convert" size={26} /></span>
             <span><strong>Nieuwe conversie</strong><small>Vind de beste methode voor een laptop</small></span>
+            <Icon name="arrow" />
+          </button>
+          <button className="action-card" onClick={() => setAddSheetOpen(true)}>
+            <span className="action-icon"><Icon name="plus" size={26} /></span>
+            <span><strong>Stickervel toevoegen</strong><small>Nieuw model dat nog geen hangmap heeft</small></span>
             <Icon name="arrow" />
           </button>
           <button className="action-card import" onClick={() => setImportOpen(true)}>
@@ -2163,6 +2209,14 @@ export function Dashboard({
             </div>
           </div>
         )}
+        <AddStickerSheetDialog
+          open={addSheetOpen}
+          onClose={() => setAddSheetOpen(false)}
+          onAdded={() => {
+            void refreshSharedState();
+            setLastAction("Nieuw stickervel toegevoegd aan de voorraad.");
+          }}
+        />
         <ConversionAdvisor open={advisorOpen} onClose={() => setAdvisorOpen(false)} />
         <AccessManagementDialog
           open={accessOpen}

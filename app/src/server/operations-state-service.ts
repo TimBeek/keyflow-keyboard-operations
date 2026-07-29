@@ -1,4 +1,5 @@
 import "server-only";
+import { inventoryCatalog } from "@/data/inventory-catalog";
 import { requirePermission } from "./authorization-service";
 import { database } from "./database";
 import { listConversionLog } from "./conversion-log-service";
@@ -18,6 +19,26 @@ import {
  * verzoeken zouden elkaar kunnen kruisen en een half beeld opleveren; dit is een
  * momentopname die bij elkaar hoort.
  */
+
+type AddedSheetRow = {
+  sku: string;
+  name: string;
+  hanging_file_number: number;
+  layout_code: string;
+  on_hand: number;
+};
+
+/**
+ * Hangmappen die de ingebouwde catalogus al bruikbaar kent. Bewust alleen de
+ * bruikbare: negen regels kwamen zonder artikelnummer uit de Excel en staan
+ * geblokkeerd. Krijgt zo'n hangmap alsnog een echt vel, dan hoort die er via de
+ * database gewoon bij te komen.
+ */
+const knownStorageNumbers = new Set(
+  inventoryCatalog
+    .filter((item) => item.dataQuality === "ready")
+    .map((item) => item.storageNumber),
+);
 
 function catalogKeyFor(hangingFileNumber: number) {
   return `hangmap-${String(hangingFileNumber).padStart(3, "0")}`;
@@ -61,6 +82,7 @@ export async function readOperationsState(actorId: string) {
     compatibilityEvidenceRecords,
     printerChecks,
     verificationReports,
+    allSheets,
   ] = await Promise.all([
     sql<BalanceRow[]>`
       select s.hanging_file_number, b.on_hand
@@ -89,6 +111,19 @@ export async function readOperationsState(actorId: string) {
     listCompatibilityEvidence(),
     listPrinterChecks(),
     listVerificationReports(),
+    // Vellen die na de Excel-import zijn toegevoegd. Die staan alleen in de
+    // database, terwijl de werkvloer in de ingebouwde catalogus zoekt — zonder
+    // dit zou een nieuw vel onvindbaar blijven tot de volgende import.
+    sql<AddedSheetRow[]>`
+      select s.sku, s.name, s.hanging_file_number, l.code as layout_code,
+             coalesce(b.on_hand, 0) as on_hand
+      from sticker_skus s
+      join keyboard_layouts l on l.id = s.layout_id
+      left join inventory_balances b on b.sku_id = s.id
+      where s.hanging_file_number is not null
+        and s.status = 'active'
+      order by s.hanging_file_number
+    `,
   ]);
 
   const catalogQuantities: Record<string, number> = {};
@@ -132,5 +167,16 @@ export async function readOperationsState(actorId: string) {
     compatibilityEvidenceRecords,
     printerChecks,
     verificationReports,
+    // Alleen wat de ingebouwde catalogus niet kent; de rest zit er al in.
+    addedSheets: allSheets
+      .filter((row) => !knownStorageNumbers.has(row.hanging_file_number))
+      .map((row) => ({
+        catalogKey: catalogKeyFor(row.hanging_file_number),
+        storageNumber: row.hanging_file_number,
+        sku: row.sku,
+        model: splitName(row.name).model,
+        layout: row.layout_code.replace(/_/g, " "),
+        stock: row.on_hand,
+      })),
   };
 }

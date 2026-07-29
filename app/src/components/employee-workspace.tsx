@@ -24,7 +24,6 @@ import {
 import {
   getSaleValueBand,
   policyValueForBand,
-  resolveModelQuery,
   saleValueBands,
   type SaleValueBandId,
 } from "@/domain/order-entry";
@@ -39,7 +38,9 @@ import {
   targetLayoutOptions,
 } from "@/domain/keyboard-layouts";
 import { catalogModelOptions } from "@/domain/model-catalog";
+import { buildModelChoices, searchModels } from "@/domain/model-search";
 import type { PrintRequestInput, PrintRequestRecord } from "@/domain/print-requests";
+import { printingNow, type PrinterCheckRecord } from "@/domain/printer-check";
 import {
   attentionCount,
   groupPrintRequests,
@@ -116,6 +117,7 @@ type Props = {
   /** De layouts die de toetsenbordsprinter aankan; leeg = nog niet ingevuld. */
   directPrintLayouts: string[];
   printRequests: PrintRequestRecord[];
+  printerChecks: PrinterCheckRecord[];
   compatibilityEvidenceRecords: CompatibilityEvidenceRecord[];
   onInventoryMutation: (request: InventoryMutationRequest) => Promise<InventoryMutationOutcome>;
   onStickerVerification: (input: StickerVerificationReportInput) => unknown;
@@ -130,6 +132,7 @@ export function EmployeeWorkspace({
   policy,
   directPrintLayouts,
   printRequests,
+  printerChecks,
   compatibilityEvidenceRecords,
   onInventoryMutation,
   onStickerVerification,
@@ -163,11 +166,16 @@ export function EmployeeWorkspace({
   const [failureReason, setFailureReason] = useState<StickerVerificationFailureReason>("position_mismatch");
 
   const modelOptions = useMemo(() => catalogModelOptions(catalog), [catalog]);
-  const resolution = useMemo(
-    () => resolveModelQuery(modelQuery, modelOptions),
-    [modelOptions, modelQuery],
+  /**
+   * Niet alleen de modellen met een hangmap: er gaan er bijna tweeduizend door
+   * de handen, en juist die zonder vel hebben een andere oplossing nodig.
+   */
+  const modelChoices = useMemo(() => buildModelChoices(modelOptions), [modelOptions]);
+  const modelMatches = useMemo(
+    () => searchModels(modelChoices, modelQuery),
+    [modelChoices, modelQuery],
   );
-  const model = chosenModel ?? (resolution.status === "unique" ? resolution.model : "");
+  const model = chosenModel ?? (modelMatches.length === 1 ? modelMatches[0].name : "");
 
   const saleBand = getSaleValueBand(saleBandId);
   const saleValue = policyValueForBand(saleBand, policy.thresholdEur);
@@ -435,6 +443,16 @@ export function EmployeeWorkspace({
         </button>
       </div>
 
+      {printingNow(printerChecks, now) && (
+        <div className="printing-now" role="status">
+          <span className="printing-dot" aria-hidden="true" />
+          <span>
+            <strong>Noviply print op dit moment</strong>
+            <small>De printer draait. Zodra een sticker klaar is, zie je dat bij “Bij Noviply”.</small>
+          </span>
+        </div>
+      )}
+
       {tab === "advice" && (
         <section className="worker-panel">
           <div className="worker-fields">
@@ -442,15 +460,12 @@ export function EmployeeWorkspace({
               <span>1 · Welke laptop?</span>
               <input
                 ref={modelInputRef}
-                list="worker-models"
                 value={modelQuery}
+                autoComplete="off"
                 onChange={(event) => { setModelQuery(event.target.value); setChosenModel(null); setAdviceMessage(null); }}
                 placeholder="Typ modelnummer, bijvoorbeeld 5420"
                 autoFocus
               />
-              <datalist id="worker-models">
-                {modelOptions.map((option) => <option key={option} value={option} />)}
-              </datalist>
             </label>
 
             <label>
@@ -558,18 +573,25 @@ export function EmployeeWorkspace({
 
           {!hasAnswer && (
             <div className="worker-waiting">
-              {resolution.status === "multiple" ? (
+              {modelMatches.length > 1 ? (
                 <>
                   <strong>Welke bedoel je?</strong>
                   <div className="worker-choices">
-                    {resolution.matches.map((candidate) => (
-                      <button key={candidate} onClick={() => { setChosenModel(candidate); setModelQuery(candidate); }}>
-                        {candidate}
+                    {modelMatches.map((candidate) => (
+                      <button
+                        key={candidate.name}
+                        className={candidate.source === "hangmap" ? "has-sheet" : ""}
+                        onClick={() => { setChosenModel(candidate.name); setModelQuery(candidate.name); }}
+                      >
+                        <span>{candidate.name}</span>
+                        {/* Ligt er een vel klaar, of komt dit op een andere
+                            oplossing uit? Dat scheelt de medewerker een gang. */}
+                        <small>{candidate.source === "hangmap" ? "vel in de hangmap" : "geen vel"}</small>
                       </button>
                     ))}
                   </div>
                 </>
-              ) : resolution.status === "none" && modelQuery.trim().length > 1 ? (
+              ) : modelMatches.length === 0 && modelQuery.trim().length > 1 ? (
                 <>
                   <strong>Dit model kennen we niet.</strong>
                   <span>Controleer het nummer op de onderkant van de laptop, of vraag je teamleider.</span>

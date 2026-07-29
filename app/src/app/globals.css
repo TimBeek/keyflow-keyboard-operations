@@ -2618,3 +2618,71 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 @media (max-width: 860px) {
   .layout-rules > div, .layout-rules > div.has-rule { grid-template-columns: 1fr; }
 }
+
+/* Modelkeuze: staat er een vel voor klaar, of komt dit op iets anders uit? */
+.worker-choices button {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  text-align: left;
+}
+.worker-choices button small {
+  flex: none;
+  font-size: 11px;
+  color: var(--text-3);
+}
+.worker-choices button.has-sheet small { color: var(--ok); }
+
+/* Een nieuw stickervel in de voorraad zetten. */
+.sheet-modal { width: min(520px, 100%); }
+.sheet-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.sheet-grid label, .sheet-field { display: grid; gap: 6px; }
+.sheet-grid span, .sheet-field span {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.sheet-grid input, .sheet-grid select, .sheet-field input {
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 14px;
+}
+
+/* Noviply print op dit moment: de werkvloer hoort de printer draaien en moet
+   niet denken dat er iets misgaat. */
+.printing-now {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 18px;
+  margin-bottom: 16px;
+  border: 1px solid color-mix(in srgb, var(--teal) 45%, transparent);
+  border-radius: 12px;
+  background: var(--signal-soft);
+}
+.printing-now strong { display: block; font-size: 14px; color: var(--text); }
+.printing-now small { color: var(--text-2); font-size: 12.5px; }
+.printing-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--teal);
+  animation: printing-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes printing-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .25; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .printing-dot { animation: none; }
+}
