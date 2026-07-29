@@ -1,8 +1,16 @@
+import { readdir } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import postgres from "postgres";
 import {
   loadProductionSource,
   productionPlanSummary,
 } from "./lib/production-source";
+
+const migrationsDirectory = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../db/migrations",
+);
 
 async function main() {
   const databaseUrl = process.env.DATABASE_URL;
@@ -26,17 +34,30 @@ async function main() {
   };
 
   try {
-    const [migration] = await sql<{ name: string }[]>`
-      select name
-      from schema_migrations
-      order by applied_at desc, name desc
-      limit 1
-    `;
+    /**
+     * Niet één vast migratienummer: er komen migraties bij, en dan zou deze
+     * controle afgaan op iets wat juist goed gaat. Wat moet kloppen is dat er
+     * niets openstaat.
+     */
+    const onDisk = (await readdir(migrationsDirectory))
+      .filter((name) => name.endsWith(".sql"))
+      .sort();
+    const applied = new Set(
+      (await sql<{ name: string }[]>`select name from schema_migrations`)
+        .map(({ name }) => name),
+    );
+    const pending = onDisk.filter((name) => !applied.has(name));
     check(
-      migration?.name === "0016_workfloor_acceptance_trials.sql",
-      "De nieuwste operationele migratie 0016 is niet toegepast.",
+      pending.length === 0,
+      `Nog niet toegepaste migraties: ${pending.join(", ")}. Voer \`npm run db:migrate\` uit.`,
     );
 
+    /**
+     * De nulmeting blijft staan zoals hij is geïmporteerd; latere tellingen
+     * gaan als bijstelling door het transactielog. De hash van het bronbestand
+     * van vandaag hoort er dus niet mee te matchen — dat zou juist betekenen
+     * dat er opnieuw een import overheen is gegaan.
+     */
     const [snapshot] = await sql<{
       row_count: number;
       total_quantity: number;
@@ -44,18 +65,36 @@ async function main() {
     }[]>`
       select row_count, total_quantity, status
       from inventory_source_snapshots
-      where source_sha256 = ${plan.metadata.sha256}
+      where status = 'applied'
+      order by applied_at desc nulls last, created_at desc
       limit 1
     `;
-    check(Boolean(snapshot), "De canonieke inventarisbronsnapshot ontbreekt.");
-    check(snapshot?.status === "applied", "De bronsnapshot is niet volledig toegepast.");
+    check(Boolean(snapshot), "Er is geen toegepaste inventarisbronsnapshot; de nulmeting ontbreekt.");
     check(
-      snapshot?.row_count === expected.sourceRows,
-      "Het bronsnapshotaantal wijkt af.",
+      snapshot === undefined || snapshot.row_count === expected.sourceRows,
+      "De nulmeting telt een ander aantal hangmappen dan de bronlijst.",
+    );
+
+    /**
+     * De controle die er echt toe doet: staat in de app hetzelfde als in de
+     * kast? Elke hangmap met een artikelnummer wordt vergeleken met de laatste
+     * telling. Wijkt er iets af, dan is er geboekt zonder dat de telling is
+     * bijgewerkt — of andersom.
+     */
+    const balances = await sql<{ sku: string; on_hand: number }[]>`
+      select s.sku, b.on_hand
+      from inventory_balances b
+      inner join sticker_skus s on s.id = b.sku_id
+    `;
+    const onHandBySku = new Map(balances.map((row) => [row.sku, row.on_hand]));
+    const drifted = plan.operationalRows.filter(
+      (row) => onHandBySku.get(row.sku) !== row.stock,
     );
     check(
-      snapshot?.total_quantity === expected.sourceQuantity,
-      "Het bronsnapshottotaal wijkt af.",
+      drifted.length === 0,
+      `Voorraad wijkt af van de laatste telling bij hangmap `
+      + `${drifted.map(({ storageNumber }) => storageNumber).join(", ")}. `
+      + "Voer `npm run stock:sync` uit om het verschil vast te leggen.",
     );
 
     const [inventory] = await sql<{
@@ -109,7 +148,7 @@ async function main() {
 
     console.log("Operationele readinesscontrole geslaagd.");
     console.table({
-      migration: migration?.name,
+      migrations: `${onDisk.length} toegepast, 0 open`,
       sourceRows: snapshot?.row_count,
       inventoryBalances: inventory?.balances,
       inventoryOnHand: inventory?.on_hand,
