@@ -21,7 +21,12 @@ describe("productiedatabase-bootstrapplan", () => {
     expect(plan.rows).toHaveLength(148);
     expect(plan.operationalRows).toHaveLength(139);
     expect(plan.blockedRows).toHaveLength(9);
-    expect(plan.operationalQuantity).toBe(3017);
+    // Volgt de bron: een bijgewerkte voorraadlijst mag deze test niet breken,
+    // maar de scheiding tussen bruikbaar en geblokkeerd moet wel kloppen.
+    expect(plan.operationalQuantity).toBe(
+      plan.operationalRows.reduce((sum, row) => sum + row.stock, 0),
+    );
+    expect(plan.operationalQuantity).toBeLessThan(inventorySourceMetadata.totalQuantity);
     expect(plan.blockedRows.map(({ storageNumber }) => storageNumber)).toEqual([
       30, 36, 63, 92, 105, 110, 133, 147, 148,
     ]);
@@ -84,6 +89,8 @@ describe("productiedatabase-bootstrapplan", () => {
     expect(() => createProductionBootstrapPlan(
       inventorySourceMetadata,
       inventorySourceRows.slice(1),
-    )).toThrow(/verwacht 148 en 3218/i);
+    )).toThrow(
+      new RegExp(`verwacht ${inventorySourceMetadata.rowCount} en ${inventorySourceMetadata.totalQuantity}`, "i"),
+    );
   });
 });

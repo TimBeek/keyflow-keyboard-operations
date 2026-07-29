@@ -29,7 +29,7 @@ export function createInventoryCsv(
     item.sourceNote ?? "",
     item.dataQuality === "ready" ? "Operationeel" : "Geblokkeerd",
     item.dataQualityIssues.join(" "),
-    item.planningDataStatus === "sample" ? "Voorbeeldparameters" : "Niet geconfigureerd",
+    item.planningDataStatus === "measured" ? "Verbruik gemeten" : "Verbruik nog niet gemeten",
   ]);
 
   return toCsv(headers, rows);

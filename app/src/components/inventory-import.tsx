@@ -105,13 +105,10 @@ export function InventoryImportDialog({ open, onClose, onReview }: Props) {
             />
             <div className="import-safety">
               <strong>Wat gebeurt er bij uploaden?</strong>
-              <span>1. Alle 148 regels worden afzonderlijk bewaard.</span>
+              <span>1. Elke regel wordt afzonderlijk bewaard.</span>
               <span>2. SKU’s, aantallen, layouts en compatibiliteit worden gecontroleerd.</span>
               <span>3. Fouten en mogelijke dubbelen gaan eerst naar beoordeling.</span>
             </div>
-            <button className="demo-review-link" onClick={() => review("demo")}>
-              Bekijk eerst de 43 bevindingen uit het huidige bronbestand
-            </button>
             {error && <div className="form-error">{error}</div>}
           </div>
         ) : (

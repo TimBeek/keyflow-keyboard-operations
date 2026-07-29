@@ -44,11 +44,20 @@ const totalQuantity = rows.reduce((sum, row) => sum + row.stock, 0);
 if (storageNumbers.size !== rows.length) {
   throw new Error("De Productie-lijst bevat dubbele hangmapnummers.");
 }
-if (rows.length !== 148 || totalQuantity !== 3218) {
-  throw new Error(
-    `Onverwachte broninhoud: ${rows.length} regels en ${totalQuantity} vellen; verwacht 148 en 3218.`,
-  );
+if (rows.length === 0) {
+  throw new Error("De Productie-lijst is leeg.");
 }
+if (rows.some(({ stock }) => stock < 0)) {
+  throw new Error("De Productie-lijst bevat een negatieve voorraad.");
+}
+
+/**
+ * Hier stond de eis dat het er precies 148 regels en 3218 vellen moesten zijn.
+ * Dat was een momentopname van één bestand: elke bijgewerkte voorraadlijst zou
+ * de import laten mislukken. De structuur wordt nog wél gecontroleerd, en de
+ * gevonden aantallen komen in beeld zodat een mens ze kan nakijken.
+ */
+console.log(`Gelezen: ${rows.length} hangmappen, ${totalQuantity} vellen.`);
 
 const sourceHash = createHash("sha256")
   .update(await readFile(resolvedInput))

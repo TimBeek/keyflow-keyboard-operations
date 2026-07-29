@@ -51,7 +51,7 @@ type Filter = "open" | "all" | Severity;
 
 export function ImportReviewDialog({ batchId, onClose }: Props) {
   const [data, setData] = useState<ReviewData | null>(() =>
-    batchId === "demo" ? createDemoReview() : null,
+    null,
   );
   const [filter, setFilter] = useState<Filter>("open");
   const [activeIssueId, setActiveIssueId] = useState<string | null>(null);
@@ -401,69 +401,3 @@ function fieldLabel(field: string) {
   } as Record<string, string>)[field] ?? field;
 }
 
-function createDemoReview(): ReviewData {
-  const errors: ReviewIssue[] = [
-    demoIssue("error", 32, "sku", "INVALID_SKU", "Ontbrekend of afwijkend artikelnummer: ,,,,,,,,,,", "HP ProBook 640", ""),
-    demoIssue("error", 65, "sku", "INVALID_SKU", "Ontbrekend of afwijkend artikelnummer: leeg", "Lenovo ThinkPad T480", ""),
-    demoIssue("error", 150, "sku", "INVALID_SKU", "Ontbrekend of afwijkend artikelnummer: leeg", "Dell Latitude 5410", ""),
-  ];
-  const warningRows = [10, 24, 27, 28, 43, 45, 56, 57, 71, 79, 84, 98, 106, 108, 110, 117, 118, 121, 125, 128, 132, 135, 136, 137, 139, 140, 142, 145, 148, 149, 150];
-  const warnings = warningRows.map((row) =>
-    demoIssue("warning", row, "linkedModels", "MISSING_COMPATIBILITY", "Compatibiliteit ontbreekt of bevat een placeholder.", `Laptopmodel rij ${row}`, `NB10${row}E1NL`),
-  );
-  const reviews = [
-    [38, "sku", "DUPLICATE_SKU", "Dubbel artikelnummer NB10100E1NL op rijen 38 en 149."],
-    [94, "sku", "DUPLICATE_SKU", "Dubbel artikelnummer NB10021E1NL op rijen 94 en 107."],
-    [112, "sku", "DUPLICATE_SKU", "Dubbel artikelnummer NB10190E1NL op rijen 112 en 135."],
-    [10, "model", "DUPLICATE_MODEL", "Dubbele modelnaam na normalisatie op rijen 10 en 77."],
-    [20, "model", "DUPLICATE_MODEL", "Dubbele modelnaam na normalisatie op rijen 20 en 146."],
-    [38, "model", "DUPLICATE_MODEL", "Dubbele modelnaam na normalisatie op rijen 38 en 149."],
-    [43, "model", "DUPLICATE_MODEL", "Dubbele modelnaam na normalisatie op rijen 43 en 148."],
-    [109, "model", "DUPLICATE_MODEL", "Dubbele modelnaam na normalisatie op rijen 109 en 141."],
-    [114, "model", "DUPLICATE_MODEL", "Dubbele modelnaam na normalisatie op rijen 114 en 150."],
-  ].map(([row, field, code, message]) =>
-    demoIssue("review", Number(row), String(field), String(code), String(message), `Laptopmodel rij ${row}`, field === "sku" ? String(message).split(" ")[2] : `NB10${row}E1NL`),
-  );
-
-  return {
-    batchId: "demo",
-    fileName: "Toetsenbordstickers voorraad.xlsx · voorbeeldweergave",
-    status: "needs_review",
-    recordCount: 148,
-    totalQuantity: 3218,
-    errorCount: errors.length,
-    warningCount: warnings.length,
-    reviewCount: reviews.length,
-    openIssueCount: errors.length + warnings.length + reviews.length,
-    issues: [...errors, ...reviews, ...warnings],
-  };
-}
-
-function demoIssue(
-  severity: Severity,
-  sourceRow: number,
-  field: string,
-  code: string,
-  message: string,
-  model: string,
-  sku: string,
-): ReviewIssue {
-  return {
-    issueId: `demo-${severity}-${sourceRow}-${field}`,
-    severity,
-    field,
-    code,
-    message,
-    resolved: false,
-    resolutionNote: null,
-    resolutionAction: null,
-    correctedValue: null,
-    resolvedAt: null,
-    sourceRow,
-    model,
-    quantity: null,
-    layout: "QWERTY US",
-    sku,
-    linkedModels: null,
-  };
-}

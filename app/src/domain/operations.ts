@@ -210,13 +210,21 @@ export function calculateAbcAnalysis(
     };
   }).sort((a, b) => b.usageValue - a.usageValue || b.issueUnits - a.issueUnits);
 
+  // Zolang er geen inkoopprijs bekend is, is verbruikswaarde overal nul en zou
+  // alles als zachtloper eindigen. Dan rangschikken we op aantallen: dat meet
+  // hetzelfde — wat gaat er hard doorheen — zonder een prijs te verzinnen.
   const totalUsageValue = rows.reduce((sum, row) => sum + row.usageValue, 0);
+  const totalUnits = rows.reduce((sum, row) => sum + row.issueUnits, 0);
+  const rankOnUnits = totalUsageValue === 0 && totalUnits > 0;
+  const total = rankOnUnits ? totalUnits : totalUsageValue;
+  const weightOf = (row: { usageValue: number; issueUnits: number }) =>
+    rankOnUnits ? row.issueUnits : row.usageValue;
   let cumulativeValue = 0;
 
   return rows.map((row) => {
-    const percentageBefore = totalUsageValue === 0 ? 100 : (cumulativeValue / totalUsageValue) * 100;
-    cumulativeValue += row.usageValue;
-    const cumulativePercentage = totalUsageValue === 0 ? 100 : (cumulativeValue / totalUsageValue) * 100;
+    const percentageBefore = total === 0 ? 100 : (cumulativeValue / total) * 100;
+    cumulativeValue += weightOf(row);
+    const cumulativePercentage = total === 0 ? 100 : (cumulativeValue / total) * 100;
     const abcClass = percentageBefore < policy.abcAThreshold
       ? "A"
       : percentageBefore < policy.abcBThreshold
@@ -225,7 +233,7 @@ export function calculateAbcAnalysis(
 
     return {
       ...row,
-      sharePercentage: totalUsageValue === 0 ? 0 : (row.usageValue / totalUsageValue) * 100,
+      sharePercentage: total === 0 ? 0 : (weightOf(row) / total) * 100,
       cumulativePercentage,
       abcClass,
       velocity: abcClass === "A" ? "Hardloper" : abcClass === "B" ? "Middenloper" : "Zachtloper",

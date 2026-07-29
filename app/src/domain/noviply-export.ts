@@ -14,7 +14,7 @@ export type NoviplyStockRow = {
   sku: string;
   layout: string;
   stock: number;
-  threshold: number;
+  threshold: number | null;
   shortfall: number;
 };
 
@@ -36,10 +36,13 @@ export function createNoviplyStockCsv(rows: NoviplyStockRow[]) {
     row.model,
     row.layout,
     row.stock,
-    row.threshold,
+    // Een leeg vak zegt "niet bekend"; een nul zou zeggen "nul nodig".
+    row.threshold ?? "",
     // Wie de kolom optelt wil het aantal, niet een streepje.
     row.shortfall > 0 ? row.shortfall : 0,
-    row.shortfall > 0 ? "Below minimum" : "OK",
+    row.threshold === null
+      ? (row.stock === 0 ? "Empty" : "No minimum yet")
+      : row.shortfall > 0 ? "Below minimum" : "OK",
   ]));
 }
 

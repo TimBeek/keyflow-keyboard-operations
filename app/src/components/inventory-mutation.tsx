@@ -13,7 +13,8 @@ export type InventoryItem = {
   sku: string;
   layout: string;
   stock: number;
-  threshold: number;
+  /** Null zolang er geen gemeten verbruik is om een minimum uit af te leiden. */
+  threshold: number | null;
 };
 
 type Props = {

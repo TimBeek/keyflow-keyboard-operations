@@ -25,7 +25,7 @@ const item: InventoryCatalogItem = {
   compatibleModels: 2,
   dataQuality: "ready",
   dataQualityIssues: [],
-  planningDataStatus: "sample",
+  planningDataStatus: "unconfigured",
 };
 
 const validInput = {

@@ -1,6 +1,12 @@
+import { inventorySourceMetadata } from "@/data/inventory-source.generated";
+/**
+ * De bootstrap controleert dat de database dezelfde bron krijgt als de app.
+ * Vaste aantallen zouden bij elke bijgewerkte voorraadlijst afketsen, dus komen
+ * ze uit de gegenereerde bron zelf.
+ */
 export const canonicalInventoryExpectation = {
-  rowCount: 148,
-  totalQuantity: 3218,
+  rowCount: inventorySourceMetadata.rowCount,
+  totalQuantity: inventorySourceMetadata.totalQuantity,
 } as const;
 
 export const productionLayoutCodes = {

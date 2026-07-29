@@ -13,9 +13,9 @@ export type InventorySourceRow = {
 export const inventorySourceMetadata = {
   "fileName": "Toetsenbordstickers voorraad.xlsx",
   "sheet": "Productie",
-  "sha256": "30f6d1884c081c6ef72e99f7db779a7ef5a878b12a76fcd1ab85bc42b616ef7a",
+  "sha256": "38fcd3f3e311838550ced257547f227ade723c925d5b24a4d46daddc58adcca5",
   "rowCount": 148,
-  "totalQuantity": 3218
+  "totalQuantity": 3164
 } as const;
 
 export const inventorySourceRows: readonly InventorySourceRow[] = [
@@ -143,7 +143,7 @@ export const inventorySourceRows: readonly InventorySourceRow[] = [
     "sourceRow": 15,
     "storageNumber": 13,
     "model": "Dell Latitude 3510",
-    "stock": 10,
+    "stock": 11,
     "layout": "QWERTY US",
     "sku": "NB10067E1NL",
     "linkedModels": "Dell Latitude 3510, Dell Latitude 3540",
@@ -1193,7 +1193,7 @@ export const inventorySourceRows: readonly InventorySourceRow[] = [
     "sourceRow": 120,
     "storageNumber": 118,
     "model": "HP Probook 430 G8",
-    "stock": 31,
+    "stock": 0,
     "layout": "QWERTY US",
     "sku": "NB10204E1NL",
     "linkedModels": "HP ProBook 445 G9",
@@ -1493,7 +1493,7 @@ export const inventorySourceRows: readonly InventorySourceRow[] = [
     "sourceRow": 150,
     "storageNumber": 148,
     "model": "Fujitsu lifebook U7410",
-    "stock": 24,
+    "stock": 0,
     "layout": "QWERTY US",
     "sku": "",
     "linkedModels": "",

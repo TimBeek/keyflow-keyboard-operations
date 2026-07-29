@@ -527,7 +527,7 @@ export function OperationsManagement({
       {showStockStats && (
         <section className="workspace-stats">
           <article><span>Actuele catalogusvoorraad</span><strong>{currentStock}</strong><small>vellen per fysieke hangmap</small></article>
-          <article><span>Uitgeboekt</span><strong>{issued}</strong><small>12-wekenbasis + live sessie</small></article>
+          <article><span>Uitgeboekt</span><strong>{issued}</strong><small>sinds de start geregistreerd</small></article>
           <article><span>Ingeboekt</span><strong>{received}</strong><small>leveringen en correcties</small></article>
           <article className={mismatchCount + blockedUnusedCount > 0 ? "attention" : ""}><span>Controle-afwijkingen</span><strong>{verificationAlertCount}</strong><small>{mismatchCount} uitval · {blockedUnusedCount} zonder afboeking</small></article>
         </section>
@@ -541,7 +541,6 @@ export function OperationsManagement({
               <h2>Voorraadbewegingen en conversiebeleid</h2>
               <p>Beheer het werknemersadvies en stuur op werkelijk in- en uitgaand gebruik.</p>
             </div>
-            <span className="data-badge">12 weken voorbeelddata + sessieboekingen</span>
           </div>
         )}
 
@@ -575,7 +574,7 @@ export function OperationsManagement({
                   <article className={`abc-card class-${abcClass.toLowerCase()}`} key={abcClass}>
                     <span>Klasse {abcClass}</span>
                     <strong>{rows.length} SKU&apos;s</strong>
-                    <small>{abcClass === "A" ? "Hardlopers: hoogste gebruikswaarde" : abcClass === "B" ? "Middenlopers: regelmatig gebruik" : "Zachtlopers: beperkt of geen verbruik"}</small>
+                    <small>{abcClass === "A" ? "Hardlopers: gaan het snelst door de hangmap" : abcClass === "B" ? "Middenlopers: regelmatig gebruik" : "Zachtlopers: beperkt of geen verbruik"}</small>
                   </article>
                 );
               })}

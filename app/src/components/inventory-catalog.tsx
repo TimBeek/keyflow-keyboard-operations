@@ -69,7 +69,7 @@ export function InventoryCatalog({
     return inventoryCatalog
       .map((sourceItem) => {
         const item = { ...sourceItem, stock: inventoryQuantity(quantities, sourceItem) };
-        const advice = item.dataQuality === "ready" && item.planningDataStatus === "sample"
+        const advice = item.dataQuality === "ready" && item.planningDataStatus === "measured"
           ? calculateForecastAdvice({
               onHand: item.stock,
               reserved: item.reserved,

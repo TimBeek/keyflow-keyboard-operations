@@ -78,6 +78,21 @@ export function OrdersWorkspace() {
     setOrderStatus("advice");
   }
 
+  if (plannedItems.length === 0) {
+    return (
+      <div className="workspace-view">
+        <section className="panel report-empty">
+          <h2>Nog geen besteladvies</h2>
+          <p>
+            Een besteladvies rekent met gemeten verbruik, levertijd en veiligheidsvoorraad.
+            Zodra er conversies geboekt zijn, weet KeyFlow hoe hard elke hangmap loopt en
+            komt hier een concept te staan dat ergens op berust.
+          </p>
+        </section>
+      </div>
+    );
+  }
+
   return (
     <div className="workspace-view">
       <section className="workspace-stats">
@@ -487,23 +502,69 @@ function modelGroupStatusLabel(status: ModelGroupStatus) {
   }[status];
 }
 
-export function ConversionsWorkspace({ onNew }: { onNew: () => void }) {
-  const queue = [
-    { order: "ORD-260727-1842", model: "Dell Latitude 5420", target: "AZERTY FR", value: 279, method: "Noviply voorraadvel", status: "Wacht op uitvoering" },
-    { order: "ORD-260727-1848", model: "HP EliteBook 850 G7", target: "QWERTY US", value: 429, method: "Directe keyboardprint", status: "Kwaliteitscontrole" },
-    { order: "ORD-260727-1851", model: "HP ZBook 15 G3", target: "QWERTZ DE", value: 245, method: "Sterke printsticker", status: "Vrijgegeven" },
-  ];
+/**
+ * Hier stond een verzonnen wachtrij met drie orders en euro-bedragen. Wat er
+ * werkelijk is, is het conversielogboek: wat er is gedaan, en waar Noviply nog
+ * aan de beurt is.
+ */
+export function ConversionsWorkspace({
+  onNew,
+  conversionLog,
+}: {
+  onNew: () => void;
+  conversionLog: ConversionLogEntry[];
+}) {
+  const recent = [...conversionLog]
+    .sort((left, right) => right.occurredAt.localeCompare(left.occurredAt))
+    .slice(0, 25);
+  const awaiting = conversionLog.filter((entry) => entry.status === "awaiting_print").length;
+
   return (
     <div className="workspace-view">
       <section className="workspace-stats">
-        <article><span>Open wachtrij</span><strong>{queue.length}</strong><small>conversies in behandeling</small></article>
-        <article><span>Keyboardprint</span><strong>1</strong><small>premium route</small></article>
-        <article><span>Stickerconversies</span><strong>2</strong><small>onder €300</small></article>
-        <article><span>Kwaliteitscontrole</span><strong>1</strong><small>vereist actie</small></article>
+        <article><span>Geregistreerd</span><strong>{conversionLog.length}</strong><small>conversies sinds de start</small></article>
+        <article className={awaiting > 0 ? "attention" : ""}><span>Wacht op Noviply</span><strong>{awaiting}</strong><small>aangevraagd, nog niet geprint</small></article>
       </section>
       <section className="panel">
-        <div className="order-heading"><div><span className="workspace-kicker">CONVERSIEWACHTRIJ</span><h2>Actieve keyboardconversies</h2><p>Beleidsadvies, gekozen methode en voortgang per order.</p></div><button className="primary-button" onClick={onNew}>Nieuwe conversie</button></div>
-        <div className="table-wrap"><table><thead><tr><th>Order</th><th>Laptop</th><th>Doellayout</th><th>Verkoopwaarde</th><th>Methode</th><th>Status</th></tr></thead><tbody>{queue.map((job) => <tr key={job.order}><td><strong>{job.order}</strong></td><td><strong>{job.model}</strong></td><td><span className="layout-badge">{job.target}</span></td><td><strong>€ {job.value}</strong></td><td><strong>{job.method}</strong></td><td><span className="planning-status healthy">{job.status}</span></td></tr>)}</tbody></table></div>
+        <div className="order-heading">
+          <div>
+            <span className="workspace-kicker">CONVERSIELOGBOEK</span>
+            <h2>Laatste conversies</h2>
+            <p>Elke afgeronde laptop, met de gebruikte oplossing en het ordernummer.</p>
+          </div>
+          <button className="primary-button" onClick={onNew}>Nieuwe conversie</button>
+        </div>
+        <div className="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Wanneer</th><th>Laptop</th><th>Doellayout</th><th>Oplossing</th><th>Order</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              {recent.map((entry) => (
+                <tr key={entry.id}>
+                  <td><strong>{new Date(entry.occurredAt).toLocaleString("nl-NL", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</strong><span>{entry.actor}</span></td>
+                  <td><strong>{entry.model}</strong>{entry.storageNumber !== null && <span>hangmap {entry.storageNumber}</span>}</td>
+                  <td><span className="layout-badge">{entry.targetLayout}</span></td>
+                  <td>
+                    <span className={`method-share-name tone-${conversionMethods[entry.method].tone}`}>
+                      <i className={`tone-${conversionMethods[entry.method].tone}`} />
+                      {conversionMethods[entry.method].name}
+                    </span>
+                  </td>
+                  <td>{entry.orderReference || "—"}</td>
+                  <td>
+                    <span className={`planning-status ${entry.status === "completed" ? "healthy" : "warning"}`}>
+                      {entry.status === "completed" ? "Afgerond" : "Wacht op print"}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {recent.length === 0 && (
+            <div className="empty">Nog geen conversies geregistreerd. Ze verschijnen hier zodra medewerkers er een afronden.</div>
+          )}
+        </div>
       </section>
     </div>
   );

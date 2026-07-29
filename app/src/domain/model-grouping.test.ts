@@ -29,7 +29,7 @@ const baseItem: InventoryCatalogItem = {
   compatibleModels: 3,
   dataQuality: "ready",
   dataQualityIssues: [],
-  planningDataStatus: "sample",
+  planningDataStatus: "unconfigured",
 };
 
 describe("modelgroepvoorstellen", () => {

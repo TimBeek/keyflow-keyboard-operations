@@ -52,11 +52,15 @@ export function migrateInventoryQuantities(
  * Het minimum dat een hangmap moet houden: verwachte vraag tijdens de levertijd
  * plus de veiligheidsvoorraad. Zowel het dashboard als Noviply rekenen hiermee,
  * zodat "te weinig" voor beide hetzelfde betekent.
+ *
+ * Zonder gemeten verbruik is er geen minimum. Een nul teruggeven zou betekenen
+ * dat elke hangmap altijd voldoende heeft — ook een lege.
  */
 export function calculateCatalogThreshold(
   averageWeeklyDemand: number,
   leadTimeDays: number,
   safetyStockWeeks: number,
-) {
+): number | null {
+  if (averageWeeklyDemand <= 0 || leadTimeDays <= 0) return null;
   return Math.ceil(averageWeeklyDemand * (leadTimeDays / 7 + safetyStockWeeks));
 }

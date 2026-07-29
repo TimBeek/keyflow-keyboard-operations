@@ -2,11 +2,18 @@
 
 import { useMemo, useState } from "react";
 import { inventoryCatalog } from "@/data/inventory-catalog";
+import { inventoryQuantity } from "@/domain/inventory-quantities";
 import {
-  calculateCatalogThreshold,
-  inventoryQuantity,
-} from "@/domain/inventory-quantities";
-import { layoutWithCountry } from "@/domain/operations";
+  layoutWithCountry,
+  type InventoryTransactionEntry,
+} from "@/domain/operations";
+import { dayKey } from "@/domain/reporting";
+import {
+  calculateResupplyLevel,
+  measuredHistoryDays,
+  minimumHistoryDays,
+  resupplyLeadTimeDays,
+} from "@/domain/resupply";
 import {
   printRequestStatusLabel,
   printRequestTotals,
@@ -26,6 +33,7 @@ type Props = {
   tab: NoviplyTab;
   printRequests: PrintRequestRecord[];
   quantities: Record<string, number>;
+  transactions: InventoryTransactionEntry[];
   onSettlePrintRequest: (
     record: PrintRequestRecord,
     status: Exclude<PrintRequestStatus, "requested">,
@@ -59,6 +67,7 @@ export function NoviplyWorkspace({
   tab,
   printRequests,
   quantities,
+  transactions,
   onSettlePrintRequest,
 }: Props) {
   const [blockedId, setBlockedId] = useState("");
@@ -78,20 +87,33 @@ export function NoviplyWorkspace({
    * De volledige voorraad, van leeg naar vol. Noviply wil het geheel zien en
    * niet alleen een selectie; wat écht onder het minimum zit is gemarkeerd.
    */
+  const today = useMemo(() => dayKey(new Date()), []);
+  const historyDays = useMemo(
+    () => measuredHistoryDays(transactions, today),
+    [today, transactions],
+  );
+
   const stockRows = useMemo(() => inventoryCatalog
     .filter((item) => item.dataQuality === "ready")
     .map((item) => {
       const stock = inventoryQuantity(quantities, item);
-      const threshold = calculateCatalogThreshold(
-        item.averageWeeklyDemand,
-        item.leadTimeDays,
-        item.safetyStockWeeks,
-      );
-      return { item, stock, threshold, shortfall: threshold - stock };
+      // Het minimum volgt het gemeten verbruik: loopt een hangmap harder, dan
+      // stijgt zijn minimum mee.
+      const level = calculateResupplyLevel(transactions, item, stock, today, historyDays);
+      return {
+        item,
+        stock,
+        threshold: level?.minimum ?? null,
+        shortfall: level?.shortfall ?? 0,
+        weeklyDemand: level?.weeklyDemand ?? null,
+      };
     })
-    .sort((left, right) => left.stock - right.stock || right.shortfall - left.shortfall),
-    [quantities]);
+    .sort((left, right) => right.shortfall - left.shortfall || left.stock - right.stock),
+    [historyDays, quantities, today, transactions]);
   const running = stockRows.filter((row) => row.shortfall > 0);
+  const withKnownMinimum = stockRows.filter((row) => row.threshold !== null).length;
+  const empty = stockRows.filter((row) => row.stock === 0).length;
+  const measuring = historyDays < minimumHistoryDays;
 
   function exportStock() {
     const moment = new Date().toISOString();
@@ -158,9 +180,13 @@ export function NoviplyWorkspace({
           <small>with a stated reason</small>
         </article>
         <article>
-          <span>RESUPPLY</span>
-          <strong className={running.length > 0 ? "attention" : ""}>{running.length}</strong>
-          <small>folders below their minimum</small>
+          <span>{withKnownMinimum === 0 ? "EMPTY FOLDERS" : "RESUPPLY"}</span>
+          <strong className={(withKnownMinimum === 0 ? empty : running.length) > 0 ? "attention" : ""}>
+            {withKnownMinimum === 0 ? empty : running.length}
+          </strong>
+          <small>{withKnownMinimum === 0
+            ? "minimums appear once usage is measured"
+            : "folders below their minimum"}</small>
         </article>
       </div>
 
@@ -266,7 +292,11 @@ export function NoviplyWorkspace({
         <div className="noviply-panel-head">
           <div>
             <h3>Stock running low</h3>
-            <p>All folders, emptiest first. Flagged rows are below their calculated minimum.</p>
+            <p>
+              {measuring
+                ? `Minimum levels follow measured usage, so a folder that starts moving faster raises its own minimum. That needs ${minimumHistoryDays} days of bookings — ${historyDays} so far.`
+                : `Sorted by what needs restocking first. A minimum covers the ${resupplyLeadTimeDays}-day delivery time plus one week spare, based on measured usage.`}
+            </p>
           </div>
           <button
             type="button"
@@ -284,21 +314,30 @@ export function NoviplyWorkspace({
                 <th>Folder</th>
                 <th>Part number</th>
                 <th>Layout</th>
+                <th>Used</th>
                 <th>Stock</th>
                 <th>Shortfall</th>
               </tr>
             </thead>
             <tbody>
-              {stockRows.map(({ item, stock, threshold, shortfall }) => (
+              {stockRows.map(({ item, stock, threshold, shortfall, weeklyDemand }) => (
                 <tr key={item.catalogKey} className={shortfall > 0 ? "stock-low" : ""}>
                   <td><strong className="storage-number">No. {item.storageNumber}</strong><span>{item.model}</span></td>
                   <td>{displayStickerSku(item.sku)}</td>
                   <td>{layoutWithCountry(item.layout, item.sku)}</td>
-                  <td><b className={stock === 0 ? "zero" : ""}>{stock}</b><span> / min. {threshold}</span></td>
+                  <td>{weeklyDemand === null
+                    ? "—"
+                    : `${weeklyDemand.toLocaleString("en-GB", { maximumFractionDigits: 1 })}/wk`}</td>
                   <td>
-                    {shortfall > 0
-                      ? <span className="resupply-flag">Resupply {shortfall}</span>
-                      : <span className="stock-ok">OK</span>}
+                    <b className={stock === 0 ? "zero" : ""}>{stock}</b>
+                    <span>{threshold === null ? "no minimum yet" : ` / min. ${threshold}`}</span>
+                  </td>
+                  <td>
+                    {threshold === null
+                      ? <span className="stock-unknown">{stock === 0 ? "Empty" : "—"}</span>
+                      : shortfall > 0
+                        ? <span className="resupply-flag">Resupply {shortfall}</span>
+                        : <span className="stock-ok">OK</span>}
                   </td>
                 </tr>
               ))}

@@ -340,10 +340,12 @@ const scenarioDefinitions: ScenarioDefinition[] = [
     "inventory",
     "Gecontroleerde Excelmomentopname",
     "normal",
-    "148 hangmappen en 3.218 vellen",
+    "Catalogus komt overeen met de ingelezen bron",
     () => outcome(
-      inventoryCatalog.length === 148
-        && inventoryCatalogSummary.totalQuantity === 3218,
+      // Vaste aantallen zouden bij elke bijgewerkte voorraadlijst afketsen.
+      // Wat telt is dat de catalogus de bron volgt en niet leeg is.
+      inventoryCatalog.length === inventoryCatalogSummary.rowCount
+        && inventoryCatalog.length > 0,
       `${inventoryCatalog.length} hangmappen · ${inventoryCatalogSummary.totalQuantity} vellen`,
     ),
   ),

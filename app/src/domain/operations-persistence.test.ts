@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { initialInventoryTransactions } from "../data/operations-demo";
 import { defaultOperationsPolicy } from "./operations";
 import {
   clearOperationsState,
@@ -15,7 +14,19 @@ describe("operationele pilotopslag", () => {
   it("maakt een versieerbare en herstelbare snapshot", () => {
     const snapshot = createOperationsSnapshot({
       catalogQuantities: { "hangmap-075": 24 },
-      transactions: initialInventoryTransactions.slice(0, 2),
+      transactions: [{
+        id: "tx-1",
+        occurredAt: "2026-07-27T09:15:00.000Z",
+        catalogKey: "hangmap-075",
+        storageNumber: 75,
+        sku: "NB10172E1NL",
+        model: "Dell Latitude 5420",
+        layout: "QWERTY US",
+        type: "issue" as const,
+        quantityDelta: -1,
+        reasonCode: "conversion_usage",
+        actor: "Medewerker",
+      }],
       operationsPolicy: defaultOperationsPolicy,
       verificationReports: [],
       stockCounts: [{

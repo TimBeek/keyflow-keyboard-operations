@@ -55,6 +55,8 @@ export type ConversionMethodProfile = {
   tier: 0 | 1 | 2 | 3 | 4;
   note: string;
   tone: "none" | "basic" | "stock" | "premium" | "professional";
+  /** Waar het materiaal vandaan komt; leeg wanneer er niets besteld wordt. */
+  supplier: string;
 };
 
 export const conversionMethods: Record<ConversionMethodId, ConversionMethodProfile> = {
@@ -63,29 +65,34 @@ export const conversionMethods: Record<ConversionMethodId, ConversionMethodProfi
     tier: 0,
     note: "Deze laptop hoeft niet omgezet te worden",
     tone: "none",
+    supplier: "",
   },
   loose_stickers: {
     name: "Basisstickers",
     tier: 1,
     note: "Tijdelijke, voordelige oplossing",
     tone: "basic",
+    supplier: "China",
   },
   noviply_sheet: {
     name: "Noviply Voorraadstickers",
     tier: 2,
     note: "Standaard voorraad, voor dagelijks gebruik",
     tone: "stock",
+    supplier: "Noviply",
   },
   printed_sticker: {
     name: "Noviply Premium Stickers",
     tier: 3,
     note: "Extra sterke lijmlaag, duurzamere variant",
     tone: "premium",
+    supplier: "Noviply",
   },
   direct_reprint: {
     name: "Professionele Toetsenbordsprint",
     tier: 4,
     note: "Permanente, fabriekwaardige oplossing",
+    supplier: "Notebook Service (Roemenië)",
     tone: "professional",
   },
 };

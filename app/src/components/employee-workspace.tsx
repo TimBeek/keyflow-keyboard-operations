@@ -554,7 +554,11 @@ export function EmployeeWorkspace({
                     </span>
                     {methodProfile(recommendation.primary).note}
                   </p>
-                  <p>{model} · {matched ? layoutWithCountry(matched.item.layout, matched.item.sku) : targetLayout}</p>
+                  <p>
+                    {model} · {matched ? layoutWithCountry(matched.item.layout, matched.item.sku) : targetLayout}
+                    {methodProfile(recommendation.primary).supplier
+                      && ` · via ${methodProfile(recommendation.primary).supplier}`}
+                  </p>
                 </div>
                 {usesSheet && storageNumber !== null && (
                   <div className="answer-slot">

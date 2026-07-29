@@ -22,11 +22,8 @@ import {
 import {
   inventoryCatalog,
   inventoryCatalogSummary,
-  planningCatalog,
   type InventoryCatalogItem,
 } from "@/data/inventory-catalog";
-import { initialInventoryTransactions } from "@/data/operations-demo";
-import { demoWorkOrders } from "@/data/orders-demo";
 import type { UserRole } from "@/domain/access-control";
 import type { KeyFlowIdentity } from "@/domain/identity";
 import {
@@ -40,7 +37,6 @@ import {
   type StockCountRecord,
 } from "@/domain/cycle-count";
 import { calculateInventoryMutation } from "@/domain/inventory";
-import { calculateForecastAdvice } from "@/domain/forecasting";
 import {
   calculateCatalogThreshold,
   inventoryQuantity,
@@ -178,29 +174,33 @@ const viewHeadings: Record<ViewName, { title: string; subtitle: string }> = {
   operations: { title: "Beheer & analyse", subtitle: "Configureer uitvoering en analyseer iedere voorraadbeweging." },
 };
 
-const initialLowStockSeed: InventoryItem[] = [
-  { model: "Fujitsu Lifebook U7410", sku: "NB10210E1NL", layout: "QWERTY US", stock: 0, threshold: 10 },
-  { model: "HP 240 G8", sku: "NB10200E2NL", layout: "QWERTY US", stock: 2, threshold: 10 },
-  { model: "HP ZBook 15 G3", sku: "NB10043E1DE", layout: "QWERTZ DE", stock: 4, threshold: 10 },
-  { model: "Dell Latitude 7300", sku: "NB10060E1NL", layout: "QWERTY US", stock: 5, threshold: 10 },
-];
-
-const initialLowStock = initialLowStockSeed.map((item) => {
-  const catalogItem = findCatalogItemForInventoryItem(item);
-  return catalogItem
-    ? {
-        ...item,
-        catalogKey: catalogItem.catalogKey,
-        storageNumber: catalogItem.storageNumber,
-      }
-    : item;
-});
+/**
+ * Stond hier als vier verzonnen regels met een verzonnen minimum van tien. De
+ * echte hangmappen met de laagste voorraad zeggen hetzelfde, en zijn waar.
+ */
+const initialLowStock: InventoryItem[] = inventoryCatalog
+  .filter((item) => item.dataQuality === "ready")
+  .map((item) => ({
+    model: item.model,
+    sku: item.sku,
+    layout: item.layout,
+    stock: item.stock,
+    threshold: calculateCatalogThreshold(
+      item.averageWeeklyDemand,
+      item.leadTimeDays,
+      item.safetyStockWeeks,
+    ),
+    catalogKey: item.catalogKey,
+    storageNumber: item.storageNumber,
+  }))
+  .sort((left, right) => left.stock - right.stock || left.storageNumber - right.storageNumber)
+  .slice(0, 8);
 
 const methods = [
-  { id: 1, name: "Basisstickers", detail: "Tijdelijke, voordelige oplossing", tone: "basic", status: "★" },
-  { id: 2, name: "Noviply Voorraadstickers", detail: "Standaard voorraad · 148 hangmappen", tone: "stock", status: "★★" },
-  { id: 3, name: "Noviply Premium Stickers", detail: "Extra sterke lijmlaag · duurzamer", tone: "premium", status: "★★★" },
-  { id: 4, name: "Professionele Toetsenbordsprint", detail: "Permanent · vanaf €300", tone: "professional", status: "★★★★" },
+  { id: 1, name: "Basisstickers", detail: "Tijdelijk en voordelig · China", tone: "basic", status: "★" },
+  { id: 2, name: "Noviply Voorraadstickers", detail: "Uit de hangmappen · Noviply", tone: "stock", status: "★★" },
+  { id: 3, name: "Noviply Premium Stickers", detail: "Extra sterke lijmlaag · Noviply", tone: "premium", status: "★★★" },
+  { id: 4, name: "Professionele Toetsenbordsprint", detail: "Permanent · Notebook Service (Roemenië)", tone: "professional", status: "★★★★" },
 ];
 
 export function Dashboard({
@@ -221,7 +221,7 @@ export function Dashboard({
   const [reviewBatchId, setReviewBatchId] = useState<string | null>(null);
   const [stockItems, setStockItems] = useState(initialLowStock);
   const [catalogQuantities, setCatalogQuantities] = useState<Record<string, number>>({});
-  const [transactions, setTransactions] = useState<InventoryTransactionEntry[]>(initialInventoryTransactions);
+  const [transactions, setTransactions] = useState<InventoryTransactionEntry[]>([]);
   const [operationsPolicy, setOperationsPolicy] = useState<OperationsPolicy>(defaultOperationsPolicy);
   const [verificationReports, setVerificationReports] = useState<StickerVerificationReport[]>([]);
   const [stockCounts, setStockCounts] = useState<StockCountRecord[]>([]);
@@ -303,16 +303,14 @@ export function Dashboard({
     (sum, item) => sum + inventoryQuantity(catalogQuantities, item),
     0,
   );
-  const planningActionCount = planningCatalog.filter((item) => {
-    const advice = calculateForecastAdvice({
-      onHand: inventoryQuantity(catalogQuantities, item),
-      reserved: item.reserved,
-      averageWeeklyDemand: item.averageWeeklyDemand,
-      leadTimeDays: item.leadTimeDays,
-      safetyStockWeeks: item.safetyStockWeeks,
-    });
-    return advice.status === "out" || advice.status === "critical" || advice.status === "order";
-  }).length;
+  // Twee cijfers die je zonder aannames kunt natellen: hoeveel hangmappen leeg
+  // zijn, en hoeveel laptops op Noviply staan te wachten.
+  const emptyFolderCount = inventoryCatalog.filter(
+    (item) => item.dataQuality === "ready" && inventoryQuantity(catalogQuantities, item) === 0,
+  ).length;
+  const awaitingPrintCount = printRequests.filter(
+    (request) => request.status === "requested",
+  ).length;
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -1052,7 +1050,7 @@ export function Dashboard({
   function resetPilotData() {
     clearOperationsState(window.localStorage);
     setCatalogQuantities({});
-    setTransactions(initialInventoryTransactions);
+    setTransactions([]);
     setOperationsPolicy(defaultOperationsPolicy);
     setVerificationReports([]);
     setStockCounts([]);
@@ -1189,6 +1187,7 @@ export function Dashboard({
             tab={noviplyTab}
             printRequests={printRequests}
             quantities={catalogQuantities}
+            transactions={transactions}
             onSettlePrintRequest={settlePrintRequestRecord}
           />
         )}
@@ -1199,7 +1198,7 @@ export function Dashboard({
             onRecordConversion={recordConversion}
             catalog={inventoryCatalog}
             actorName={actorName}
-            orders={demoWorkOrders}
+            orders={[]}
             quantities={catalogQuantities}
             policy={operationsPolicy}
             compatibilityEvidenceRecords={compatibilityEvidenceRecords}
@@ -1239,7 +1238,7 @@ export function Dashboard({
             <div className="stat-glyph stock"><Icon name="stock" size={27} /></div>
           </article>
           <article className="stat-card urgent">
-            <div><span>Bestelactie</span><strong>{planningActionCount}</strong><small><b>{inventoryCatalogSummary.planningRows} regels</b> met voorbeeldplanning</small></div>
+            <div><span>Lege hangmappen</span><strong>{emptyFolderCount}</strong><small>van {inventoryCatalogSummary.operationalRows} bruikbare hangmappen</small></div>
             <div className="stat-glyph"><Icon name="alert" size={27} /></div>
           </article>
           <article className="stat-card">
@@ -1247,7 +1246,7 @@ export function Dashboard({
             <div className="stat-glyph chart"><Icon name="reports" size={27} /></div>
           </article>
           <article className="stat-card">
-            <div><span>Open conversies</span><strong>3</strong><small>1 wacht op kwaliteitscontrole</small></div>
+            <div><span>Wacht op Noviply</span><strong>{awaitingPrintCount}</strong><small>aangevraagd, nog niet geprint</small></div>
             <div className="stat-glyph convert"><Icon name="convert" size={27} /></div>
           </article>
         </section>
@@ -1255,7 +1254,7 @@ export function Dashboard({
         <div className="content-grid">
           <section className="panel stock-panel">
             <div className="panel-heading">
-              <div><h2>Voorraad vraagt aandacht</h2><p>Gesorteerd op urgentie</p></div>
+              <div><h2>Laagste voorraad</h2><p>De acht hangmappen met de minste vellen</p></div>
               <button onClick={() => setActiveView("inventory")}>Bekijk volledige catalogus <Icon name="arrow" size={16} /></button>
             </div>
             <div className="table-wrap">
@@ -1266,8 +1265,17 @@ export function Dashboard({
                     <tr key={item.sku}>
                       <td><strong>{item.model}</strong><span>{item.sku}</span></td>
                       <td><span className="layout-badge">{item.layout}</span></td>
-                      <td><b className={item.stock === 0 ? "zero" : ""}>{item.stock}</b><span> / min. {item.threshold}</span></td>
-                      <td><span className={`status ${item.stock === 0 ? "critical" : "low"}`}>{item.stock === 0 ? "Uitverkocht" : "Laag"}</span></td>
+                      <td>
+                        <b className={item.stock === 0 ? "zero" : ""}>{item.stock}</b>
+                        <span>{item.threshold === null ? "minimum nog niet bekend" : ` / min. ${item.threshold}`}</span>
+                      </td>
+                      <td>
+                        {item.stock === 0
+                          ? <span className="status critical">Leeg</span>
+                          : item.threshold !== null && item.stock < item.threshold
+                            ? <span className="status low">Onder minimum</span>
+                            : <span className="status neutral">—</span>}
+                      </td>
                       <td><button className="row-action" onClick={() => setMutation({ mode: "receipt", item })}>Voorraad</button></td>
                     </tr>
                   ))}
@@ -1327,7 +1335,7 @@ export function Dashboard({
             }}
           />
         )}
-        {role === "management" && activeView === "conversions" && <ConversionsWorkspace onNew={() => setAdvisorOpen(true)} />}
+        {role === "management" && activeView === "conversions" && <ConversionsWorkspace onNew={() => setAdvisorOpen(true)} conversionLog={conversionLog} />}
         {role === "management" && activeView === "orders" && <OrdersWorkspace />}
         {role === "management" && activeView === "models" && <ModelsWorkspace />}
         {role === "management" && (activeView === "operations" || activeView === "movers" || activeView === "layoutgroups") && (
