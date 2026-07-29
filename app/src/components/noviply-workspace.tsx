@@ -38,7 +38,7 @@ type Props = {
     record: PrintRequestRecord,
     status: Exclude<PrintRequestStatus, "requested">,
     note: string,
-  ) => void;
+  ) => Promise<void>;
 };
 
 /** Overtypen in een ander systeem is werk dat fouten maakt. */
@@ -144,13 +144,13 @@ export function NoviplyWorkspace({
     setMessage(`Downloaded ${printRequests.length} requests as a spreadsheet.`);
   }
 
-  function settle(
+  async function settle(
     record: PrintRequestRecord,
     status: Exclude<PrintRequestStatus, "requested">,
     note: string,
   ) {
     try {
-      onSettlePrintRequest(record, status, note);
+      await onSettlePrintRequest(record, status, note);
       setBlockedId("");
       setBlockedNote("");
       setMessage(status === "printed"

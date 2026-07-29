@@ -1998,3 +1998,10 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 }
 
 .noviply-panel-head > button:disabled { opacity: .45; cursor: not-allowed; }
+
+/* De statusregel zegt nu waar de gegevens staan, niet alleen dát ze bewaard zijn. */
+.sync-state i { background: var(--text-3); }
+.sync-state.online i { background: var(--ok); }
+.sync-state.offline i { background: var(--warn); }
+.sync-state.local i { background: var(--warn); }
+.sync-state.offline, .sync-state.local { color: var(--warn); }

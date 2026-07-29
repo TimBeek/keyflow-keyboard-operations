@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ConversionAdvisor } from "@/components/conversion-advisor";
 import { AccessManagementDialog } from "@/components/access-management";
 import { EmployeeWorkspace } from "@/components/employee-workspace";
@@ -73,6 +73,25 @@ import {
   CONVERSION_LOG_LIMIT,
   TRANSACTION_LIMIT,
 } from "@/domain/operations-persistence";
+import {
+  fetchSharedState,
+  patchPrintRequest,
+  postConversion,
+  postInventoryMutation,
+  postPrintRequest,
+  KeyflowApiError,
+  KeyflowOfflineError,
+  type SharedOperationsState,
+} from "@/lib/keyflow-api";
+import {
+  addPendingWrite,
+  pendingWritesMessage,
+  readPendingWrites,
+  removePendingWrite,
+  PENDING_WRITES_KEY,
+  type PendingWrite,
+} from "@/domain/pending-writes";
+import { pilotActorFor } from "@/domain/pilot-actors";
 import {
   createConversionLogEntry,
   type ConversionLogEntry,
@@ -178,6 +197,9 @@ const viewHeadings: Record<ViewName, { title: string; subtitle: string }> = {
  * Stond hier als vier verzonnen regels met een verzonnen minimum van tien. De
  * echte hangmappen met de laagste voorraad zeggen hetzelfde, en zijn waar.
  */
+/** De hangmappenwagen is de enige plek waar stickervellen fysiek liggen. */
+const inventoryLocationCode = "HANGMAPPENWAGEN";
+
 const initialLowStock: InventoryItem[] = inventoryCatalog
   .filter((item) => item.dataQuality === "ready")
   .map((item) => ({
@@ -262,6 +284,9 @@ export function Dashboard({
   });
   const [workfloorRefreshToken, setWorkfloorRefreshToken] = useState(0);
   const [persistenceReady, setPersistenceReady] = useState(false);
+  const [sharedStatus, setSharedStatus] = useState<"loading" | "online" | "offline" | "local">("loading");
+  const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
+  const [pendingWrites, setPendingWrites] = useState<PendingWrite[]>([]);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [persistenceMessage, setPersistenceMessage] = useState("Lokale pilotopslag laden…");
   const [mutation, setMutation] = useState<{
@@ -280,6 +305,11 @@ export function Dashboard({
         ? "Noviply"
         : "Medewerker";
   const actorInitials = initialsFor(actorName);
+  // In pilotmodus handelt elke rol met een eigen account, zodat de database de
+  // rechten kan afdwingen. Zie pilot-actors.ts voor waarom dat eerlijk is.
+  // Met een persoonlijke login bepaalt de server zelf wie er handelt; dan mag
+  // de browser dat niet kunnen opgeven.
+  const actorId = identity.mode === "entra" ? "" : pilotActorFor(role);
   /**
    * Stond hier hardgecodeerd, en zou dus voor altijd dezelfde maandag melden.
    * Pas na het aankoppelen, anders wijkt de server af van de browser.
@@ -350,6 +380,135 @@ export function Dashboard({
     }, 0);
     return () => window.clearTimeout(timeoutId);
   }, [identity.mode]);
+
+  /**
+   * De gedeelde stand komt van de server: voorraad, mutaties, de bestellijst en
+   * het conversielogboek. Lukt dat niet, dan blijft staan wat er lokaal bewaard
+   * was — een medewerker zonder verbinding moet nog steeds kunnen zien wat waar
+   * ligt. Zodra de verbinding terug is, wint de server.
+   */
+  const applySharedState = useCallback((state: SharedOperationsState) => {
+    setCatalogQuantities(state.catalogQuantities);
+    setTransactions(state.transactions);
+    setPrintRequests(state.printRequests);
+    setConversionLog(state.conversionLog);
+    setStockItems((items) => items.map((item) => ({
+      ...item,
+      stock: quantityForInventoryItem(state.catalogQuantities, item),
+    })));
+    setLastSyncedAt(state.savedAt);
+  }, []);
+
+  const refreshSharedState = useCallback(async () => {
+    try {
+      applySharedState(await fetchSharedState(actorId));
+      setSharedStatus("online");
+      return true;
+    } catch (error) {
+      // Een regelfout hoort bij een handeling, niet bij ophalen; alles wat hier
+      // misgaat betekent in de praktijk: even geen server.
+      setSharedStatus(error instanceof KeyflowApiError && error.code === "DATABASE_NOT_CONFIGURED"
+        ? "local"
+        : "offline");
+      return false;
+    }
+  }, [actorId, applySharedState]);
+
+  useEffect(() => {
+    if (!persistenceReady) return;
+    void refreshSharedState();
+  }, [persistenceReady, refreshSharedState]);
+
+  /* ---------- handelingen die op verbinding wachten ---------- */
+
+  useEffect(() => {
+    setPendingWrites(readPendingWrites(window.localStorage.getItem(PENDING_WRITES_KEY)));
+  }, []);
+
+  useEffect(() => {
+    if (!persistenceReady) return;
+    window.localStorage.setItem(PENDING_WRITES_KEY, JSON.stringify(pendingWrites));
+  }, [pendingWrites, persistenceReady]);
+
+  const sendPendingWrite = useCallback(async (write: PendingWrite) => {
+    if (write.kind === "mutation") {
+      await postInventoryMutation(write.payload as never);
+    } else if (write.kind === "printRequest") {
+      await postPrintRequest(write.payload as never);
+    } else if (write.kind === "settlePrintRequest") {
+      await patchPrintRequest(write.requestId, write.payload as never);
+    } else {
+      await postConversion(write.payload as never);
+    }
+  }, []);
+
+  /**
+   * Alsnog versturen wat is blijven staan. Eén voor één en op volgorde: een
+   * ontvangst die vóór een afboeking hoorde te gaan mag niet omdraaien. Een
+   * regel die de server inhoudelijk afwijst gaat eruit — die blijft anders
+   * eeuwig de rij blokkeren.
+   */
+  const flushPendingWrites = useCallback(async () => {
+    const queue = pendingWrites;
+    if (queue.length === 0) return;
+    for (const write of queue) {
+      try {
+        await sendPendingWrite(write);
+        setPendingWrites((current) => removePendingWrite(current, write.id));
+      } catch (error) {
+        if (error instanceof KeyflowOfflineError) return;
+        setPendingWrites((current) => removePendingWrite(current, write.id));
+        setLastAction("Een bewaarde handeling is door de server geweigerd en overgeslagen.");
+      }
+    }
+    await refreshSharedState();
+  }, [pendingWrites, refreshSharedState, sendPendingWrite]);
+
+  useEffect(() => {
+    if (sharedStatus !== "online" || pendingWrites.length === 0) return;
+    void flushPendingWrites();
+    // Alleen wanneer de verbinding terugkomt of er iets bijkomt; niet bij elke
+    // wijziging van de wachtrij zelf, anders herhaalt hij zichzelf.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sharedStatus, pendingWrites.length]);
+
+  const syncLabel = (() => {
+    if (!persistenceReady || sharedStatus === "loading") return "Verbinden met de database…";
+    const waiting = pendingWritesMessage(pendingWrites.length);
+    if (sharedStatus === "offline") {
+      return waiting || "Geen verbinding — er wordt getoond wat het laatst bekend was.";
+    }
+    if (sharedStatus === "local") {
+      return "Alleen op dit apparaat bewaard; de database is niet aangesloten.";
+    }
+    if (waiting) return waiting;
+    return `Gedeeld met iedereen${lastSyncedAt ? ` · bijgewerkt ${formatPersistenceTime(lastSyncedAt)}` : ""}`;
+  })();
+
+  function queueWrite(write: PendingWrite) {
+    setPendingWrites((current) => addPendingWrite(current, write));
+    setSharedStatus("offline");
+  }
+
+  // Noviply moet een aanvraag zien zonder de pagina te verversen. Alleen
+  // ophalen als het tabblad open staat: op de achtergrond pollen kost niets dan
+  // batterij en verbindingen.
+  useEffect(() => {
+    if (!persistenceReady) return;
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "visible") void refreshSharedState();
+    }, 20_000);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void refreshSharedState();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("online", onVisible);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("online", onVisible);
+    };
+  }, [persistenceReady, refreshSharedState]);
 
   useEffect(() => {
     if (identity.mode !== "entra" || identity.role !== "management") return;
@@ -578,7 +737,7 @@ export function Dashboard({
     setMutation(null);
   }
 
-  function recordEmployeeInventoryMutation(request: InventoryMutationRequest) {
+  async function recordEmployeeInventoryMutation(request: InventoryMutationRequest) {
     const matchingItems = inventoryCatalog.filter(
       (candidate) =>
         candidate.dataQuality === "ready"
@@ -589,15 +748,47 @@ export function Dashboard({
     }
     const item = matchingItems[0];
     const currentQuantity = inventoryQuantity(catalogQuantities, item);
-    const result = calculateInventoryMutation({
+    const idempotencyKey = `employee-${crypto.randomUUID()}`;
+    // Eerst lokaal narekenen: dat levert een begrijpelijke melding op ("dit vel
+    // is op") in plaats van een foutcode van de server.
+    let result = calculateInventoryMutation({
       sku: request.sku,
       currentQuantity,
       type: request.type,
       quantity: request.quantity,
       reasonCode: request.reasonCode,
       notes: request.notes,
-      idempotencyKey: `employee-${crypto.randomUUID()}`,
+      idempotencyKey,
     });
+
+    const payload = {
+      sku: item.sku,
+      locationCode: inventoryLocationCode,
+      type: request.type,
+      quantity: request.quantity,
+      reasonCode: request.reasonCode,
+      notes: request.notes,
+      reference: request.reference,
+      idempotencyKey,
+      actorId,
+    };
+
+    try {
+      // De server houdt de echte stand bij: een collega kan net het laatste vel
+      // hebben gepakt.
+      const confirmed = await postInventoryMutation(payload);
+      result = {
+        ...result,
+        newQuantity: confirmed.newQuantity,
+        quantityDelta: confirmed.quantityDelta,
+      };
+      setSharedStatus("online");
+    } catch (error) {
+      if (!(error instanceof KeyflowOfflineError)) throw error;
+      // Geen verbinding: de laptop is er wel. Lokaal toepassen en later sturen.
+      queueWrite({ kind: "mutation", id: idempotencyKey, payload });
+    }
+
     setCatalogQuantities((current) => withInventoryQuantity(current, item, result.newQuantity));
     setStockItems((items) => items.map((stockItem) =>
       stockItem.catalogKey === item.catalogKey
@@ -928,37 +1119,99 @@ export function Dashboard({
     setSkuOverrides((current) => ({ ...current, [catalogKey]: sku }));
   }
 
-  function requestPrintSticker(input: PrintRequestInput) {
-    const record = createPrintRequest(input, {
-      id: crypto.randomUUID(),
+  async function requestPrintSticker(input: PrintRequestInput) {
+    const idempotencyKey = `print-${crypto.randomUUID()}`;
+    // Lokaal opbouwen geeft dezelfde regels en meldingen als voorheen, en dient
+    // meteen als wat we tonen zolang de server nog niet heeft geantwoord.
+    const local = createPrintRequest(input, {
+      id: idempotencyKey,
       requestedAt: new Date().toISOString(),
       requestedBy: actorName,
     });
-    setPrintRequests((current) => [...current, record]);
-    return record;
+    const payload = {
+      model: input.model,
+      layout: input.layout,
+      variant: input.variant,
+      orderReference: input.orderReference,
+      reason: input.reason,
+      idempotencyKey,
+      actorId,
+    };
+
+    try {
+      const { record } = await postPrintRequest(payload);
+      setPrintRequests((current) => [...current, record]);
+      setSharedStatus("online");
+      return record;
+    } catch (error) {
+      if (!(error instanceof KeyflowOfflineError)) throw error;
+      // Noviply ziet hem pas als de verbinding terug is; de medewerker kan door.
+      queueWrite({ kind: "printRequest", id: idempotencyKey, payload });
+      setPrintRequests((current) => [...current, local]);
+      return local;
+    }
   }
 
   function recordConversion(input: ConversionLogInput) {
+    const idempotencyKey = `conversion-${crypto.randomUUID()}`;
     const entry = createConversionLogEntry(input, {
-      id: crypto.randomUUID(),
+      id: idempotencyKey,
       occurredAt: new Date().toISOString(),
       actor: actorName,
     });
+    const payload = {
+      method: input.method,
+      status: input.status,
+      model: input.model,
+      targetLayout: input.targetLayout,
+      variant: input.variant ?? "",
+      sku: input.sku ?? "",
+      storageNumber: input.storageNumber ?? null,
+      orderReference: input.orderReference ?? "",
+      idempotencyKey,
+      actorId,
+    };
+
+    // Het logboek mag de medewerker nooit ophouden: direct tonen, op de
+    // achtergrond versturen, en bij een storing in de wachtrij.
     setConversionLog((current) => [...current, entry]);
+    void postConversion(payload).catch((error) => {
+      if (error instanceof KeyflowOfflineError) {
+        queueWrite({ kind: "conversion", id: idempotencyKey, payload });
+      } else {
+        setLastAction("De conversie kon niet worden vastgelegd in de database.");
+      }
+    });
     return entry;
   }
 
-  function settlePrintRequestRecord(
+  async function settlePrintRequestRecord(
     record: PrintRequestRecord,
     status: Exclude<PrintRequestStatus, "requested">,
     note: string,
   ) {
+    // Dezelfde controle als op de server, maar met een melding die Noviply
+    // begrijpt voordat het verzoek de deur uit gaat.
     const settled = settlePrintRequest(record, status, note, {
       handledAt: new Date().toISOString(),
       handledBy: actorName,
     });
-    setPrintRequests((current) =>
-      current.map((item) => (item.id === settled.id ? settled : item)));
+    const payload = { status, note, actorId };
+
+    try {
+      const result = await patchPrintRequest(record.id, payload);
+      setPrintRequests((current) =>
+        current.map((item) => (item.id === result.record.id ? result.record : item)));
+      setSharedStatus("online");
+      if (result.alreadySettled) {
+        setLastAction(`${record.model} was al afgehandeld door ${result.record.handledBy ?? "iemand anders"}.`);
+      }
+    } catch (error) {
+      if (!(error instanceof KeyflowOfflineError)) throw error;
+      queueWrite({ kind: "settlePrintRequest", id: `settle-${record.id}`, requestId: record.id, payload });
+      setPrintRequests((current) =>
+        current.map((item) => (item.id === settled.id ? settled : item)));
+    }
   }
 
   function switchRole(nextRole: UserRole) {
@@ -1392,7 +1645,7 @@ export function Dashboard({
         )}
 
         <footer className="app-footer">
-          <span><i /> {persistenceReady ? `Lokaal bewaard${lastSavedAt ? ` · ${formatPersistenceTime(lastSavedAt)}` : ""}` : "Opslag laden…"}</span>
+          <span className={`sync-state ${sharedStatus}`}><i /> {syncLabel}</span>
           <span>{lastAction}</span>
         </footer>
         <ConversionAdvisor open={advisorOpen} onClose={() => setAdvisorOpen(false)} />

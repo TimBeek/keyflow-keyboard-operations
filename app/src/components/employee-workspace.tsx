@@ -107,7 +107,7 @@ type Props = {
   quantities: Record<string, number>;
   policy: OperationsPolicy;
   compatibilityEvidenceRecords: CompatibilityEvidenceRecord[];
-  onInventoryMutation: (request: InventoryMutationRequest) => InventoryMutationOutcome;
+  onInventoryMutation: (request: InventoryMutationRequest) => Promise<InventoryMutationOutcome>;
   onStickerVerification: (input: StickerVerificationReportInput) => unknown;
   onRequestPrintSticker: (input: PrintRequestInput) => unknown;
   onRecordConversion: (input: ConversionLogInput) => unknown;
@@ -215,7 +215,7 @@ export function EmployeeWorkspace({
     }
   }
 
-  function bookDone() {
+  async function bookDone() {
     if (!usesSheet) {
       // Ook zonder voorraadvel is de laptop klaar: leegmaken voor de volgende,
       // anders blijft hij op het scherm staan en weet niemand of het gelukt is.
@@ -243,7 +243,7 @@ export function EmployeeWorkspace({
       return;
     }
     try {
-      const result = onInventoryMutation({
+      const result = await onInventoryMutation({
         sku: matched.item.sku,
         type: "issue",
         quantity: 1,
@@ -284,7 +284,7 @@ export function EmployeeWorkspace({
     }
   }
 
-  function reportIssue(bookAsScrap: boolean) {
+  async function reportIssue(bookAsScrap: boolean) {
     if (!matched) return;
     if (bookAsScrap && !policy.employeeCanBookMismatch) {
       setAdviceMessage({ tone: "warn", text: "Je mag geen uitval boeken. Geef het door aan je teamleider." });
@@ -293,7 +293,7 @@ export function EmployeeWorkspace({
     try {
       let tail = "Er is niets afgeboekt.";
       if (bookAsScrap) {
-        const result = onInventoryMutation({
+        const result = await onInventoryMutation({
           sku: matched.item.sku,
           type: "issue",
           quantity: 1,
@@ -348,7 +348,7 @@ export function EmployeeWorkspace({
 
   const receiveItem = receiveMatches.length === 1 ? receiveMatches[0] : null;
 
-  function addStock() {
+  async function addStock() {
     if (!receiveItem) {
       setReceiveMessage({ tone: "warn", text: "Kies eerst welk stickervel je hebt ontvangen." });
       return;
@@ -358,7 +358,7 @@ export function EmployeeWorkspace({
       return;
     }
     try {
-      const result = onInventoryMutation({
+      const result = await onInventoryMutation({
         sku: receiveItem.sku,
         type: "receipt",
         quantity: receiveQuantity,
