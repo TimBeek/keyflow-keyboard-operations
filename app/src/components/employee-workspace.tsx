@@ -33,6 +33,7 @@ import {
 } from "@/domain/sticker-verification";
 import {
   genericNordicLayout,
+  normalizeLayoutName,
   targetLayoutOptions,
 } from "@/domain/keyboard-layouts";
 import { catalogModelOptions } from "@/domain/model-catalog";
@@ -161,7 +162,9 @@ export function EmployeeWorkspace({
    * is aan de gewenste layout — anders adviseert de motor "geen conversie".
    */
   const assumedCurrentLayout =
-    targetLayout === "QWERTY US" ? genericNordicLayout : "QWERTY US";
+    normalizeLayoutName(targetLayout) === normalizeLayoutName("QWERTY US")
+      ? genericNordicLayout
+      : "QWERTY US";
 
   const recommendation = useMemo(() => recommendConversion({
     saleValueEur: saleValue,

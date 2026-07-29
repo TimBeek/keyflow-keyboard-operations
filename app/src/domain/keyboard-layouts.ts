@@ -100,3 +100,18 @@ export function isScandinavianLayout(layout: string) {
   return layout === genericNordicLayout
     || scandinavianLayoutReferences.some((reference) => reference.value === layout);
 }
+
+/**
+ * Een Nederlands toetsenbord is fysiek US International. De voorraadvellen staan
+ * daarom als "QWERTY US" in de bron, met NL achteraan het artikelnummer. Wie
+ * QWERTY NL kiest bedoelt exact die hangmappen — zowel bij het zoeken van het
+ * vel als bij de vraag welke methode de voorkeur heeft.
+ */
+const layoutAliases: Record<string, string> = {
+  "qwerty nl": "qwerty us",
+};
+
+export function normalizeLayoutName(value: string) {
+  const normalized = value.trim().toLowerCase().replace(/\s+/g, " ");
+  return layoutAliases[normalized] ?? normalized;
+}

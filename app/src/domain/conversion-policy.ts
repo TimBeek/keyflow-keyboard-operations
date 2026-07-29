@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeLayoutName } from "./keyboard-layouts";
 
 export const conversionMethodIds = [
   "none",
@@ -110,7 +111,7 @@ export function recommendConversion(rawInput: ConversionPolicyInput): Conversion
   } else {
     preferred = ["noviply_sheet", "direct_reprint", "printed_sticker", "loose_stickers"];
     rule = "qwerty_us_below_threshold";
-    reason = `De gewenste layout is QWERTY US en de verkoopwaarde ligt onder €${formatAmount(input.thresholdEur)}. Het bestaande Noviply-voorraadvel is de beschikbare standaardfallback.`;
+    reason = `De gewenste layout is ${input.targetLayout} en de verkoopwaarde ligt onder €${formatAmount(input.thresholdEur)}. Het bestaande Noviply-voorraadvel is de beschikbare standaardfallback.`;
   }
 
   const ranked = preferred.filter(canUse);
@@ -139,7 +140,7 @@ export function recommendConversion(rawInput: ConversionPolicyInput): Conversion
 }
 
 function normalizeLayout(value: string) {
-  return value.trim().replace(/\s+/g, " ").toLowerCase();
+  return normalizeLayoutName(value);
 }
 
 function formatAmount(value: number) {

@@ -1,4 +1,5 @@
 import type { InventoryCatalogItem } from "@/data/inventory-catalog";
+import { normalizeLayoutName } from "./keyboard-layouts";
 import type { ConversionMethodId } from "@/domain/conversion-policy";
 import { inventoryQuantity } from "./inventory-quantities";
 import { modelMatchesCatalogItem } from "./model-catalog";
@@ -227,14 +228,6 @@ export function calculateAbcAnalysis(
   });
 }
 
-// Een Nederlands toetsenbord is fysiek US International. De voorraadvellen staan
-// daarom als "QWERTY US" in de bron, met NL achteraan het artikelnummer. Zonder
-// deze gelijkstelling levert de keuze "QWERTY NL" geen enkele hangmap op.
-const layoutAliases: Record<string, string> = {
-  "qwerty nl": "qwerty us",
-};
-
 function normalizeLayout(value: string) {
-  const normalized = value.trim().toLowerCase().replace(/\s+/g, " ");
-  return layoutAliases[normalized] ?? normalized;
+  return normalizeLayoutName(value);
 }

@@ -40,6 +40,7 @@ export function NoviplyWorkspace({
   quantities,
   onSettlePrintRequest,
 }: Props) {
+  const [tab, setTab] = useState<"orders" | "stock">("orders");
   const [blockedId, setBlockedId] = useState("");
   const [blockedNote, setBlockedNote] = useState("");
   const [message, setMessage] = useState("");
@@ -111,6 +112,28 @@ export function NoviplyWorkspace({
         </article>
       </div>
 
+      <div className="noviply-tabs" role="tablist">
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "orders"}
+          className={tab === "orders" ? "active" : ""}
+          onClick={() => setTab("orders")}
+        >
+          Bestellijst{totals.open > 0 ? ` · ${totals.open}` : ""}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === "stock"}
+          className={tab === "stock" ? "active" : ""}
+          onClick={() => setTab("stock")}
+        >
+          Voorraad die leeg loopt{running.length > 0 ? ` · ${running.length}` : ""}
+        </button>
+      </div>
+
+      {tab === "orders" && (
       <section className="noviply-panel">
         <div className="noviply-panel-head">
           <div>
@@ -197,7 +220,9 @@ export function NoviplyWorkspace({
         </div>
         {message && <div className="policy-saved" role="status">{message}</div>}
       </section>
+      )}
 
+      {tab === "stock" && (
       <section className="noviply-panel">
         <div className="noviply-panel-head">
           <div>
@@ -233,11 +258,12 @@ export function NoviplyWorkspace({
           )}
         </div>
       </section>
+      )}
 
-      {handled.length > 0 && (
+      {tab === "orders" && (
         <section className="noviply-panel">
           <div className="noviply-panel-head">
-            <div><h3>Laatst afgehandeld</h3></div>
+            <div><h3>Geschiedenis</h3><p>Wat je hebt afgevinkt blijft hier staan, met tijdstip.</p></div>
           </div>
           <div className="table-wrap">
             <table className="operations-table">
@@ -251,7 +277,7 @@ export function NoviplyWorkspace({
                     <td>{request.layout}</td>
                     <td>
                       <span className={`print-status ${request.status}`}>
-                        {printRequestStatusLabel(request.status)}
+                        {request.status === "printed" ? "✓" : "✕"} {printRequestStatusLabel(request.status)}
                       </span>
                       {request.note && <span>{request.note}</span>}
                     </td>
@@ -260,6 +286,9 @@ export function NoviplyWorkspace({
                 ))}
               </tbody>
             </table>
+            {handled.length === 0 && (
+              <div className="empty">Nog niets afgevinkt in deze pilot.</div>
+            )}
           </div>
         </section>
       )}
