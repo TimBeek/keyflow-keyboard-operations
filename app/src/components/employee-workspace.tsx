@@ -41,6 +41,7 @@ import {
 import { catalogModelOptions } from "@/domain/model-catalog";
 import type { PrintRequestInput } from "@/domain/print-requests";
 import type { ConversionLogInput } from "@/domain/conversion-log";
+import { directPrintScopeFor } from "@/domain/direct-print-scope";
 
 /**
  * Eén concrete handeling per methode. Bewust geen lijst met werkinstructies:
@@ -175,6 +176,16 @@ export function EmployeeWorkspace({
       ? genericNordicLayout
       : "QWERTY US";
 
+  /**
+   * Wat Notebook Service met dít model kan. Onbekend is geen nee: dan valt de
+   * app terug op de algemene lijst uit het beleid, in plaats van de werkvloer
+   * tegen te houden om iets wat misschien prima kan.
+   */
+  const printScope = useMemo(
+    () => directPrintScopeFor(model, targetLayout),
+    [model, targetLayout],
+  );
+
   const recommendation = useMemo(() => recommendConversion({
     saleValueEur: saleValue,
     saleValueLabel: saleBand.label,
@@ -183,14 +194,14 @@ export function EmployeeWorkspace({
     targetLayout,
     workload: policy.workload,
     available: policy.methodEnabled,
-    directPrintLayouts,
+    directPrintLayouts: printScope.status === "unknown" ? directPrintLayouts : printScope.layouts,
     compatible: {
       loose_stickers: true,
       noviply_sheet: noviplyMatch.status === "matched" && evidence?.status !== "rejected",
       printed_sticker: true,
       direct_reprint: true,
     },
-  }), [assumedCurrentLayout, directPrintLayouts, evidence?.status, noviplyMatch.status, policy, saleBand.label, saleValue, targetLayout]);
+  }), [assumedCurrentLayout, directPrintLayouts, evidence?.status, noviplyMatch.status, policy, printScope, saleBand.label, saleValue, targetLayout]);
 
   /**
    * De toetsenbordsprinter kan deze taal niet. De laptop krijgt dan de
@@ -589,12 +600,17 @@ export function EmployeeWorkspace({
 
               {printerFallback && (
                 <div className="answer-fallback">
-                  <b>De toetsenbordsprinter kan {targetLayout} niet</b>
+                  <b>De toetsenbordsprinter kan {targetLayout} niet voor dit model</b>
                   <p>
                     Deze laptop hoorde een toetsenbordsprint te krijgen, maar Notebook
-                    Service print deze taal niet. Hij gaat daarom met een
+                    Service print deze taal niet voor {model}. Hij gaat daarom met een
                     Noviply Premium Sticker, en die moet Noviply nog printen.
                   </p>
+                  {printScope.layouts.length > 0 && (
+                    <p className="fallback-detail">
+                      Voor dit model kunnen zij wel: {printScope.layouts.join(", ")}.
+                    </p>
+                  )}
                 </div>
               )}
 

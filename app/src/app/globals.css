@@ -2281,3 +2281,4 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 }
 .answer-fallback b { font-size: 13.5px; color: var(--text); }
 .answer-fallback p { margin: 0; color: var(--text-2); font-size: 12.5px; line-height: 1.6; }
+.answer-fallback .fallback-detail { color: var(--text-3); font-size: 12px; }
