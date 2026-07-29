@@ -6,3 +6,8 @@ app/.env
 app/.env.local
 *.log
 .DS_Store
+
+# Door de Vercel-CLI neergezette agent-skills van externe partijen.
+app/.agents/
+app/.claude/
+app/skills-lock.json
