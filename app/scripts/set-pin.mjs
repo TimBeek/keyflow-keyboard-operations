@@ -42,11 +42,14 @@ try {
       values (${userId}, ${role}, '00000000-0000-0000-0000-000000000001')
       on conflict (user_id, role_code) do nothing
     `;
+    // Een code die iemand anders zet is per definitie tijdelijk: hij staat in
+    // een chatvenster of op een briefje. Bij de eerste aanmelding kiest de
+    // gebruiker zelf een eigen — en die blijft daarna staan.
     await tx`
-      insert into pilot_credentials (user_id, pin_hash)
-      values (${userId}, ${hash})
+      insert into pilot_credentials (user_id, pin_hash, must_change_pin)
+      values (${userId}, ${hash}, true)
       on conflict (user_id) do update
-      set pin_hash = excluded.pin_hash, failed_attempts = 0,
+      set pin_hash = excluded.pin_hash, must_change_pin = true, failed_attempts = 0,
           locked_until = null, updated_at = now()
     `;
     console.log(`Pincode gezet voor ${name} (${role}).`);
