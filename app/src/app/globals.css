@@ -2363,28 +2363,82 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
   font-size: 14px;
 }
 
-/* De kant van Noviply. */
-.printer-panel .noviply-panel-head { margin-bottom: 4px; }
+/* De kant van Noviply. De vraag aan de werkvloer is een handeling met gevolgen
+   — iemand daar wordt onderbroken — dus geen randknopje maar een echte knop. */
+.printer-head { margin-bottom: 16px; }
+.printer-head h3 { margin: 0 0 3px; color: var(--text); font-size: 15px; }
+.printer-head p { max-width: 640px; margin: 0; color: var(--text-2); font-size: 12px; line-height: 1.55; }
 
-.printer-answer {
-  display: grid;
-  gap: 4px;
-  margin: 0;
-  padding: 13px 15px;
-  border: 1px solid var(--line);
-  border-radius: 11px;
-  background: var(--surface-2);
-  color: var(--text-2);
-  font-size: 12.5px;
+.printer-ask {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border: 1px solid var(--teal);
+  border-radius: 14px;
+  background: var(--signal-soft);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background .15s, box-shadow .15s;
 }
 
-.printer-answer b { font-size: 13.5px; color: var(--text); }
-.printer-answer small { color: var(--text-3); font-size: 11.5px; }
-.printer-answer.ready { border-color: color-mix(in srgb, var(--ok) 45%, transparent); background: var(--ok-soft); }
-.printer-answer.ready b { color: var(--ok); }
-.printer-answer.blocked { border-color: color-mix(in srgb, var(--crit) 45%, transparent); background: var(--crit-soft); }
-.printer-answer.blocked b { color: var(--crit); }
-.printer-answer.waiting { border-style: dashed; }
+.printer-ask:hover { background: color-mix(in srgb, var(--teal) 18%, transparent); box-shadow: var(--shadow); }
+.printer-ask b { display: block; font-size: 14.5px; font-weight: 700; }
+.printer-ask small { color: var(--text-2); font-size: 12px; }
+
+.printer-ask-icon {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--teal);
+  color: #fff;
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.printer-state {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 15px 18px;
+  margin-bottom: 10px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--surface-2);
+}
+
+.printer-state b { display: block; font-size: 14.5px; color: var(--text); }
+.printer-state span { display: block; color: var(--text-2); font-size: 12.5px; }
+.printer-state small { display: block; color: var(--text-3); font-size: 11.5px; }
+
+.printer-state.ready { border-color: color-mix(in srgb, var(--ok) 50%, transparent); background: var(--ok-soft); }
+.printer-state.ready b { color: var(--ok); }
+.printer-state.blocked { border-color: color-mix(in srgb, var(--crit) 50%, transparent); background: var(--crit-soft); }
+.printer-state.blocked b { color: var(--crit); }
+.printer-state.waiting { border-style: dashed; }
+
+.printer-go {
+  flex: none;
+  min-height: 46px;
+  padding: 0 22px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--ok);
+  color: #fff;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.printer-go:hover { filter: brightness(1.08); }
 
 /* Wat Noviply met de aanvragen van de werkvloer heeft gedaan. */
 .tab-badge {

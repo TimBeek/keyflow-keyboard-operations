@@ -278,3 +278,8 @@ export function postVerificationReport(payload: Record<string, unknown>) {
     body: JSON.stringify(payload),
   });
 }
+
+/** Noviply begint met printen; het antwoord van de werkvloer vervalt daarmee. */
+export function closePrinterCheck(id: string) {
+  return request<{ closed: true }>(`/api/printer-checks/${id}`, { method: "DELETE" });
+}

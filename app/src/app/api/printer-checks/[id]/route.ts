@@ -1,5 +1,5 @@
 import { apiErrorResponse } from "@/server/api-errors";
-import { answerPrinterCheck } from "@/server/printer-check-service";
+import { answerPrinterCheck, closePrinterCheck } from "@/server/printer-check-service";
 import { resolveRequestActorId } from "@/server/request-identity";
 
 export const runtime = "nodejs";
@@ -17,6 +17,22 @@ export async function PATCH(
       actorId: await resolveRequestActorId(),
     });
     return Response.json(result);
+  } catch (error) {
+    const response = apiErrorResponse(error);
+    return Response.json(response.body, { status: response.status });
+  }
+}
+
+/** Noviply is gaan printen: de vraag is daarmee afgehandeld. */
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    return Response.json(await closePrinterCheck(
+      (await params).id,
+      await resolveRequestActorId(),
+    ));
   } catch (error) {
     const response = apiErrorResponse(error);
     return Response.json(response.body, { status: response.status });

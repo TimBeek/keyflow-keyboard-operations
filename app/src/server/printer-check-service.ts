@@ -33,6 +33,7 @@ type Row = {
   answered_at: Date | null;
   answered_by_name: string | null;
   answer_note: string;
+  closed_at: Date | null;
 };
 
 function toRecord(row: Row): PrinterCheckRecord {
@@ -45,11 +46,12 @@ function toRecord(row: Row): PrinterCheckRecord {
     answeredAt: row.answered_at ? row.answered_at.toISOString() : null,
     answeredBy: row.answered_by_name,
     answerNote: row.answer_note,
+    closedAt: row.closed_at ? row.closed_at.toISOString() : null,
   };
 }
 
 const columns = `
-  c.id, c.asked_at, c.question, c.status, c.answered_at, c.answer_note,
+  c.id, c.asked_at, c.question, c.status, c.answered_at, c.answer_note, c.closed_at,
   asker.display_name as asked_by_name,
   answerer.display_name as answered_by_name
 `;
@@ -64,7 +66,7 @@ export async function listPrinterChecks(limit = 20) {
   const sql = database();
   const rows = await sql<Row[]>`
     select
-      c.id, c.asked_at, c.question, c.status, c.answered_at, c.answer_note,
+      c.id, c.asked_at, c.question, c.status, c.answered_at, c.answer_note, c.closed_at,
       asker.display_name as asked_by_name,
       answerer.display_name as answered_by_name
     from printer_checks c
@@ -148,4 +150,25 @@ export async function answerPrinterCheck(rawInput: AnswerPrinterCheckInput) {
     `;
     return { check: toRecord(row), alreadyAnswered: false };
   });
+}
+
+/**
+ * Noviply gaat printen: daarmee is deze vraag afgehandeld. Het antwoord vervalt,
+ * zodat er niet ergens blijft staan dat de printer klaarstaat terwijl er
+ * ondertussen materiaal doorheen is gegaan.
+ */
+export async function closePrinterCheck(id: string, actorId: string) {
+  await requirePermission(actorId, "print.fulfil");
+  const sql = database();
+  const [row] = await sql<Row[]>`
+    update printer_checks
+    set closed_at = now(), closed_by = ${actorId}
+    where id = ${id} and status <> 'pending' and closed_at is null
+    returning id, asked_at, question, status, answered_at, answer_note, closed_at,
+              '' as asked_by_name, null as answered_by_name
+  `;
+  if (!row) {
+    throw new PrinterCheckError("Deze vraag is al afgehandeld of nog niet beantwoord.");
+  }
+  return { closed: true };
 }

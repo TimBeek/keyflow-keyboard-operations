@@ -86,6 +86,7 @@ import {
   changeOwnPin,
   askPrinterCheck,
   answerPrinterCheck,
+  closePrinterCheck,
   postVerificationReport,
   lockAccess,
   type PilotAccount,
@@ -1347,6 +1348,16 @@ export function Dashboard({
     }
   }
 
+  async function startPrinting(id: string) {
+    try {
+      await closePrinterCheck(id);
+      await refreshSharedState();
+      setLastAction("Doorgegeven dat Noviply is gaan printen.");
+    } catch (error) {
+      setLastAction(error instanceof Error ? error.message : "Dat is niet gelukt.");
+    }
+  }
+
   async function replyPrinterCheck(id: string, status: "ready" | "blocked", note: string) {
     const { check } = await answerPrinterCheck(id, status, note);
     setPrinterChecks((current) => current.map((item) => (item.id === check.id ? check : item)));
@@ -1774,6 +1785,7 @@ export function Dashboard({
             resupplyLeadTimeDays={operationsPolicy.resupplyLeadTimeDays}
             resupplySafetyWeeks={operationsPolicy.resupplySafetyWeeks}
             onAskPrinterCheck={() => void requestPrinterCheck()}
+            onStartPrinting={(id: string) => void startPrinting(id)}
             onSettlePrintRequest={settlePrintRequestRecord}
           />
         )}

@@ -28,6 +28,7 @@ import { displayStickerSku } from "@/domain/sticker-sku";
 import {
   latestAnswered,
   openCheck,
+  readyToPrint,
   type PrinterCheckRecord,
 } from "@/domain/printer-check";
 
@@ -42,6 +43,7 @@ type Props = {
   resupplyLeadTimeDays: number;
   resupplySafetyWeeks: number;
   onAskPrinterCheck: () => void;
+  onStartPrinting: (id: string) => void;
   onSettlePrintRequest: (
     record: PrintRequestRecord,
     status: Exclude<PrintRequestStatus, "requested">,
@@ -80,6 +82,7 @@ export function NoviplyWorkspace({
   resupplyLeadTimeDays,
   resupplySafetyWeeks,
   onAskPrinterCheck,
+  onStartPrinting,
   onSettlePrintRequest,
 }: Props) {
   const [blockedId, setBlockedId] = useState("");
@@ -207,43 +210,69 @@ export function NoviplyWorkspace({
 
       {tab === "orders" && (
         <section className="noviply-panel printer-panel">
-          <div className="noviply-panel-head">
+          <div className="printer-head">
             <div>
               <h3>Remote printer</h3>
               <p>
-                The printer sits at ReMarkt. Ask the floor whether it is loaded and
-                switched on before you send a job.
+                The printer sits at ReMarkt. Only the floor can see whether it is
+                loaded and switched on.
               </p>
             </div>
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={onAskPrinterCheck}
-              disabled={Boolean(openCheck(printerChecks))}
-            >
-              {openCheck(printerChecks) ? "Waiting for the floor…" : "Is the printer ready?"}
-            </button>
           </div>
+
           {(() => {
+            const waiting = openCheck(printerChecks);
+            const ready = readyToPrint(printerChecks);
             const answered = latestAnswered(printerChecks);
-            if (openCheck(printerChecks)) {
+
+            if (waiting) {
               return (
-                <p className="printer-answer waiting">
-                  The floor has been asked. Their answer appears here.
-                </p>
+                <div className="printer-state waiting">
+                  <b>Waiting for the floor…</b>
+                  <span>They have been asked. Their answer appears here.</span>
+                </div>
               );
             }
-            if (!answered) {
-              return <p className="printer-answer">Nothing asked yet.</p>;
+
+            if (ready) {
+              return (
+                <div className="printer-state ready">
+                  <div>
+                    <b>✓ The printer is ready</b>
+                    <span>{ready.answeredBy} · {formatMoment(ready.answeredAt ?? "")}</span>
+                  </div>
+                  {/* Zodra er geprint is vervalt het antwoord: laten staan zou
+                      suggereren dat de printer nog klaarstaat. */}
+                  <button
+                    type="button"
+                    className="printer-go"
+                    onClick={() => onStartPrinting(ready.id)}
+                  >
+                    We are printing now
+                  </button>
+                </div>
+              );
             }
+
             return (
-              <p className={`printer-answer ${answered.status}`}>
-                <b>{answered.status === "ready" ? "✓ Ready to print" : "✕ Not ready"}</b>
-                {answered.answerNote && <span>{answered.answerNote}</span>}
-                <small>
-                  {answered.answeredBy} · {formatMoment(answered.answeredAt ?? "")}
-                </small>
-              </p>
+              <>
+                {answered && answered.status === "blocked" && (
+                  <div className="printer-state blocked">
+                    <div>
+                      <b>✕ Not ready</b>
+                      <span>{answered.answerNote}</span>
+                      <small>{answered.answeredBy} · {formatMoment(answered.answeredAt ?? "")}</small>
+                    </div>
+                  </div>
+                )}
+                <button type="button" className="printer-ask" onClick={onAskPrinterCheck}>
+                  <span className="printer-ask-icon" aria-hidden="true">?</span>
+                  <span>
+                    <b>Ask the floor if the printer is ready</b>
+                    <small>They get a message straight away</small>
+                  </span>
+                </button>
+              </>
             );
           })()}
         </section>

@@ -15,6 +15,8 @@ export type PrinterCheckRecord = {
   answeredAt: string | null;
   answeredBy: string | null;
   answerNote: string;
+  /** Gezet zodra Noviply is gaan printen; daarmee is de uitwisseling voorbij. */
+  closedAt: string | null;
 };
 
 export class PrinterCheckError extends Error {
@@ -40,11 +42,21 @@ export function openCheck(checks: PrinterCheckRecord[]) {
   return checks.find((check) => check.status === "pending") ?? null;
 }
 
-/** De laatst beantwoorde vraag, voor het bericht aan Noviply. */
+/**
+ * Het antwoord dat nog geldt. Zodra Noviply is gaan printen vervalt het: laten
+ * staan zou suggereren dat de printer nog klaarstaat, terwijl er ondertussen
+ * materiaal doorheen is gegaan.
+ */
 export function latestAnswered(checks: PrinterCheckRecord[]) {
   return [...checks]
-    .filter((check) => check.status !== "pending" && check.answeredAt)
+    .filter((check) => check.status !== "pending" && check.answeredAt && !check.closedAt)
     .sort((left, right) => (right.answeredAt ?? "").localeCompare(left.answeredAt ?? ""))[0] ?? null;
+}
+
+/** Kan Noviply nu beginnen? Alleen als de werkvloer ja zei en er nog niet is geprint. */
+export function readyToPrint(checks: PrinterCheckRecord[]) {
+  const answer = latestAnswered(checks);
+  return answer && answer.status === "ready" ? answer : null;
 }
 
 export function printerCheckStatusLabel(status: PrinterCheckStatus) {
