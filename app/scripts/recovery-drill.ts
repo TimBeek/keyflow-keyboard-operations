@@ -127,6 +127,21 @@ async function main() {
       env: { ...process.env, DATABASE_URL: drillUrl },
     });
 
+    /**
+     * Hierna wordt er geleegd. Als het omschrijven van de databasenaam in de
+     * verbindingsregel ooit misgaat, wijst deze verbinding naar de echte
+     * database en is alles weg. Dus eerst vragen waar we zitten, en pas
+     * doorgaan als het antwoord de proefdatabase is.
+     */
+    const [{ current_database: connectedTo }] = await restored<{ current_database: string }[]>`
+      select current_database()
+    `;
+    if (connectedTo !== drillDatabase) {
+      throw new Error(
+        `De proef zit op database "${connectedTo}" in plaats van "${drillDatabase}". Gestopt voordat er iets geleegd werd.`,
+      );
+    }
+
     // De migraties zetten zelf al referentiegegevens klaar. Die eerst weg, anders
     // vergelijk je straks de back-up plus wat er toevallig al stond.
     await restored.unsafe(`truncate ${tables.join(", ")} restart identity cascade`);
