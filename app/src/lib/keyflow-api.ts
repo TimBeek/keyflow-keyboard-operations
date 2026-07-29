@@ -10,7 +10,10 @@
  */
 
 import type { ConversionLogEntry } from "@/domain/conversion-log";
-import type { InventoryTransactionEntry } from "@/domain/operations";
+import type { CompatibilityEvidenceRecord } from "@/domain/compatibility-evidence";
+import type { StockCountRecord } from "@/domain/cycle-count";
+import type { ModelGroupDecision } from "@/domain/model-grouping";
+import type { InventoryTransactionEntry, OperationsPolicy } from "@/domain/operations";
 import type { PrintRequestRecord, PrintRequestStatus } from "@/domain/print-requests";
 
 export type SharedOperationsState = {
@@ -19,6 +22,13 @@ export type SharedOperationsState = {
   transactions: InventoryTransactionEntry[];
   printRequests: PrintRequestRecord[];
   conversionLog: ConversionLogEntry[];
+  operationsPolicy: OperationsPolicy | null;
+  /** Waarmee we merken dat iemand anders het beleid ondertussen aanpaste. */
+  operationsPolicyVersion: number;
+  skuOverrides: Record<string, string>;
+  stockCounts: StockCountRecord[];
+  modelGroupDecisions: ModelGroupDecision[];
+  compatibilityEvidenceRecords: CompatibilityEvidenceRecord[];
 };
 
 /** Een fout die de gebruiker iets zegt, tegenover een verbinding die wegviel. */
@@ -135,6 +145,49 @@ export type ConversionPayload = {
 export function postConversion(payload: ConversionPayload) {
   return request<{ entry: ConversionLogEntry; duplicate: boolean }>(
     "/api/conversions",
+    { method: "POST", body: JSON.stringify(payload) },
+  );
+}
+
+export function putOperationsPolicy(payload: {
+  policy: OperationsPolicy;
+  expectedVersion: number;
+  actorId: string;
+}) {
+  return request<{ policy: OperationsPolicy; version: number }>(
+    "/api/operations/policy",
+    { method: "PUT", body: JSON.stringify(payload) },
+  );
+}
+
+export function putSkuOverride(payload: {
+  catalogKey: string;
+  sku: string;
+  actorId: string;
+}) {
+  return request<{ catalogKey: string; sku: string }>(
+    "/api/sku-overrides",
+    { method: "PUT", body: JSON.stringify(payload) },
+  );
+}
+
+export function postStockCount(payload: Record<string, unknown>) {
+  return request<{ duplicate: boolean; newQuantity: number }>(
+    "/api/inventory/counts",
+    { method: "POST", body: JSON.stringify(payload) },
+  );
+}
+
+export function postModelGroupReview(payload: Record<string, unknown>) {
+  return request<{ duplicate: boolean }>(
+    "/api/model-groups/reviews",
+    { method: "POST", body: JSON.stringify(payload) },
+  );
+}
+
+export function postCompatibilityEvidence(payload: Record<string, unknown>) {
+  return request<{ duplicate: boolean }>(
+    "/api/compatibility/evidence",
     { method: "POST", body: JSON.stringify(payload) },
   );
 }

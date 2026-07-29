@@ -3,6 +3,13 @@ import { requirePermission } from "./authorization-service";
 import { database } from "./database";
 import { listConversionLog } from "./conversion-log-service";
 import { listPrintRequests } from "./print-request-service";
+import { readOperationsPolicy } from "./operations-policy-service";
+import { readSkuOverrides } from "./sku-override-service";
+import {
+  listCompatibilityEvidence,
+  listModelGroupDecisions,
+  listStockCounts,
+} from "./shared-history-service";
 
 /**
  * Alles wat de schermen bij het openen nodig hebben, in één antwoord. Vier losse
@@ -40,7 +47,17 @@ export async function readOperationsState(actorId: string) {
   await requirePermission(actorId, "inventory.view");
   const sql = database();
 
-  const [balances, transactions, printRequests, conversionLog] = await Promise.all([
+  const [
+    balances,
+    transactions,
+    printRequests,
+    conversionLog,
+    policy,
+    skuOverrides,
+    stockCounts,
+    modelGroupDecisions,
+    compatibilityEvidenceRecords,
+  ] = await Promise.all([
     sql<BalanceRow[]>`
       select s.hanging_file_number, b.on_hand
       from inventory_balances b
@@ -61,6 +78,11 @@ export async function readOperationsState(actorId: string) {
     `,
     listPrintRequests(actorId),
     listConversionLog(actorId),
+    readOperationsPolicy(),
+    readSkuOverrides(),
+    listStockCounts(),
+    listModelGroupDecisions(),
+    listCompatibilityEvidence(),
   ]);
 
   const catalogQuantities: Record<string, number> = {};
@@ -95,5 +117,11 @@ export async function readOperationsState(actorId: string) {
     }),
     printRequests,
     conversionLog,
+    operationsPolicy: policy?.policy ?? null,
+    operationsPolicyVersion: policy?.version ?? 0,
+    skuOverrides,
+    stockCounts,
+    modelGroupDecisions,
+    compatibilityEvidenceRecords,
   };
 }

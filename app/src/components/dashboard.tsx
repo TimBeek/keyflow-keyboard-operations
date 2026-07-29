@@ -79,6 +79,11 @@ import {
   postConversion,
   postInventoryMutation,
   postPrintRequest,
+  putOperationsPolicy,
+  putSkuOverride,
+  postStockCount,
+  postModelGroupReview,
+  postCompatibilityEvidence,
   KeyflowApiError,
   KeyflowOfflineError,
   type SharedOperationsState,
@@ -287,6 +292,9 @@ export function Dashboard({
   const [sharedStatus, setSharedStatus] = useState<"loading" | "online" | "offline" | "local">("loading");
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(null);
   const [pendingWrites, setPendingWrites] = useState<PendingWrite[]>([]);
+  // De versie die we zagen; daarmee merken we dat een ander het beleid
+  // ondertussen heeft aangepast in plaats van hem stil te overschrijven.
+  const [policyVersion, setPolicyVersion] = useState(0);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [persistenceMessage, setPersistenceMessage] = useState("Lokale pilotopslag laden…");
   const [mutation, setMutation] = useState<{
@@ -392,6 +400,12 @@ export function Dashboard({
     setTransactions(state.transactions);
     setPrintRequests(state.printRequests);
     setConversionLog(state.conversionLog);
+    setSkuOverrides(state.skuOverrides);
+    setStockCounts(state.stockCounts);
+    setModelGroupDecisions(state.modelGroupDecisions);
+    setCompatibilityEvidenceRecords(state.compatibilityEvidenceRecords);
+    if (state.operationsPolicy) setOperationsPolicy(state.operationsPolicy);
+    setPolicyVersion(state.operationsPolicyVersion);
     setStockItems((items) => items.map((item) => ({
       ...item,
       stock: quantityForInventoryItem(state.catalogQuantities, item),
@@ -437,8 +451,16 @@ export function Dashboard({
       await postPrintRequest(write.payload as never);
     } else if (write.kind === "settlePrintRequest") {
       await patchPrintRequest(write.requestId, write.payload as never);
-    } else {
+    } else if (write.kind === "conversion") {
       await postConversion(write.payload as never);
+    } else if (write.kind === "stockCount") {
+      await postStockCount(write.payload);
+    } else if (write.kind === "modelGroupReview") {
+      await postModelGroupReview(write.payload);
+    } else if (write.kind === "compatibilityEvidence") {
+      await postCompatibilityEvidence(write.payload);
+    } else {
+      await putSkuOverride(write.payload as never);
     }
   }, []);
 
@@ -848,6 +870,26 @@ export function Dashboard({
     ));
     setStockCounts((current) => [...current, record]);
 
+    // De telling zelf gaat naar de database; lukt dat niet, dan wacht hij.
+    const countKey = `count-${crypto.randomUUID()}`;
+    const countPayload = {
+      locationCode: inventoryLocationCode,
+      storageNumber: item.storageNumber,
+      countedQuantity: input.countedQuantity,
+      notes: input.notes,
+      idempotencyKey: countKey,
+      actorId,
+    };
+    void postStockCount(countPayload)
+      .then(() => { void refreshSharedState(); })
+      .catch((error) => {
+        if (error instanceof KeyflowOfflineError) {
+          queueWrite({ kind: "stockCount", id: countKey, payload: countPayload });
+        } else {
+          setLastAction(error instanceof Error ? error.message : "De telling is niet vastgelegd.");
+        }
+      });
+
     if (result.difference !== 0) {
       setTransactions((current) => [
         ...current,
@@ -905,6 +947,28 @@ export function Dashboard({
       reviewer: actorName,
     });
     setModelGroupDecisions((current) => [...current, decision]);
+    const reviewKey = `modelgroup-${crypto.randomUUID()}`;
+    const reviewPayload = {
+      proposalId: proposal.id,
+      status: decision.status,
+      manufacturerPartNumber: decision.manufacturerPartNumber,
+      photoReference: decision.photoReference,
+      notes: decision.notes,
+      evidence: decision.evidence,
+      excludedModels: decision.excludedModels,
+      addedModels: decision.addedModels,
+      idempotencyKey: reviewKey,
+      actorId,
+    };
+    void postModelGroupReview(reviewPayload)
+      .then(() => { void refreshSharedState(); })
+      .catch((error) => {
+        if (error instanceof KeyflowOfflineError) {
+          queueWrite({ kind: "modelGroupReview", id: reviewKey, payload: reviewPayload });
+        } else {
+          setLastAction(error instanceof Error ? error.message : "Het besluit is niet vastgelegd.");
+        }
+      });
     setLastAction(
       `${proposal.proposedName} ${decision.status === "approved" ? "goedgekeurd" : "afgewezen"} door ${decision.reviewer}.`,
     );
@@ -922,6 +986,17 @@ export function Dashboard({
       },
     );
     setCompatibilityEvidenceRecords((current) => [...current, record]);
+    const evidenceKey = `evidence-${crypto.randomUUID()}`;
+    const evidencePayload = { ...input, idempotencyKey: evidenceKey, actorId };
+    void postCompatibilityEvidence(evidencePayload)
+      .then(() => { void refreshSharedState(); })
+      .catch((error) => {
+        if (error instanceof KeyflowOfflineError) {
+          queueWrite({ kind: "compatibilityEvidence", id: evidenceKey, payload: evidencePayload });
+        } else {
+          setLastAction(error instanceof Error ? error.message : "Het bewijs is niet vastgelegd.");
+        }
+      });
     setLastAction(
       `${record.model} · ${record.sku} ${record.status === "approved" ? "fysiek goedgekeurd" : "afgekeurd"} door ${record.reviewer}.`,
     );
@@ -1115,8 +1190,49 @@ export function Dashboard({
     }
   }
 
+  /**
+   * Het beleid geldt voor iedereen. Heeft een ander het ondertussen aangepast,
+   * dan overschrijven we dat niet stilzwijgend maar tonen we wat er nu staat.
+   */
+  async function savePolicy(nextPolicy: OperationsPolicy) {
+    const previous = operationsPolicy;
+    setOperationsPolicy(nextPolicy);
+    try {
+      const result = await putOperationsPolicy({
+        policy: nextPolicy,
+        expectedVersion: policyVersion,
+        actorId,
+      });
+      setOperationsPolicy(result.policy);
+      setPolicyVersion(result.version);
+      setLastAction(`Conversiebeleid bijgewerkt voor iedereen · grens €${result.policy.thresholdEur}`);
+    } catch (error) {
+      if (error instanceof KeyflowOfflineError) {
+        setOperationsPolicy(previous);
+        setLastAction("Geen verbinding — het beleid is niet gewijzigd. Probeer het zo opnieuw.");
+        return;
+      }
+      if (error instanceof KeyflowApiError && error.status === 409) {
+        await refreshSharedState();
+        setLastAction("Iemand anders paste het beleid net aan. De actuele instellingen staan nu in beeld.");
+        return;
+      }
+      setOperationsPolicy(previous);
+      setLastAction(error instanceof Error ? error.message : "Het beleid is niet bewaard.");
+    }
+  }
+
   function changeCatalogSku(catalogKey: string, sku: string) {
     setSkuOverrides((current) => ({ ...current, [catalogKey]: sku }));
+    const payload = { catalogKey, sku, actorId };
+    void putSkuOverride(payload).catch((error) => {
+      if (error instanceof KeyflowOfflineError) {
+        // Eén sleutel per hangmap: een tweede correctie vervangt de eerste.
+        queueWrite({ kind: "skuOverride", id: `sku-${catalogKey}`, payload });
+      } else {
+        setLastAction(error instanceof Error ? error.message : "Het artikelnummer is niet bewaard.");
+      }
+    });
   }
 
   async function requestPrintSticker(input: PrintRequestInput) {
@@ -1622,10 +1738,7 @@ export function Dashboard({
             onRecordRecoveryDrill={recordRecoveryDrill}
             onRecordGoLiveAcceptance={recordGoLiveAcceptance}
             onRecordWorkfloorTrial={recordWorkfloorTrial}
-            onPolicyChange={(nextPolicy) => {
-              setOperationsPolicy(nextPolicy);
-              setLastAction(`Conversiebeleid bijgewerkt · grens €${nextPolicy.thresholdEur}`);
-            }}
+            onPolicyChange={savePolicy}
             persistence={{
               ready: persistenceReady,
               lastSavedAt,

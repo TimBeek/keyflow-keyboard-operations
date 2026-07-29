@@ -11,7 +11,11 @@ export type PendingWrite =
   | { kind: "mutation"; id: string; payload: Record<string, unknown> }
   | { kind: "printRequest"; id: string; payload: Record<string, unknown> }
   | { kind: "settlePrintRequest"; id: string; requestId: string; payload: Record<string, unknown> }
-  | { kind: "conversion"; id: string; payload: Record<string, unknown> };
+  | { kind: "conversion"; id: string; payload: Record<string, unknown> }
+  | { kind: "stockCount"; id: string; payload: Record<string, unknown> }
+  | { kind: "modelGroupReview"; id: string; payload: Record<string, unknown> }
+  | { kind: "compatibilityEvidence"; id: string; payload: Record<string, unknown> }
+  | { kind: "skuOverride"; id: string; payload: Record<string, unknown> };
 
 export const PENDING_WRITES_KEY = "keyflow.pending-writes.v1";
 
@@ -42,7 +46,10 @@ export function readPendingWrites(raw: string | null): PendingWrite[] {
       && typeof item === "object"
       && typeof item.id === "string"
       && typeof item.kind === "string"
-      && ["mutation", "printRequest", "settlePrintRequest", "conversion"].includes(item.kind)
+      && [
+        "mutation", "printRequest", "settlePrintRequest", "conversion",
+        "stockCount", "modelGroupReview", "compatibilityEvidence", "skuOverride",
+      ].includes(item.kind)
       && Boolean(item.payload));
   } catch {
     // Een onleesbare wachtrij is erger dan een lege: hij zou elke poging

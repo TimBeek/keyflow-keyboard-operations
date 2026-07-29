@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { ConversionLogError } from "@/domain/conversion-log";
 import { PrintRequestError } from "@/domain/print-requests";
+import { StickerSkuError } from "@/domain/sticker-sku";
 import { AuthorizationError } from "./authorization-service";
 import { DatabaseConfigurationError } from "./database";
 import { RequestIdentityError } from "./request-identity";
@@ -23,7 +24,9 @@ export function apiErrorResponse(error: unknown) {
   if (error instanceof AuthorizationError) {
     return { status: 403, body: { error: "FORBIDDEN", message: error.message } };
   }
-  if (error instanceof PrintRequestError || error instanceof ConversionLogError) {
+  if (error instanceof PrintRequestError
+    || error instanceof ConversionLogError
+    || error instanceof StickerSkuError) {
     return { status: 422, body: { error: "RULE_VIOLATION", message: error.message } };
   }
   if (error instanceof z.ZodError) {
