@@ -891,9 +891,14 @@ export function OperationsManagement({
                       </small>
                       <span className="model-group-score">
                         Bronmatch {proposal.confidence}%
-                        {proposal.conflictingModels.length > 0
-                          ? ` · ${proposal.conflictingModels.length} conflict${proposal.conflictingModels.length === 1 ? "" : "en"}`
-                          : " · geen bronconflict"}
+                        {proposal.conflictingModels.length > 0 ? (
+                          <b className="score-conflict">
+                            {proposal.conflictingModels.length} conflict
+                            {proposal.conflictingModels.length === 1 ? "" : "en"}
+                          </b>
+                        ) : (
+                          <b className="score-clean">geen conflict</b>
+                        )}
                       </span>
                     </button>
                   );
@@ -1451,16 +1456,6 @@ export function OperationsManagement({
               </div>
               <button className="primary-button policy-save" onClick={savePolicy}>Configuratie actief maken</button>
               {saved && <div className={saved.startsWith("Controleer") ? "form-error" : "policy-saved"}>{saved}</div>}
-            </section>
-            <section className="ai-readiness">
-              <div><span>AI-ONDERSTEUNING</span><h3>Layoutgroepen met één knop</h3></div>
-              <p>KeyFlow zoekt zelf uit welke modellen dezelfde sticker kunnen gebruiken. Jij keurt een groep goed of af; bewijs vastleggen mag daarna en blokkeert de beslissing niet.</p>
-              <ul>
-                <li className="ready">Modelnamen, SKU, layout en hangmap gekoppeld</li>
-                <li className="ready">Bronconflicten automatisch gemarkeerd</li>
-                <li className="ready">Goedkeuring en afwijzing in audit bewaard</li>
-                <li>Onderdeelnummers en foto&apos;s achteraf aanvullen</li>
-              </ul>
             </section>
             <section className="data-continuity">
               <div>

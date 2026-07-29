@@ -247,7 +247,7 @@ td b.zero { color: var(--red); }
 .recommendation-label { color: var(--signal); font-size: 11.5px; font-weight: 900; letter-spacing: 1px; }
 .recommendation-hero h3 { margin: 7px 0; color: var(--signal); font-size: 25px; }
 .recommendation-hero p { margin: 0 0 12px; color: var(--text); font-size: 13px; line-height: 1.55; }
-.rule-chip { display: inline-block; padding: 4px 7px; border-radius: 10px; background: rgba(255,255,255,.8); color: var(--text); font-size: 11.5px; }
+.rule-chip { display: inline-block; padding: 4px 7px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font-size: 11.5px; }
 .warning-list, .alternatives { padding: 15px 17px; border-radius: 14px; }
 .warning-list { border: 1px solid color-mix(in srgb, var(--warn) 34%, transparent); background: var(--warn-soft); }
 .warning-list strong, .alternatives strong { display: block; margin-bottom: 7px; color: var(--text); font-size: 12.5px; }
@@ -819,7 +819,7 @@ td b.zero { color: var(--red); }
 .model-group-intro h3 { margin: 5px 0; color: var(--text); font-size: 14px; }
 .model-group-intro p { max-width: 650px; margin: 0; color: var(--text-2); font-size: 11.5px; line-height: 1.55; }
 .model-group-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
-.model-group-summary button { min-width: 0; padding: 10px; border: 1px solid var(--signal-soft); border-radius: 12px; background: rgba(255,255,255,.8); text-align: left; }
+.model-group-summary button { min-width: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); text-align: left; cursor: pointer; transition: border-color .15s, background .15s; }
 .model-group-summary button span, .model-group-summary button strong { display: block; }
 .model-group-summary button span { color: var(--text-2); font-size: 11px; font-weight: 800; }
 .model-group-summary button strong { margin-top: 4px; color: var(--text); font-size: 16px; }
@@ -1760,3 +1760,25 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 .stock-low { background: color-mix(in srgb, var(--warn) 8%, transparent); }
 .resupply-flag { display: inline-block; padding: 2px 9px; border-radius: 999px; background: var(--warn-soft); color: var(--warn); font-size: 11px; font-weight: 800; }
 .stock-ok { color: var(--muted); font-size: 11.5px; font-weight: 700; }
+
+/* Filters op layoutgroepen: de telling is de hoofdzaak, het label de toelichting. */
+.model-group-summary button:hover { border-color: var(--signal); }
+.model-group-summary button strong { color: var(--text); font-size: 21px; font-weight: 800; letter-spacing: -.01em; }
+.model-group-summary button span { color: var(--muted); }
+.model-group-summary button.active { border-color: var(--signal); background: color-mix(in srgb, var(--signal) 14%, transparent); }
+.model-group-summary button.active span { color: var(--signal); }
+.model-group-summary button.active.approved { border-color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
+.model-group-summary button.active.approved span, .model-group-summary button.active.approved strong { color: var(--ok); }
+.model-group-summary button.active.rejected { border-color: var(--crit); background: color-mix(in srgb, var(--crit) 14%, transparent); }
+.model-group-summary button.active.rejected span, .model-group-summary button.active.rejected strong { color: var(--crit); }
+
+/* Een bronconflict is een waarschuwing, geen neutrale mededeling — dus niet
+   in dezelfde blauwe tint als de rest van de regel. */
+.model-group-score { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+.model-group-score .score-conflict { padding: 1px 7px; border-radius: 999px; background: var(--warn-soft); color: var(--warn); font-size: 10.5px; font-weight: 800; }
+.model-group-score .score-clean { color: var(--muted); font-weight: 700; }
+
+/* De modelnamen zijn de hoofdzaak; de knop eronder mag pas opvallen bij hover. */
+.model-group-models button { opacity: .55; transition: opacity .15s, border-color .15s, color .15s; }
+.model-group-models li:hover button, .model-group-models li.removed button, .model-group-models li.added button { opacity: 1; }
+.model-group-models li > span { font-size: 12.5px; }

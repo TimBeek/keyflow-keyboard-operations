@@ -1259,13 +1259,6 @@ export function Dashboard({
             </div>
           </section>
         </div>
-        <section className="roadmap-panel">
-          <div className="roadmap-heading"><div><span className="workspace-kicker">PRODUCTIEROADMAP</span><h2>KeyFlow is 96% compleet</h2><p>Voortgang naar de volledige live productieversie.</p></div><strong>96%</strong></div>
-          <div className="roadmap-track"><span style={{ width: "96%" }} /></div>
-          <div className="roadmap-steps">
-            <span className="done">Basis & UX</span><span className="done">Excel-import</span><span className="done">Voorraad & planning</span><span className="current">Rollen & uitvoering</span><span>Database live</span><span>SSO & integraties</span><span>Productieacceptatie</span>
-          </div>
-        </section>
           </>
         )}
 
@@ -1348,7 +1341,7 @@ export function Dashboard({
 
         <footer className="app-footer">
           <span><i /> {persistenceReady ? `Lokaal bewaard${lastSavedAt ? ` · ${formatPersistenceTime(lastSavedAt)}` : ""}` : "Opslag laden…"}</span>
-          <span>{lastAction || `Productieroadmap 96% · ${role === "management" ? "managementweergave" : "werknemersuitvoering"}`}</span>
+          <span>{lastAction}</span>
         </footer>
         <ConversionAdvisor open={advisorOpen} onClose={() => setAdvisorOpen(false)} />
         <AccessManagementDialog
