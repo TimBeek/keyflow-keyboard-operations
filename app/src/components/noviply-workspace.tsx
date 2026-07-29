@@ -26,6 +26,11 @@ import {
   noviplyExportFilename,
 } from "@/domain/noviply-export";
 import { displayStickerSku } from "@/domain/sticker-sku";
+import {
+  latestAnswered,
+  openCheck,
+  type PrinterCheckRecord,
+} from "@/domain/printer-check";
 
 export type NoviplyTab = "orders" | "stock";
 
@@ -34,6 +39,8 @@ type Props = {
   printRequests: PrintRequestRecord[];
   quantities: Record<string, number>;
   transactions: InventoryTransactionEntry[];
+  printerChecks: PrinterCheckRecord[];
+  onAskPrinterCheck: () => void;
   onSettlePrintRequest: (
     record: PrintRequestRecord,
     status: Exclude<PrintRequestStatus, "requested">,
@@ -68,6 +75,8 @@ export function NoviplyWorkspace({
   printRequests,
   quantities,
   transactions,
+  printerChecks,
+  onAskPrinterCheck,
   onSettlePrintRequest,
 }: Props) {
   const [blockedId, setBlockedId] = useState("");
@@ -189,6 +198,50 @@ export function NoviplyWorkspace({
             : "folders below their minimum"}</small>
         </article>
       </div>
+
+      {tab === "orders" && (
+        <section className="noviply-panel printer-panel">
+          <div className="noviply-panel-head">
+            <div>
+              <h3>Remote printer</h3>
+              <p>
+                The printer sits at ReMarkt. Ask the floor whether it is loaded and
+                switched on before you send a job.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={onAskPrinterCheck}
+              disabled={Boolean(openCheck(printerChecks))}
+            >
+              {openCheck(printerChecks) ? "Waiting for the floor…" : "Is the printer ready?"}
+            </button>
+          </div>
+          {(() => {
+            const answered = latestAnswered(printerChecks);
+            if (openCheck(printerChecks)) {
+              return (
+                <p className="printer-answer waiting">
+                  The floor has been asked. Their answer appears here.
+                </p>
+              );
+            }
+            if (!answered) {
+              return <p className="printer-answer">Nothing asked yet.</p>;
+            }
+            return (
+              <p className={`printer-answer ${answered.status}`}>
+                <b>{answered.status === "ready" ? "✓ Ready to print" : "✕ Not ready"}</b>
+                {answered.answerNote && <span>{answered.answerNote}</span>}
+                <small>
+                  {answered.answeredBy} · {formatMoment(answered.answeredAt ?? "")}
+                </small>
+              </p>
+            );
+          })()}
+        </section>
+      )}
 
       {tab === "orders" && (
       <section className="noviply-panel">

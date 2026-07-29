@@ -15,6 +15,7 @@ import type { StockCountRecord } from "@/domain/cycle-count";
 import type { ModelGroupDecision } from "@/domain/model-grouping";
 import type { InventoryTransactionEntry, OperationsPolicy } from "@/domain/operations";
 import type { PrintRequestRecord, PrintRequestStatus } from "@/domain/print-requests";
+import type { PrinterCheckRecord } from "@/domain/printer-check";
 
 export type SharedOperationsState = {
   savedAt: string;
@@ -31,6 +32,7 @@ export type SharedOperationsState = {
   stockCounts: StockCountRecord[];
   modelGroupDecisions: ModelGroupDecision[];
   compatibilityEvidenceRecords: CompatibilityEvidenceRecord[];
+  printerChecks: PrinterCheckRecord[];
 };
 
 /** Een fout die de gebruiker iets zegt, tegenover een verbinding die wegviel. */
@@ -246,4 +248,24 @@ export function removeAccount(userId: string) {
 
 export function lockAccess() {
   return request<{ role: string }>("/api/access", { method: "DELETE" });
+}
+
+/* ---------- de printer bij ons, bediend vanuit Roemenië ---------- */
+
+export function askPrinterCheck(question: string) {
+  return request<{ check: PrinterCheckRecord; alreadyOpen: boolean }>(
+    "/api/printer-checks",
+    { method: "POST", body: JSON.stringify({ question }) },
+  );
+}
+
+export function answerPrinterCheck(
+  id: string,
+  status: "ready" | "blocked",
+  note: string,
+) {
+  return request<{ check: PrinterCheckRecord; alreadyAnswered: boolean }>(
+    `/api/printer-checks/${id}`,
+    { method: "PATCH", body: JSON.stringify({ status, note }) },
+  );
 }

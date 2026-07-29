@@ -10,6 +10,7 @@ import { InventoryImportDialog } from "@/components/inventory-import";
 import { InventoryCatalog } from "@/components/inventory-catalog";
 import { InventoryMutationDialog, type InventoryItem } from "@/components/inventory-mutation";
 import { OperationsManagement } from "@/components/operations-management";
+import { PrinterCheckPrompt } from "@/components/printer-check-prompt";
 import type { AcceptanceSyncState } from "@/components/go-live-acceptance-center";
 import type { ContinuitySyncState } from "@/components/production-readiness-center";
 import type { WorkfloorSyncState } from "@/components/workfloor-acceptance-center";
@@ -82,6 +83,8 @@ import {
   fetchAccessRole,
   signInWithPin,
   changeOwnPin,
+  askPrinterCheck,
+  answerPrinterCheck,
   lockAccess,
   type PilotAccount,
   putOperationsPolicy,
@@ -102,6 +105,10 @@ import {
   type PendingWrite,
 } from "@/domain/pending-writes";
 import { pilotActorFor } from "@/domain/pilot-actors";
+import {
+  openCheck,
+  type PrinterCheckRecord,
+} from "@/domain/printer-check";
 import {
   createConversionLogEntry,
   type ConversionLogEntry,
@@ -263,6 +270,9 @@ export function Dashboard({
   const [stockCounts, setStockCounts] = useState<StockCountRecord[]>([]);
   const [printRequests, setPrintRequests] = useState<PrintRequestRecord[]>([]);
   const [conversionLog, setConversionLog] = useState<ConversionLogEntry[]>([]);
+  // Noviply bedient de premiumstickerprinter op afstand; of hij klaarstaat kan
+  // alleen de werkvloer zien.
+  const [printerChecks, setPrinterChecks] = useState<PrinterCheckRecord[]>([]);
   const [noviplyTab, setNoviplyTab] = useState<NoviplyTab>("orders");
   // Regels waar de Excel-import geen bruikbaar artikelnummer opleverde, kunnen
   // hier worden aangevuld zonder de bron aan te passen.
@@ -415,6 +425,7 @@ export function Dashboard({
     setStockCounts(state.stockCounts);
     setModelGroupDecisions(state.modelGroupDecisions);
     setCompatibilityEvidenceRecords(state.compatibilityEvidenceRecords);
+    setPrinterChecks(state.printerChecks);
     if (state.operationsPolicy) setOperationsPolicy(state.operationsPolicy);
     setPolicyVersion(state.operationsPolicyVersion);
     setDirectPrintLayouts(state.directPrintLayouts);
@@ -1286,6 +1297,26 @@ export function Dashboard({
     }
   }
 
+  async function requestPrinterCheck() {
+    try {
+      const { check, alreadyOpen } = await askPrinterCheck("");
+      setPrinterChecks((current) => [check, ...current.filter((item) => item.id !== check.id)]);
+      setLastAction(alreadyOpen
+        ? "Er stond al een vraag open bij de werkvloer."
+        : "Gevraagd aan de werkvloer of de printer klaarstaat.");
+    } catch (error) {
+      setLastAction(error instanceof Error ? error.message : "De vraag kon niet worden gesteld.");
+    }
+  }
+
+  async function replyPrinterCheck(id: string, status: "ready" | "blocked", note: string) {
+    const { check } = await answerPrinterCheck(id, status, note);
+    setPrinterChecks((current) => current.map((item) => (item.id === check.id ? check : item)));
+    setLastAction(status === "ready"
+      ? "Doorgegeven aan Noviply: de printer staat klaar."
+      : "Doorgegeven aan Noviply: de printer staat niet klaar.");
+  }
+
   function recordConversion(input: ConversionLogInput) {
     const idempotencyKey = `conversion-${crypto.randomUUID()}`;
     const entry = createConversionLogEntry(input, {
@@ -1699,6 +1730,8 @@ export function Dashboard({
             printRequests={printRequests}
             quantities={catalogQuantities}
             transactions={transactions}
+            printerChecks={printerChecks}
+            onAskPrinterCheck={() => void requestPrinterCheck()}
             onSettlePrintRequest={settlePrintRequestRecord}
           />
         )}
@@ -1904,6 +1937,12 @@ export function Dashboard({
           <span className={`sync-state ${sharedStatus}`}><i /> {syncLabel}</span>
           <span>{lastAction}</span>
         </footer>
+        {role === "employee" && openCheck(printerChecks) && (
+          <PrinterCheckPrompt
+            check={openCheck(printerChecks)!}
+            onAnswer={(status, note) => replyPrinterCheck(openCheck(printerChecks)!.id, status, note)}
+          />
+        )}
         {unlockOpen && (
           <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Aanmelden">
             <div className="modal unlock-modal">

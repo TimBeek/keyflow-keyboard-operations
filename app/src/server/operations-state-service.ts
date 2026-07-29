@@ -5,6 +5,7 @@ import { listConversionLog } from "./conversion-log-service";
 import { listPrintRequests } from "./print-request-service";
 import { readOperationsPolicy } from "./operations-policy-service";
 import { readSkuOverrides } from "./sku-override-service";
+import { listPrinterChecks } from "./printer-check-service";
 import {
   listCompatibilityEvidence,
   listModelGroupDecisions,
@@ -57,6 +58,7 @@ export async function readOperationsState(actorId: string) {
     stockCounts,
     modelGroupDecisions,
     compatibilityEvidenceRecords,
+    printerChecks,
   ] = await Promise.all([
     sql<BalanceRow[]>`
       select s.hanging_file_number, b.on_hand
@@ -83,6 +85,7 @@ export async function readOperationsState(actorId: string) {
     listStockCounts(),
     listModelGroupDecisions(),
     listCompatibilityEvidence(),
+    listPrinterChecks(),
   ]);
 
   const catalogQuantities: Record<string, number> = {};
@@ -124,5 +127,6 @@ export async function readOperationsState(actorId: string) {
     stockCounts,
     modelGroupDecisions,
     compatibilityEvidenceRecords,
+    printerChecks,
   };
 }

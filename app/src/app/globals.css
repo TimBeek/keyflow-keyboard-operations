@@ -2282,3 +2282,106 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 .answer-fallback b { font-size: 13.5px; color: var(--text); }
 .answer-fallback p { margin: 0; color: var(--text-2); font-size: 12.5px; line-height: 1.6; }
 .answer-fallback .fallback-detail { color: var(--text-3); font-size: 12px; }
+
+/* ---------------------------------------------------------------------------
+   De premiumstickerprinter staat bij ons, Noviply bedient hem op afstand. Deze
+   vraag onderbreekt de werkvloer bewust: aan de andere kant wacht iemand met
+   een order.
+   --------------------------------------------------------------------------- */
+
+.printer-check {
+  width: min(480px, 100%);
+  padding: 28px 30px 26px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: var(--shadow-pop);
+}
+
+.printer-check-kicker {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--teal);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+
+.printer-check h2 { margin: 0 0 10px; font-size: 22px; letter-spacing: -.3px; }
+.printer-check > p { margin: 0 0 22px; color: var(--text-2); font-size: 13.5px; line-height: 1.6; }
+
+.printer-check-actions { display: flex; gap: 10px; }
+
+.printer-check-yes, .printer-check-no {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 54px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+
+.printer-check-yes b, .printer-check-no b { font-size: 18px; }
+.printer-check-yes b { color: var(--ok); }
+.printer-check-no b { color: var(--crit); }
+
+.printer-check-yes:hover:not(:disabled) {
+  border-color: var(--ok);
+  background: var(--ok-soft);
+}
+.printer-check-no:hover:not(:disabled) {
+  border-color: var(--crit);
+  background: var(--crit-soft);
+}
+.printer-check button:disabled { opacity: .55; cursor: not-allowed; }
+
+.printer-check-blocked { display: grid; gap: 14px; }
+.printer-check-blocked label { display: grid; gap: 6px; }
+.printer-check-blocked span {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  color: var(--text-3);
+  text-transform: uppercase;
+}
+.printer-check-blocked input {
+  min-height: 42px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 14px;
+}
+
+/* De kant van Noviply. */
+.printer-panel .noviply-panel-head { margin-bottom: 4px; }
+
+.printer-answer {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 13px 15px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 12.5px;
+}
+
+.printer-answer b { font-size: 13.5px; color: var(--text); }
+.printer-answer small { color: var(--text-3); font-size: 11.5px; }
+.printer-answer.ready { border-color: color-mix(in srgb, var(--ok) 45%, transparent); background: var(--ok-soft); }
+.printer-answer.ready b { color: var(--ok); }
+.printer-answer.blocked { border-color: color-mix(in srgb, var(--crit) 45%, transparent); background: var(--crit-soft); }
+.printer-answer.blocked b { color: var(--crit); }
+.printer-answer.waiting { border-style: dashed; }

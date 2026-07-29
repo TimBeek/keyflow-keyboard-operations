@@ -3,6 +3,7 @@ import { z } from "zod";
 import { ConversionLogError } from "@/domain/conversion-log";
 import { PrintRequestError } from "@/domain/print-requests";
 import { StickerSkuError } from "@/domain/sticker-sku";
+import { PrinterCheckError } from "@/domain/printer-check";
 import { AccessCodeError } from "./access-session";
 import { AuthorizationError } from "./authorization-service";
 import { DatabaseConfigurationError } from "./database";
@@ -28,7 +29,8 @@ export function apiErrorResponse(error: unknown) {
   if (error instanceof PrintRequestError
     || error instanceof ConversionLogError
     || error instanceof StickerSkuError
-    || error instanceof AccessCodeError) {
+    || error instanceof AccessCodeError
+    || error instanceof PrinterCheckError) {
     return { status: 422, body: { error: "RULE_VIOLATION", message: error.message } };
   }
   if (error instanceof z.ZodError) {
