@@ -235,11 +235,25 @@ export function EmployeeWorkspace({
    */
   const printerFallback = recommendation.fellBackFrom === "direct_reprint";
 
+  /**
+   * De medewerker heeft zelf gemeld dat de toetsenbordsprint niet gaat. Nodig
+   * omdat de koppeling met Roemenië niet sluitend is: zij noemen sommige
+   * modellen bij hun interne nummer ("Surface 1950") en wij bij hun naam. Dan
+   * vindt de app niets, adviseert vier sterren, en staat er iemand met een
+   * laptop die daar niet doorheen kan.
+   */
+  const [printBlocked, setPrintBlocked] = useState(false);
+  const effectiveMethod: ConversionMethodId = printBlocked && recommendation.primary === "direct_reprint"
+    ? "printed_sticker"
+    : recommendation.primary;
+  const fallbackToPremium = printerFallback || (printBlocked && recommendation.primary === "direct_reprint");
+
   const hasAnswer = model !== "";
-  const usesSheet = recommendation.primary === "noviply_sheet";
+  const usesSheet = effectiveMethod === "noviply_sheet";
   const storageNumber = matched?.item.storageNumber ?? null;
 
   function resetAdvice() {
+    setPrintBlocked(false);
     setModelQuery("");
     setChosenModel(null);
     setOrderReference("");
@@ -267,19 +281,20 @@ export function EmployeeWorkspace({
       // Ook zonder voorraadvel is de laptop klaar: leegmaken voor de volgende,
       // anders blijft hij op het scherm staan en weet niemand of het gelukt is.
       // "Geen conversie" is geen conversie: die hoort niet in de telling.
-      if (recommendation.primary !== "none") {
+      if (effectiveMethod !== "none") {
         logConversion({
-          method: recommendation.primary,
+          method: effectiveMethod,
           status: "completed",
           model,
           targetLayout,
           variant: enterShape,
           orderReference,
-          ...(printerFallback ? { fellBackFrom: "direct_reprint" as const } : {}),
+          ...(fallbackToPremium ? { fellBackFrom: "direct_reprint" as const } : {}),
         });
       }
       setAdviceMessage({ tone: "ok", text: "Klaar. Deze methode gebruikt geen voorraadvel, er is niets afgeboekt. Pak de volgende laptop." });
       setConfirmed(false);
+      setPrintBlocked(false);
       setModelQuery("");
       setChosenModel(null);
       setOrderReference("");
@@ -603,27 +618,27 @@ export function EmployeeWorkspace({
           )}
 
           {hasAnswer && (
-            <div className={`answer tone-${methodProfile(recommendation.primary).tone}${usesSheet ? "" : " answer-nosheet"}`}>
+            <div className={`answer tone-${methodProfile(effectiveMethod).tone}${usesSheet ? "" : " answer-nosheet"}`}>
               <div className="answer-head">
                 <div>
                   <span>DIT MOET JE GEBRUIKEN</span>
-                  <h2 className={`method-name tone-${methodProfile(recommendation.primary).tone}`}>
+                  <h2 className={`method-name tone-${methodProfile(effectiveMethod).tone}`}>
                     <span className="method-dot" aria-hidden="true" />
-                    {methodLabel(recommendation.primary)}
+                    {methodLabel(effectiveMethod)}
                   </h2>
                   <p className="method-tier">
                     <span className="method-stars" aria-hidden="true">
-                      {methodStars(recommendation.primary)}
+                      {methodStars(effectiveMethod)}
                     </span>
                     <span className="sr-only">
-                      Niveau {methodProfile(recommendation.primary).tier} van 4.
+                      Niveau {methodProfile(effectiveMethod).tier} van 4.
                     </span>
-                    {methodProfile(recommendation.primary).note}
+                    {methodProfile(effectiveMethod).note}
                   </p>
                   <p>
                     {model} · {matched ? layoutWithCountry(matched.item.layout, matched.item.sku) : targetLayout}
-                    {methodProfile(recommendation.primary).supplier
-                      && ` · via ${methodProfile(recommendation.primary).supplier}`}
+                    {methodProfile(effectiveMethod).supplier
+                      && ` · via ${methodProfile(effectiveMethod).supplier}`}
                   </p>
                 </div>
                 {usesSheet && storageNumber !== null && (
@@ -642,13 +657,17 @@ export function EmployeeWorkspace({
                 </dl>
               )}
 
-              {printerFallback && (
+              {fallbackToPremium && (
                 <div className="answer-fallback">
-                  <b>De toetsenbordsprinter kan {targetLayout} niet voor dit model</b>
+                  <b>
+                    {printBlocked
+                      ? "Je hebt gemeld dat de toetsenbordsprint niet gaat"
+                      : `De toetsenbordsprinter kan ${targetLayout} niet voor dit model`}
+                  </b>
                   <p>
-                    Deze laptop hoorde een toetsenbordsprint te krijgen, maar Notebook
-                    Service print deze taal niet voor {model}. Hij gaat daarom met een
-                    Noviply Premium Sticker, en die moet Noviply nog printen.
+                    Deze laptop hoorde een toetsenbordsprint te krijgen, maar dat gaat
+                    niet voor {model}. Hij gaat daarom met een Noviply Premium Sticker,
+                    en die moet Noviply nog printen.
                   </p>
                   {printScope.layouts.length > 0 && (
                     <p className="fallback-detail">
@@ -658,16 +677,16 @@ export function EmployeeWorkspace({
                 </div>
               )}
 
-              {recommendation.primary === "printed_sticker" ? (
+              {effectiveMethod === "printed_sticker" ? (
                 <div className="answer-todo">
-                  <b>{printerFallback ? "Vraag de sticker aan bij Noviply" : "Ligt deze sticker al klaar?"}</b>
+                  <b>{fallbackToPremium ? "Vraag de sticker aan bij Noviply" : "Ligt deze sticker al klaar?"}</b>
                   <p>
-                    {printerFallback
+                    {fallbackToPremium
                       ? "Er ligt niets voorgeprint voor dit geval — de ochtendronde kende hem niet."
                       : "De buitenlandse orders worden 's ochtends automatisch voorgeprint."}
                   </p>
                   <div className="print-ready-choice">
-                    {!printerFallback && (
+                    {!fallbackToPremium && (
                     <button
                       type="button"
                       className="primary-button"
@@ -701,7 +720,9 @@ export function EmployeeWorkspace({
                               : targetLayout,
                             variant: enterShape,
                             orderReference,
-                            reason: "Not ready during the morning run.",
+                            reason: fallbackToPremium
+                              ? "Keyboard printer cannot handle this model."
+                              : "Not ready during the morning run.",
                           });
                           // De laptop is voor de medewerker klaar, maar pas af
                           // als Noviply hem geprint heeft. Dat verschil blijft
@@ -713,7 +734,7 @@ export function EmployeeWorkspace({
                             targetLayout,
                             variant: enterShape,
                             orderReference,
-                            ...(printerFallback ? { fellBackFrom: "direct_reprint" as const } : {}),
+                            ...(fallbackToPremium ? { fellBackFrom: "direct_reprint" as const } : {}),
                           });
                           setAdviceMessage({
                             tone: "ok",
@@ -732,14 +753,26 @@ export function EmployeeWorkspace({
                         }
                       }}
                     >
-                      {printerFallback ? "Aanvragen bij Noviply" : "Nee, aanvragen"}
+                      {fallbackToPremium ? "Aanvragen bij Noviply" : "Nee, aanvragen"}
                     </button>
                   </div>
                 </div>
               ) : (
                 <div className="answer-todo">
                   <b>Wat moet je doen</b>
-                  <p>{todoFor(recommendation.primary, storageNumber)}</p>
+                  <p>{todoFor(effectiveMethod, storageNumber)}</p>
+                  {/* De koppeling met Roemenië is niet sluitend: zij noemen
+                      sommige modellen bij hun interne nummer. Dan moet de
+                      medewerker kunnen zeggen dat het niet gaat. */}
+                  {effectiveMethod === "direct_reprint" && printScope.status !== "supported" && (
+                    <button
+                      type="button"
+                      className="answer-escape"
+                      onClick={() => setPrintBlocked(true)}
+                    >
+                      Lukt niet — dit model kan niet door de toetsenbordsprinter
+                    </button>
+                  )}
                 </div>
               )}
 

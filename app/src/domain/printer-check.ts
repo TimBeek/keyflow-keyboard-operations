@@ -59,8 +59,12 @@ export function readyToPrint(checks: PrinterCheckRecord[]) {
   return answer && answer.status === "ready" ? answer : null;
 }
 
-/** Hoe lang "Noviply print nu" op de werkvloer blijft staan. */
-export const printingVisibleMinutes = 45;
+/**
+ * Hoe lang "Noviply print nu" op de werkvloer blijft staan. Kort: het is een
+ * seintje dat de printer draait, geen mededeling die de hele dag moet blijven
+ * hangen — anders leest niemand hem meer.
+ */
+export const printingVisibleMinutes = 5;
 
 /**
  * Noviply is net begonnen met printen. De werkvloer hoort dat te weten: die
