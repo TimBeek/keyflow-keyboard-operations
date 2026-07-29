@@ -45,16 +45,62 @@ export type ConversionRecommendation = {
   };
 };
 
-const labels: Record<ConversionMethodId, string> = {
-  none: "Geen conversie",
-  loose_stickers: "Losse stickers",
-  noviply_sheet: "Noviply voorraadvel",
-  printed_sticker: "Sterke printsticker",
-  direct_reprint: "Directe keyboardprint",
+/**
+ * De vier oplossingen in oplopende kwaliteit. De naam alleen zei niets over de
+ * rangorde — "Sterke printsticker" klinkt niet zwaarder dan "voorraadvel" —
+ * dus staat het niveau er nu expliciet bij, in sterren en in kleur.
+ */
+export type ConversionMethodProfile = {
+  name: string;
+  tier: 0 | 1 | 2 | 3 | 4;
+  note: string;
+  tone: "none" | "basic" | "stock" | "premium" | "professional";
+};
+
+export const conversionMethods: Record<ConversionMethodId, ConversionMethodProfile> = {
+  none: {
+    name: "Geen conversie",
+    tier: 0,
+    note: "Deze laptop hoeft niet omgezet te worden",
+    tone: "none",
+  },
+  loose_stickers: {
+    name: "Basisstickers",
+    tier: 1,
+    note: "Tijdelijke, voordelige oplossing",
+    tone: "basic",
+  },
+  noviply_sheet: {
+    name: "Noviply Voorraadstickers",
+    tier: 2,
+    note: "Standaard voorraad, voor dagelijks gebruik",
+    tone: "stock",
+  },
+  printed_sticker: {
+    name: "Noviply Premium Stickers",
+    tier: 3,
+    note: "Extra sterke lijmlaag, duurzamere variant",
+    tone: "premium",
+  },
+  direct_reprint: {
+    name: "Professionele Toetsenbordsprint",
+    tier: 4,
+    note: "Permanente, fabriekwaardige oplossing",
+    tone: "professional",
+  },
 };
 
 export function methodLabel(method: ConversionMethodId) {
-  return labels[method];
+  return conversionMethods[method].name;
+}
+
+export function methodProfile(method: ConversionMethodId) {
+  return conversionMethods[method];
+}
+
+/** Sterren zeggen de rangorde ook zonder kleur — kleurenblindheid meegerekend. */
+export function methodStars(method: ConversionMethodId) {
+  return "★".repeat(conversionMethods[method].tier);
 }
 
 export function recommendConversion(rawInput: ConversionPolicyInput): ConversionRecommendation {

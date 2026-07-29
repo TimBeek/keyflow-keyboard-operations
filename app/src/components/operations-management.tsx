@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { inventoryCatalog } from "@/data/inventory-catalog";
+import { conversionMethods } from "@/domain/conversion-policy";
 import {
   type StockCountInput,
   type StockCountRecord,
@@ -131,11 +132,12 @@ const emptyModelGroupEvidence: ModelGroupEvidence = {
   dryFitPassed: false,
 };
 
+// Eén bron voor de namen: het domein bepaalt hoe een methode heet en hoe zwaar hij weegt.
 const methodLabels: Record<OperationalMethodId, { name: string; detail: string }> = {
-  loose_stickers: { name: "Losse stickers", detail: "Uitfaseringsfallback" },
-  noviply_sheet: { name: "Oude Noviply-voorraadvel", detail: "Exact SKU-nummer verplicht" },
-  printed_sticker: { name: "Sterke printsticker", detail: "First-time-right" },
-  direct_reprint: { name: "Directe keyboardprint", detail: "Premiumroute" },
+  loose_stickers: { name: conversionMethods.loose_stickers.name, detail: conversionMethods.loose_stickers.note },
+  noviply_sheet: { name: conversionMethods.noviply_sheet.name, detail: conversionMethods.noviply_sheet.note },
+  printed_sticker: { name: conversionMethods.printed_sticker.name, detail: conversionMethods.printed_sticker.note },
+  direct_reprint: { name: conversionMethods.direct_reprint.name, detail: conversionMethods.direct_reprint.note },
 };
 
 export function OperationsManagement({

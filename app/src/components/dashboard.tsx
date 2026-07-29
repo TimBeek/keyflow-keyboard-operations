@@ -189,10 +189,10 @@ const initialLowStock = initialLowStockSeed.map((item) => {
 });
 
 const methods = [
-  { id: 1, name: "Losse stickers", detail: "Wordt uitgefaseerd", tone: "muted", status: "Fallback" },
-  { id: 2, name: "Noviply voorraadvel", detail: "Onder €300 · vooral QWERTY US", tone: "blue", status: "148 hangmappen" },
-  { id: 3, name: "Sterke printsticker", detail: "Buitenlandse layouts · onder €300", tone: "violet", status: "Actief" },
-  { id: 4, name: "Directe keyboardprint", detail: "Vanaf €300 · premium resultaat", tone: "green", status: "Voorkeur" },
+  { id: 1, name: "Basisstickers", detail: "Tijdelijke, voordelige oplossing", tone: "basic", status: "★" },
+  { id: 2, name: "Noviply Voorraadstickers", detail: "Standaard voorraad · 148 hangmappen", tone: "stock", status: "★★" },
+  { id: 3, name: "Noviply Premium Stickers", detail: "Extra sterke lijmlaag · duurzamer", tone: "premium", status: "★★★" },
+  { id: 4, name: "Professionele Toetsenbordsprint", detail: "Permanent · vanaf €300", tone: "professional", status: "★★★★" },
 ];
 
 export function Dashboard({

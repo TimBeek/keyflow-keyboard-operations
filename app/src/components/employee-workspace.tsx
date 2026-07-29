@@ -9,6 +9,8 @@ import {
 import type { WorkOrderSnapshot } from "@/domain/order-lookup";
 import {
   methodLabel,
+  methodProfile,
+  methodStars,
   recommendConversion,
   type ConversionMethodId,
 } from "@/domain/conversion-policy";
@@ -502,7 +504,19 @@ export function EmployeeWorkspace({
               <div className="answer-head">
                 <div>
                   <span>DIT MOET JE GEBRUIKEN</span>
-                  <h2>{methodLabel(recommendation.primary)}</h2>
+                  <h2 className={`method-name tone-${methodProfile(recommendation.primary).tone}`}>
+                    <span className="method-dot" aria-hidden="true" />
+                    {methodLabel(recommendation.primary)}
+                  </h2>
+                  <p className="method-tier">
+                    <span className="method-stars" aria-hidden="true">
+                      {methodStars(recommendation.primary)}
+                    </span>
+                    <span className="sr-only">
+                      Niveau {methodProfile(recommendation.primary).tier} van 4.
+                    </span>
+                    {methodProfile(recommendation.primary).note}
+                  </p>
                   <p>{model} · {matched ? layoutWithCountry(matched.item.layout, matched.item.sku) : targetLayout}</p>
                 </div>
                 {usesSheet && storageNumber !== null && (

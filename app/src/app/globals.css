@@ -1710,3 +1710,37 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 .sku-edit { display: flex; gap: 5px; align-items: center; margin-top: 3px; }
 .sku-edit input { width: 150px; height: 27px; padding: 0 8px; border: 1px solid var(--signal); border-radius: 8px; background: var(--surface-2); color: var(--text); font-size: 11.5px; }
 .sku-edit button { min-height: 27px; padding: 0 9px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--text-2); font-size: 10.5px; font-weight: 800; cursor: pointer; }
+
+/* Vier oplossingen in oplopende kwaliteit. Kleur ondersteunt, sterren dragen
+   de rangorde — die blijft leesbaar zonder kleur. */
+:root {
+  --tier-basic: #2FA36B;
+  --tier-stock: #2E9BF0;
+  --tier-premium: #9A7BE8;
+  --tier-professional: #D9A62B;
+}
+:root[data-theme="light"] {
+  --tier-basic: #17794C;
+  --tier-stock: #1B6FB8;
+  --tier-premium: #6B4CC4;
+  --tier-professional: #97701A;
+}
+.method-name { display: flex; align-items: center; gap: 10px; }
+.method-dot { width: 12px; height: 12px; border-radius: 50%; flex: none; background: var(--muted); }
+.method-name.tone-basic .method-dot { background: var(--tier-basic); }
+.method-name.tone-stock .method-dot { background: var(--tier-stock); }
+.method-name.tone-premium .method-dot { background: var(--tier-premium); }
+.method-name.tone-professional .method-dot { background: var(--tier-professional); }
+.method-tier { display: flex; align-items: center; gap: 8px; margin: 2px 0 0; color: var(--text-2); font-size: 13px; }
+.method-stars { color: var(--tier-professional); font-size: 14px; letter-spacing: 1px; }
+.method-list .tone-basic, .conversion-methods .tone-basic { color: var(--tier-basic); }
+.method-list .tone-stock, .conversion-methods .tone-stock { color: var(--tier-stock); }
+.method-list .tone-premium, .conversion-methods .tone-premium { color: var(--tier-premium); }
+.method-list .tone-professional, .conversion-methods .tone-professional { color: var(--tier-professional); }
+
+/* Het niveau van een methode krijgt dezelfde kleur op elk scherm. */
+.method-number.basic, .method-status.basic { background: color-mix(in srgb, var(--tier-basic) 18%, transparent); color: var(--tier-basic); }
+.method-number.stock, .method-status.stock { background: color-mix(in srgb, var(--tier-stock) 18%, transparent); color: var(--tier-stock); }
+.method-number.premium, .method-status.premium { background: color-mix(in srgb, var(--tier-premium) 20%, transparent); color: var(--tier-premium); }
+.method-number.professional, .method-status.professional { background: color-mix(in srgb, var(--tier-professional) 20%, transparent); color: var(--tier-professional); }
+.method-status.basic, .method-status.stock, .method-status.premium, .method-status.professional { letter-spacing: 1px; }

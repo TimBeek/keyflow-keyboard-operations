@@ -13,10 +13,10 @@ type Props = {
 };
 
 const methodOptions: { id: Exclude<ConversionMethodId, "none">; short: string }[] = [
-  { id: "loose_stickers", short: "Losse stickers" },
-  { id: "noviply_sheet", short: "Noviply voorraadvel" },
-  { id: "printed_sticker", short: "Sterke printsticker" },
-  { id: "direct_reprint", short: "Directe keyboardprint" },
+  { id: "loose_stickers", short: "Basisstickers" },
+  { id: "noviply_sheet", short: "Voorraadstickers" },
+  { id: "printed_sticker", short: "Premium Stickers" },
+  { id: "direct_reprint", short: "Toetsenbordsprint" },
 ];
 
 const layouts = ["QWERTY US", "AZERTY FR", "QWERTZ DE", "QWERTY UK", "QWERTY ES", "QWERTY IT"];
