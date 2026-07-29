@@ -15,7 +15,8 @@ export type PendingWrite =
   | { kind: "stockCount"; id: string; payload: Record<string, unknown> }
   | { kind: "modelGroupReview"; id: string; payload: Record<string, unknown> }
   | { kind: "compatibilityEvidence"; id: string; payload: Record<string, unknown> }
-  | { kind: "skuOverride"; id: string; payload: Record<string, unknown> };
+  | { kind: "skuOverride"; id: string; payload: Record<string, unknown> }
+  | { kind: "verificationReport"; id: string; payload: Record<string, unknown> };
 
 export const PENDING_WRITES_KEY = "keyflow.pending-writes.v1";
 
@@ -49,6 +50,7 @@ export function readPendingWrites(raw: string | null): PendingWrite[] {
       && [
         "mutation", "printRequest", "settlePrintRequest", "conversion",
         "stockCount", "modelGroupReview", "compatibilityEvidence", "skuOverride",
+        "verificationReport",
       ].includes(item.kind)
       && Boolean(item.payload));
   } catch {

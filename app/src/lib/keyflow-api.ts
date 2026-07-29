@@ -16,6 +16,7 @@ import type { ModelGroupDecision } from "@/domain/model-grouping";
 import type { InventoryTransactionEntry, OperationsPolicy } from "@/domain/operations";
 import type { PrintRequestRecord, PrintRequestStatus } from "@/domain/print-requests";
 import type { PrinterCheckRecord } from "@/domain/printer-check";
+import type { StickerVerificationReport } from "@/domain/sticker-verification";
 
 export type SharedOperationsState = {
   savedAt: string;
@@ -33,6 +34,7 @@ export type SharedOperationsState = {
   modelGroupDecisions: ModelGroupDecision[];
   compatibilityEvidenceRecords: CompatibilityEvidenceRecord[];
   printerChecks: PrinterCheckRecord[];
+  verificationReports: StickerVerificationReport[];
 };
 
 /** Een fout die de gebruiker iets zegt, tegenover een verbinding die wegviel. */
@@ -268,4 +270,11 @@ export function answerPrinterCheck(
     `/api/printer-checks/${id}`,
     { method: "PATCH", body: JSON.stringify({ status, note }) },
   );
+}
+
+export function postVerificationReport(payload: Record<string, unknown>) {
+  return request<{ report: StickerVerificationReport }>("/api/verification-reports", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }

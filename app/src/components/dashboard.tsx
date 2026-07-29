@@ -85,6 +85,7 @@ import {
   changeOwnPin,
   askPrinterCheck,
   answerPrinterCheck,
+  postVerificationReport,
   lockAccess,
   type PilotAccount,
   putOperationsPolicy,
@@ -114,9 +115,10 @@ import {
   type ConversionLogEntry,
   type ConversionLogInput,
 } from "@/domain/conversion-log";
-import type {
-  StickerVerificationReport,
-  StickerVerificationReportInput,
+import {
+  stickerVerificationFailureLabel,
+  type StickerVerificationReport,
+  type StickerVerificationReportInput,
 } from "@/domain/sticker-verification";
 import {
   createRecoveryDrill,
@@ -367,6 +369,17 @@ export function Dashboard({
   const emptyFolderCount = inventoryCatalog.filter(
     (item) => item.dataQuality === "ready" && inventoryQuantity(catalogQuantities, item) === 0,
   ).length;
+  /**
+   * Meldingen van de werkvloer dat een vel niet paste. Een geslaagde controle
+   * hoeft management niet te zien; een mislukte wel, want dan is er iets mis met
+   * de hangmap, de koppeling of de bron.
+   */
+  const reportedProblems = useMemo(
+    () => verificationReports
+      .filter((report) => report.outcome !== "passed")
+      .sort((left, right) => right.occurredAt.localeCompare(left.occurredAt)),
+    [verificationReports],
+  );
   const awaitingPrintCount = printRequests.filter(
     (request) => request.status === "requested",
   ).length;
@@ -426,6 +439,7 @@ export function Dashboard({
     setModelGroupDecisions(state.modelGroupDecisions);
     setCompatibilityEvidenceRecords(state.compatibilityEvidenceRecords);
     setPrinterChecks(state.printerChecks);
+    setVerificationReports(state.verificationReports);
     if (state.operationsPolicy) setOperationsPolicy(state.operationsPolicy);
     setPolicyVersion(state.operationsPolicyVersion);
     setDirectPrintLayouts(state.directPrintLayouts);
@@ -482,6 +496,8 @@ export function Dashboard({
       await postModelGroupReview(write.payload);
     } else if (write.kind === "compatibilityEvidence") {
       await postCompatibilityEvidence(write.payload);
+    } else if (write.kind === "verificationReport") {
+      await postVerificationReport(write.payload);
     } else {
       await putSkuOverride(write.payload as never);
     }
@@ -952,6 +968,21 @@ export function Dashboard({
       actor: actorName,
     };
     setVerificationReports((current) => [...current, report]);
+
+    // Een melding die alleen in deze browser staat bereikt management nooit,
+    // en dan komt dezelfde fout volgende week gewoon terug.
+    const key = `verification-${crypto.randomUUID()}`;
+    const payload = { ...input, idempotencyKey: key };
+    void postVerificationReport(payload)
+      .then(() => { void refreshSharedState(); })
+      .catch((error) => {
+        if (error instanceof KeyflowOfflineError) {
+          queueWrite({ kind: "verificationReport", id: key, payload });
+        } else {
+          setLastAction(error instanceof Error ? error.message : "De melding is niet vastgelegd.");
+        }
+      });
+
     setLastAction(
       report.outcome === "passed"
         ? `Hangmap ${report.storageNumber} gecontroleerd voor ${report.sku}.`
@@ -1739,6 +1770,7 @@ export function Dashboard({
         {role === "employee" && (
           <EmployeeWorkspace
             directPrintLayouts={directPrintLayouts}
+            printRequests={printRequests}
             onRequestPrintSticker={requestPrintSticker}
             onRecordConversion={recordConversion}
             catalog={inventoryCatalog}
@@ -1797,6 +1829,53 @@ export function Dashboard({
         </section>
 
         <div className="content-grid">
+          {reportedProblems.length > 0 && (
+            <section className="panel problems-panel">
+              <div className="panel-heading">
+                <div>
+                  <h2>Gemeld door de werkvloer</h2>
+                  <p>Vellen die niet pasten. Hier moet iemand iets mee.</p>
+                </div>
+                <span className="problems-count">{reportedProblems.length}</span>
+              </div>
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr><th>Wanneer</th><th>Hangmap / model</th><th>Wat klopte niet</th><th>Gevolg</th></tr>
+                  </thead>
+                  <tbody>
+                    {reportedProblems.slice(0, 8).map((report) => (
+                      <tr key={report.id}>
+                        <td>
+                          <strong>{formatPersistenceTime(report.occurredAt)}</strong>
+                          <span>{report.actor}</span>
+                        </td>
+                        <td>
+                          <strong className="storage-number">Nr. {report.storageNumber}</strong>
+                          <span>{report.model} · {report.sku}</span>
+                        </td>
+                        <td>
+                          <strong>{stickerVerificationFailureLabel(report.failureReason)}</strong>
+                          <span>{report.targetLayout}{report.variant && ` · ${report.variant}`}</span>
+                        </td>
+                        <td>
+                          <span className={`status ${report.outcome === "scrapped" ? "critical" : "low"}`}>
+                            {report.outcome === "scrapped" ? "Vel afgeboekt" : "Niet gebruikt"}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {reportedProblems.length > 8 && (
+                  <p className="report-note">
+                    De acht meest recente staan hier; er zijn er {reportedProblems.length} in totaal.
+                  </p>
+                )}
+              </div>
+            </section>
+          )}
+
           <section className="panel stock-panel">
             <div className="panel-heading">
               <div><h2>Laagste voorraad</h2><p>De acht hangmappen met de minste vellen</p></div>

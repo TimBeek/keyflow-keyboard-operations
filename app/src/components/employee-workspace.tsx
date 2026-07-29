@@ -39,7 +39,13 @@ import {
   targetLayoutOptions,
 } from "@/domain/keyboard-layouts";
 import { catalogModelOptions } from "@/domain/model-catalog";
-import type { PrintRequestInput } from "@/domain/print-requests";
+import type { PrintRequestInput, PrintRequestRecord } from "@/domain/print-requests";
+import {
+  attentionCount,
+  groupPrintRequests,
+  isFresh,
+  printRequestHeadline,
+} from "@/domain/print-request-status";
 import type { ConversionLogInput } from "@/domain/conversion-log";
 import { directPrintScopeFor } from "@/domain/direct-print-scope";
 
@@ -74,7 +80,7 @@ const failureOptions: { value: StickerVerificationFailureReason; label: string }
   { value: "other", label: "Iets anders" },
 ];
 
-type Tab = "advice" | "receive";
+type Tab = "advice" | "receive" | "requests";
 
 /**
  * De Enter-toets verraadt de entervorm, en die bepaalt uit welke hangmap het vel
@@ -109,6 +115,7 @@ type Props = {
   policy: OperationsPolicy;
   /** De layouts die de toetsenbordsprinter aankan; leeg = nog niet ingevuld. */
   directPrintLayouts: string[];
+  printRequests: PrintRequestRecord[];
   compatibilityEvidenceRecords: CompatibilityEvidenceRecord[];
   onInventoryMutation: (request: InventoryMutationRequest) => Promise<InventoryMutationOutcome>;
   onStickerVerification: (input: StickerVerificationReportInput) => unknown;
@@ -122,6 +129,7 @@ export function EmployeeWorkspace({
   quantities,
   policy,
   directPrintLayouts,
+  printRequests,
   compatibilityEvidenceRecords,
   onInventoryMutation,
   onStickerVerification,
@@ -129,6 +137,15 @@ export function EmployeeWorkspace({
   onRecordConversion,
 }: Props) {
   const [tab, setTab] = useState<Tab>("advice");
+
+  /* ---------- tabblad 3: wat deed Noviply met mijn aanvraag? ---------- */
+  // Wie een sticker aanvraagt zet de laptop apart en gaat door. Zonder
+  // terugkoppeling blijft die staan tot iemand er toevallig langsloopt.
+  // Bewust elke render opnieuw: "sinds kort afgehandeld" moet meelopen met de
+  // klok, niet blijven staan op het moment dat het scherm openging.
+  const now = new Date();
+  const requestGroups = useMemo(() => groupPrintRequests(printRequests), [printRequests]);
+  const needsAttention = attentionCount(printRequests, now);
 
   /* ---------- tabblad 1: welke sticker? ---------- */
   const modelInputRef = useRef<HTMLInputElement>(null);
@@ -410,6 +427,10 @@ export function EmployeeWorkspace({
         </button>
         <button role="tab" aria-selected={tab === "receive"} className={tab === "receive" ? "active" : ""} onClick={() => setTab("receive")}>
           Stickers ontvangen
+        </button>
+        <button role="tab" aria-selected={tab === "requests"} className={tab === "requests" ? "active" : ""} onClick={() => setTab("requests")}>
+          Bij Noviply
+          {needsAttention > 0 && <span className="tab-badge">{needsAttention}</span>}
         </button>
       </div>
 
@@ -761,6 +782,74 @@ export function EmployeeWorkspace({
                 </div>
               )}
             </div>
+          )}
+        </section>
+      )}
+
+      {tab === "requests" && (
+        <section className="worker-panel">
+          <p className="requests-headline">{printRequestHeadline(requestGroups)}</p>
+
+          {requestGroups.ready.length > 0 && (
+            <div className="request-group ready">
+              <h3>Klaar om op te halen</h3>
+              {requestGroups.ready.map((request) => (
+                <article key={request.id} className={isFresh(request, now) ? "fresh" : ""}>
+                  <div>
+                    <strong>{request.model}</strong>
+                    <span>{request.layout}{request.variant && ` · ${request.variant}`}</span>
+                  </div>
+                  <div className="request-order">
+                    <b>{request.orderReference || "geen ordernummer"}</b>
+                    <small>geprint door {request.handledBy}</small>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+
+          {requestGroups.blocked.length > 0 && (
+            <div className="request-group blocked">
+              <h3>Kan niet geprint worden</h3>
+              {requestGroups.blocked.map((request) => (
+                <article key={request.id} className={isFresh(request, now) ? "fresh" : ""}>
+                  <div>
+                    <strong>{request.model}</strong>
+                    <span>{request.layout}{request.variant && ` · ${request.variant}`}</span>
+                  </div>
+                  <div className="request-order">
+                    <b>{request.orderReference || "geen ordernummer"}</b>
+                    {/* Zonder de reden weet niemand wat er dan wél moet gebeuren. */}
+                    <small>{request.note || "geen reden opgegeven"}</small>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+
+          {requestGroups.waiting.length > 0 && (
+            <div className="request-group waiting">
+              <h3>Wacht nog bij Noviply</h3>
+              {requestGroups.waiting.map((request) => (
+                <article key={request.id}>
+                  <div>
+                    <strong>{request.model}</strong>
+                    <span>{request.layout}{request.variant && ` · ${request.variant}`}</span>
+                  </div>
+                  <div className="request-order">
+                    <b>{request.orderReference || "geen ordernummer"}</b>
+                    <small>aangevraagd</small>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+
+          {printRequests.length === 0 && (
+            <p className="requests-empty">
+              Zodra je een sticker bij Noviply aanvraagt, kun je hier volgen wat ermee
+              gebeurt.
+            </p>
           )}
         </section>
       )}
