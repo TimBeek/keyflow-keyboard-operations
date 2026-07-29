@@ -45,6 +45,11 @@ export type InventoryTransactionEntry = {
   notes?: string;
   actor: string;
   reference?: string;
+  /**
+   * Een samengevoegde regel uit de import: twaalf weken verbruik op één datum.
+   * Bruikbaar voor een beginstand, niet voor een dagverloop.
+   */
+  aggregated?: boolean;
 };
 
 export type InventoryMutationRequest = {

@@ -72,8 +72,16 @@ import {
   parseOperationsSnapshot,
   readOperationsState,
   serializeOperationsSnapshot,
+  trimHistory,
   writeOperationsState,
+  CONVERSION_LOG_LIMIT,
+  TRANSACTION_LIMIT,
 } from "@/domain/operations-persistence";
+import {
+  createConversionLogEntry,
+  type ConversionLogEntry,
+  type ConversionLogInput,
+} from "@/domain/conversion-log";
 import type {
   StickerVerificationReport,
   StickerVerificationReportInput,
@@ -218,6 +226,7 @@ export function Dashboard({
   const [verificationReports, setVerificationReports] = useState<StickerVerificationReport[]>([]);
   const [stockCounts, setStockCounts] = useState<StockCountRecord[]>([]);
   const [printRequests, setPrintRequests] = useState<PrintRequestRecord[]>([]);
+  const [conversionLog, setConversionLog] = useState<ConversionLogEntry[]>([]);
   const [noviplyTab, setNoviplyTab] = useState<NoviplyTab>("orders");
   // Regels waar de Excel-import geen bruikbaar artikelnummer opleverde, kunnen
   // hier worden aangevuld zonder de bron aan te passen.
@@ -271,6 +280,16 @@ export function Dashboard({
         ? "Noviply"
         : "Medewerker";
   const actorInitials = initialsFor(actorName);
+  /**
+   * Stond hier hardgecodeerd, en zou dus voor altijd dezelfde maandag melden.
+   * Pas na het aankoppelen, anders wijkt de server af van de browser.
+   */
+  const [headerDate, setHeaderDate] = useState("");
+  useEffect(() => {
+    setHeaderDate(new Date()
+      .toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" })
+      .toUpperCase());
+  }, []);
   const filteredStock = useMemo(
     () => stockItems.filter((item) => `${item.model} ${item.sku} ${item.layout}`.toLowerCase().includes(query.toLowerCase())),
     [query, stockItems],
@@ -308,10 +327,9 @@ export function Dashboard({
         setOperationsPolicy(restored.state.operationsPolicy);
         setVerificationReports(restored.state.verificationReports);
         setStockCounts(restored.state.stockCounts);
-    setPrintRequests(restored.state.printRequests);
-    setSkuOverrides(restored.state.skuOverrides);
         setPrintRequests(restored.state.printRequests);
         setSkuOverrides(restored.state.skuOverrides);
+        setConversionLog(restored.state.conversionLog);
         setModelGroupDecisions(restored.state.modelGroupDecisions);
         setCompatibilityEvidenceRecords(restored.state.compatibilityEvidenceRecords);
         if (identity.mode === "pilot") {
@@ -476,7 +494,9 @@ export function Dashboard({
           : [];
       const snapshot = createOperationsSnapshot({
         catalogQuantities,
-        transactions,
+        // Snoeien vóór het opslaan: loopt een lijst tegen zijn grens aan, dan
+        // zou hij bij inlezen in zijn geheel wegvallen.
+        transactions: trimHistory(transactions, TRANSACTION_LIMIT),
         operationsPolicy,
         verificationReports,
         stockCounts,
@@ -493,6 +513,7 @@ export function Dashboard({
           : locallyStoredWorkfloorTrials,
         printRequests,
         skuOverrides,
+        conversionLog: trimHistory(conversionLog, CONVERSION_LOG_LIMIT),
       });
       writeOperationsState(window.localStorage, snapshot);
       savedAt = snapshot.savedAt;
@@ -519,6 +540,7 @@ export function Dashboard({
     workfloorTrials,
     printRequests,
     skuOverrides,
+    conversionLog,
     identity.mode,
   ]);
 
@@ -918,6 +940,16 @@ export function Dashboard({
     return record;
   }
 
+  function recordConversion(input: ConversionLogInput) {
+    const entry = createConversionLogEntry(input, {
+      id: crypto.randomUUID(),
+      occurredAt: new Date().toISOString(),
+      actor: actorName,
+    });
+    setConversionLog((current) => [...current, entry]);
+    return entry;
+  }
+
   function settlePrintRequestRecord(
     record: PrintRequestRecord,
     status: Exclude<PrintRequestStatus, "requested">,
@@ -974,6 +1006,7 @@ export function Dashboard({
         : locallyStoredWorkfloorTrials,
       printRequests,
       skuOverrides,
+      conversionLog,
     });
     const blob = new Blob([serializeOperationsSnapshot(snapshot)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -999,6 +1032,7 @@ export function Dashboard({
     setStockCounts(restored.state.stockCounts);
     setPrintRequests(restored.state.printRequests);
     setSkuOverrides(restored.state.skuOverrides);
+    setConversionLog(restored.state.conversionLog);
     setModelGroupDecisions(restored.state.modelGroupDecisions);
     setCompatibilityEvidenceRecords(restored.state.compatibilityEvidenceRecords);
     if (identity.mode === "pilot") {
@@ -1022,6 +1056,9 @@ export function Dashboard({
     setOperationsPolicy(defaultOperationsPolicy);
     setVerificationReports([]);
     setStockCounts([]);
+    setPrintRequests([]);
+    setSkuOverrides({});
+    setConversionLog([]);
     setModelGroupDecisions([]);
     setCompatibilityEvidenceRecords([]);
     if (identity.mode === "pilot") {
@@ -1102,7 +1139,7 @@ export function Dashboard({
       <main className="main">
         <header className="topbar">
           <div>
-            <p className="eyebrow">MAANDAG 27 JULI</p>
+            <p className="eyebrow">{headerDate}</p>
             <h1>{role === "employee"
               ? "Uitvoering keyboardconversies"
               : role === "noviply"
@@ -1159,6 +1196,7 @@ export function Dashboard({
         {role === "employee" && (
           <EmployeeWorkspace
             onRequestPrintSticker={requestPrintSticker}
+            onRecordConversion={recordConversion}
             catalog={inventoryCatalog}
             actorName={actorName}
             orders={demoWorkOrders}
@@ -1337,7 +1375,13 @@ export function Dashboard({
             onResetPilotData={resetPilotData}
           />
         )}
-        {role === "management" && activeView === "reports" && <ReportsWorkspace />}
+        {role === "management" && activeView === "reports" && (
+          <ReportsWorkspace
+            conversionLog={conversionLog}
+            transactions={transactions}
+            quantities={catalogQuantities}
+          />
+        )}
 
         <footer className="app-footer">
           <span><i /> {persistenceReady ? `Lokaal bewaard${lastSavedAt ? ` · ${formatPersistenceTime(lastSavedAt)}` : ""}` : "Opslag laden…"}</span>

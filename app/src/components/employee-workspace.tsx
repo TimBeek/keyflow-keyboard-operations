@@ -40,6 +40,7 @@ import {
 } from "@/domain/keyboard-layouts";
 import { catalogModelOptions } from "@/domain/model-catalog";
 import type { PrintRequestInput } from "@/domain/print-requests";
+import type { ConversionLogInput } from "@/domain/conversion-log";
 
 /**
  * Eén concrete handeling per methode. Bewust geen lijst met werkinstructies:
@@ -109,6 +110,7 @@ type Props = {
   onInventoryMutation: (request: InventoryMutationRequest) => InventoryMutationOutcome;
   onStickerVerification: (input: StickerVerificationReportInput) => unknown;
   onRequestPrintSticker: (input: PrintRequestInput) => unknown;
+  onRecordConversion: (input: ConversionLogInput) => unknown;
 };
 
 export function EmployeeWorkspace({
@@ -120,6 +122,7 @@ export function EmployeeWorkspace({
   onInventoryMutation,
   onStickerVerification,
   onRequestPrintSticker,
+  onRecordConversion,
 }: Props) {
   const [tab, setTab] = useState<Tab>("advice");
 
@@ -199,10 +202,34 @@ export function EmployeeWorkspace({
     requestAnimationFrame(() => modelInputRef.current?.focus());
   }
 
+  /**
+   * Zonder registratie is een conversie zonder voorraadgevolg onzichtbaar, en
+   * kan niemand zeggen hoeveel laptops er op een dag doorheen gingen. Een
+   * mislukte registratie mag de medewerker echter nooit ophouden.
+   */
+  function logConversion(input: ConversionLogInput) {
+    try {
+      onRecordConversion(input);
+    } catch {
+      // Bewust stil: de laptop is klaar, dat telt op de werkvloer.
+    }
+  }
+
   function bookDone() {
     if (!usesSheet) {
       // Ook zonder voorraadvel is de laptop klaar: leegmaken voor de volgende,
       // anders blijft hij op het scherm staan en weet niemand of het gelukt is.
+      // "Geen conversie" is geen conversie: die hoort niet in de telling.
+      if (recommendation.primary !== "none") {
+        logConversion({
+          method: recommendation.primary,
+          status: "completed",
+          model,
+          targetLayout,
+          variant: enterShape,
+          orderReference,
+        });
+      }
       setAdviceMessage({ tone: "ok", text: "Klaar. Deze methode gebruikt geen voorraadvel, er is niets afgeboekt. Pak de volgende laptop." });
       setConfirmed(false);
       setModelQuery("");
@@ -233,6 +260,16 @@ export function EmployeeWorkspace({
         targetLayout,
         variant: matched.variant,
         outcome: "passed",
+      });
+      logConversion({
+        method: "noviply_sheet",
+        status: "completed",
+        model,
+        targetLayout,
+        variant: matched.variant,
+        sku: matched.item.sku,
+        storageNumber: matched.item.storageNumber,
+        orderReference,
       });
       setAdviceMessage({
         tone: "ok",
@@ -575,6 +612,17 @@ export function EmployeeWorkspace({
                             variant: enterShape,
                             orderReference,
                             reason: "Not ready during the morning run.",
+                          });
+                          // De laptop is voor de medewerker klaar, maar pas af
+                          // als Noviply hem geprint heeft. Dat verschil blijft
+                          // zichtbaar in de rapportage.
+                          logConversion({
+                            method: "printed_sticker",
+                            status: "awaiting_print",
+                            model,
+                            targetLayout,
+                            variant: enterShape,
+                            orderReference,
                           });
                           setAdviceMessage({
                             tone: "ok",

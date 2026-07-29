@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ConversionLogEntry } from "./conversion-log";
 import type { PrintRequestRecord } from "./print-requests";
 import type { CompatibilityEvidenceRecord } from "@/domain/compatibility-evidence";
 import type {
@@ -17,6 +18,21 @@ import {
 
 export const OPERATIONS_STORAGE_KEY = "keyflow.operations-state.v1";
 
+/**
+ * De browseropslag is eindig. Loopt een lijst tegen zijn grens aan, dan zou de
+ * hele lijst bij inlezen wegvallen — daarom snoeien we vóór het opslaan en
+ * houden we de nieuwste regels over.
+ */
+export const CONVERSION_LOG_LIMIT = 5000;
+export const TRANSACTION_LIMIT = 2500;
+
+export function trimHistory<T extends { occurredAt: string }>(records: T[], limit: number) {
+  if (records.length <= limit) return records;
+  return [...records]
+    .sort((left, right) => left.occurredAt.localeCompare(right.occurredAt))
+    .slice(records.length - limit);
+}
+
 const transactionSchema = z.object({
   id: z.string().min(1),
   occurredAt: z.string().min(10),
@@ -31,6 +47,26 @@ const transactionSchema = z.object({
   notes: z.string().optional(),
   actor: z.string().min(1),
   reference: z.string().optional(),
+  aggregated: z.boolean().optional(),
+});
+
+const conversionLogEntrySchema = z.object({
+  id: z.string().min(1),
+  occurredAt: z.string().min(10),
+  method: z.enum([
+    "loose_stickers",
+    "noviply_sheet",
+    "printed_sticker",
+    "direct_reprint",
+  ]),
+  status: z.enum(["completed", "awaiting_print"]),
+  model: z.string().min(1),
+  targetLayout: z.string(),
+  variant: z.string(),
+  sku: z.string(),
+  storageNumber: z.number().int().positive().nullable(),
+  orderReference: z.string(),
+  actor: z.string().min(1),
 });
 
 const policySchema = z.object({
@@ -203,7 +239,7 @@ const persistedOperationsStateSchema = z.object({
   version: z.literal(1),
   savedAt: z.string().min(10),
   catalogQuantities: z.record(z.string(), z.number().int().nonnegative()),
-  transactions: z.array(transactionSchema).max(2500),
+  transactions: z.array(transactionSchema).max(TRANSACTION_LIMIT),
   operationsPolicy: policySchema,
   verificationReports: z.array(stickerVerificationReportSchema).max(2500).catch([]).default([]),
   stockCounts: z.array(stockCountRecordSchema).max(2500).catch([]).default([]),
@@ -214,6 +250,7 @@ const persistedOperationsStateSchema = z.object({
   workfloorTrials: z.array(workfloorTrialRecordSchema).max(500).catch([]).default([]),
   printRequests: z.array(printRequestRecordSchema).max(2500).catch([]).default([]),
   skuOverrides: z.record(z.string(), z.string()).catch({}).default({}),
+  conversionLog: z.array(conversionLogEntrySchema).max(CONVERSION_LOG_LIMIT).catch([]).default([]),
 });
 
 export type PersistedOperationsState = {
@@ -232,21 +269,25 @@ export type PersistedOperationsState = {
   workfloorTrials: WorkfloorTrialRecord[];
   printRequests: PrintRequestRecord[];
   skuOverrides: Record<string, string>;
+  conversionLog: ConversionLogEntry[];
 };
 
-export type OperationsStateInput = Omit<
-  PersistedOperationsState,
-  | "format"
-  | "version"
-  | "savedAt"
+/**
+ * Alles wat het schema zelf al kan invullen, mag hier ontbreken. Zo hoeft een
+ * nieuwe sectie niet elke bestaande aanroep te breken.
+ */
+type OptionalSections =
   | "recoveryDrills"
   | "goLiveAcceptanceRecords"
   | "workfloorTrials"
-> & {
-  recoveryDrills?: RecoveryDrillRecord[];
-  goLiveAcceptanceRecords?: GoLiveAcceptanceRecord[];
-  workfloorTrials?: WorkfloorTrialRecord[];
-};
+  | "printRequests"
+  | "skuOverrides"
+  | "conversionLog";
+
+export type OperationsStateInput = Omit<
+  PersistedOperationsState,
+  "format" | "version" | "savedAt" | OptionalSections
+> & Partial<Pick<PersistedOperationsState, OptionalSections>>;
 
 type StorageLike = Pick<Storage, "getItem" | "setItem" | "removeItem">;
 

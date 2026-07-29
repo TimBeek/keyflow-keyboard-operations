@@ -19,6 +19,7 @@ export const initialInventoryTransactions: InventoryTransactionEntry[] = plannin
           notes: "Samengevoegd verbruik over de afgelopen 12 weken",
           actor: "Historische import",
           reference: "12W-BASELINE",
+          aggregated: true,
         }]
       : [];
     const receiptEntry: InventoryTransactionEntry[] = index % 3 === 0
@@ -36,6 +37,7 @@ export const initialInventoryTransactions: InventoryTransactionEntry[] = plannin
           notes: "Samengevoegde leveranciersontvangst",
           actor: "Historische import",
           reference: `PO-26${String(index + 1).padStart(3, "0")}`,
+          aggregated: true,
         }]
       : [];
 

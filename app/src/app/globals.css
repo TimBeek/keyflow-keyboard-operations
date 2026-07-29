@@ -1782,3 +1782,186 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 .model-group-models button { opacity: .55; transition: opacity .15s, border-color .15s, color .15s; }
 .model-group-models li:hover button, .model-group-models li.removed button, .model-group-models li.added button { opacity: 1; }
 .model-group-models li > span { font-size: 12.5px; }
+
+/* ---------------------------------------------------------------------------
+   Fase 4 — rapportage. De oude versie tekende een grafiek van verzonnen
+   getallen; deze rekent met echte registraties, dus moet ook zichtbaar zijn
+   wanneer er nog niets te tonen is.
+   --------------------------------------------------------------------------- */
+
+.report-period {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.report-period button {
+  border: 0;
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 16px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+
+.report-period button:hover { color: var(--text-1); }
+
+.report-period button.active {
+  background: var(--surface-1);
+  color: var(--text-1);
+  box-shadow: 0 1px 2px rgb(0 0 0 / .18);
+}
+
+.report-empty { padding: 32px; text-align: center; }
+.report-empty h2 { font-size: 17px; margin: 0 0 8px; }
+.report-empty p { color: var(--text-2); max-width: 62ch; margin: 0 auto; line-height: 1.6; }
+.report-note { color: var(--text-3); font-size: 12.5px; line-height: 1.6; margin-top: 12px; }
+
+/* Gestapelde dagkolommen, gekleurd naar de vier oplossingen. */
+.conversion-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 190px;
+  padding-top: 18px;
+}
+
+.conversion-column {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+}
+
+.conversion-stack {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  max-width: 34px;
+  display: flex;
+  flex-direction: column-reverse;
+  justify-content: flex-start;
+  border-radius: 4px 4px 0 0;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.conversion-slice { display: block; width: 100%; }
+.conversion-slice.tone-basic { background: var(--tier-basic); }
+.conversion-slice.tone-stock { background: var(--tier-stock); }
+.conversion-slice.tone-premium { background: var(--tier-premium); }
+.conversion-slice.tone-professional { background: var(--tier-professional); }
+
+.conversion-stack b {
+  position: absolute;
+  top: -17px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-2);
+}
+
+.conversion-column small {
+  font-size: 10.5px;
+  color: var(--text-3);
+  white-space: nowrap;
+}
+
+.conversion-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.conversion-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.conversion-legend i,
+.method-share-name i {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  flex: none;
+}
+
+.conversion-legend i.tone-basic, .method-share-name i.tone-basic { background: var(--tier-basic); }
+.conversion-legend i.tone-stock, .method-share-name i.tone-stock { background: var(--tier-stock); }
+.conversion-legend i.tone-premium, .method-share-name i.tone-premium { background: var(--tier-premium); }
+.conversion-legend i.tone-professional, .method-share-name i.tone-professional { background: var(--tier-professional); }
+
+.method-share-list { display: grid; gap: 18px; }
+.method-share-list > div { display: grid; gap: 7px; }
+
+.method-share-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.method-share-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-1);
+}
+
+.method-share-head b { font-size: 15px; font-weight: 700; color: var(--text-1); }
+
+.method-share-bar {
+  height: 7px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+
+.method-share-bar span { display: block; height: 100%; border-radius: 4px; }
+.method-share-bar span[style*="width: 0%"] { display: none; }
+.method-share-bar span.tone-basic { background: var(--tier-basic); }
+.method-share-bar span.tone-stock { background: var(--tier-stock); }
+.method-share-bar span.tone-premium { background: var(--tier-premium); }
+.method-share-bar span.tone-professional { background: var(--tier-professional); }
+
+.method-share-list small { font-size: 12px; color: var(--text-3); }
+
+.mover-up { color: var(--tier-basic); font-weight: 600; }
+.mover-down { color: var(--text-3); font-weight: 600; }
+
+.report-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  padding: 14px 20px 0;
+  margin-top: 4px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--text-3);
+}
+
+@media (max-width: 720px) {
+  .conversion-chart { height: 150px; gap: 2px; }
+  .conversion-stack b { display: none; }
+  .conversion-column small { font-size: 9px; transform: rotate(-45deg); }
+}

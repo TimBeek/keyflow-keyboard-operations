@@ -41,6 +41,8 @@ describe("operationele pilotopslag", () => {
         manufacturerPartNumber: "0A12345",
         photoReference: "FOTO-75",
         notes: "Droge pastest uitgevoerd.",
+        excludedModels: [],
+        addedModels: [],
         evidence: {
           exactVariantConfirmed: true,
           manufacturerPartNumberConfirmed: true,

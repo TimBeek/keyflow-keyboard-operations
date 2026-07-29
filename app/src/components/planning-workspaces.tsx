@@ -5,12 +5,43 @@ import {
   inventoryCatalog,
   planningCatalog,
 } from "@/data/inventory-catalog";
+import { conversionMethods } from "@/domain/conversion-policy";
+import type { ConversionLogEntry } from "@/domain/conversion-log";
 import { calculateForecastAdvice } from "@/domain/forecasting";
 import { scandinavianLayoutReferences } from "@/domain/keyboard-layouts";
 import {
   buildModelGroupAudit,
   type ModelGroupStatus,
 } from "@/domain/model-groups";
+import {
+  layoutWithCountry,
+  type InventoryTransactionEntry,
+  type OperationalMethodId,
+} from "@/domain/operations";
+import {
+  bucketConversionDays,
+  consumptionTrend,
+  conversionTotals,
+  conversionsPerDay,
+  dayKey,
+  getReportPeriod,
+  historyDepthDays,
+  importedBaselineUnits,
+  methodShares,
+  moverRanking,
+  reportPeriods,
+  type ConversionBucket,
+  type ReportPeriodId,
+} from "@/domain/reporting";
+import { displayStickerSku } from "@/domain/sticker-sku";
+
+/** Van eenvoudig naar zwaar, dezelfde volgorde als overal in de app. */
+const methodsInTierOrder: OperationalMethodId[] = [
+  "loose_stickers",
+  "noviply_sheet",
+  "printed_sticker",
+  "direct_reprint",
+];
 
 const plannedItems = planningCatalog
   .map((item) => ({
@@ -95,48 +126,259 @@ export function OrdersWorkspace() {
   );
 }
 
-export function ReportsWorkspace() {
-  const weeklyUsage = [72, 85, 68, 94, 101, 88, 113, 96];
-  const maxUsage = Math.max(...weeklyUsage);
-  const topItems = [...planningCatalog].sort((a, b) => b.averageWeeklyDemand - a.averageWeeklyDemand).slice(0, 6);
-  const totalWeekly = planningCatalog.reduce((sum, item) => sum + item.averageWeeklyDemand, 0);
-  const dormantValue = planningCatalog.filter(({ averageWeeklyDemand }) => averageWeeklyDemand === 0).reduce((sum, item) => sum + item.stock * item.unitCost, 0);
+/** Nederlandse notatie: een komma, en geen nul achter een rond getal. */
+function formatNumber(value: number) {
+  return value.toLocaleString("nl-NL", { maximumFractionDigits: 1 });
+}
+
+function formatDelta(delta: number, percentage: number | null) {
+  const sign = delta > 0 ? "+" : "";
+  if (percentage === null) return `${sign}${delta} t.o.v. vorige periode`;
+  return `${sign}${delta} (${sign}${percentage.toFixed(0)}%) t.o.v. vorige periode`;
+}
+
+function formatDayLabel(bucket: ConversionBucket) {
+  const short = (day: string) => day.slice(8, 10) + "/" + day.slice(5, 7);
+  return bucket.dayCount === 1 ? short(bucket.startDay) : `${short(bucket.startDay)}–${short(bucket.endDay)}`;
+}
+
+type ReportsProps = {
+  conversionLog: ConversionLogEntry[];
+  transactions: InventoryTransactionEntry[];
+  quantities: Record<string, number>;
+};
+
+export function ReportsWorkspace({ conversionLog, transactions, quantities }: ReportsProps) {
+  const [periodId, setPeriodId] = useState<ReportPeriodId>("month");
+  const period = getReportPeriod(periodId);
+  // Eén peildatum voor het hele scherm, zodat elk blok over dezelfde dag praat.
+  const today = useMemo(() => dayKey(new Date()), []);
+
+  const totals = useMemo(
+    () => conversionTotals(conversionLog, period.days, today),
+    [conversionLog, period.days, today],
+  );
+  const shares = useMemo(
+    () => methodShares(conversionLog, period.days, today),
+    [conversionLog, period.days, today],
+  );
+  const buckets = useMemo(
+    () => bucketConversionDays(conversionsPerDay(conversionLog, period.days, today), 31),
+    [conversionLog, period.days, today],
+  );
+  const trend = useMemo(
+    () => consumptionTrend(transactions, period.days, today),
+    [period.days, today, transactions],
+  );
+  const movers = useMemo(
+    () => moverRanking(transactions, inventoryCatalog, quantities, period.days, today),
+    [period.days, quantities, today, transactions],
+  );
+
+  const activeMovers = movers.filter((row) => row.used > 0);
+  const idleWithStock = movers.filter((row) => row.used === 0 && row.stock > 0);
+  const baseline = importedBaselineUnits(transactions);
+  const depth = historyDepthDays(conversionLog, today);
+  const tallest = Math.max(1, ...buckets.map((bucket) => bucket.total));
+  // Achtentwintig datums naast elkaar lopen in elkaar over; hooguit tien passen.
+  const labelEvery = Math.max(1, Math.ceil(buckets.length / 10));
+  const hasConversions = conversionLog.length > 0;
 
   return (
     <div className="workspace-view">
-      <section className="workspace-stats">
-        <article><span>Gemiddeld verbruik</span><strong>{totalWeekly.toFixed(0)}</strong><small>vellen per week · planningsset</small></article>
-        <article><span>8-weeks piek</span><strong>{maxUsage}</strong><small>vellen in één week</small></article>
-        <article><span>Voorraaddekking</span><strong>7,4 wk</strong><small>gewogen gemiddelde</small></article>
-        <article className="attention"><span>Dode voorraad</span><strong>€ {dormantValue.toFixed(0)}</strong><small>geen gemeten vraag</small></article>
-      </section>
-      <div className="report-grid">
-        <section className="panel report-card usage-chart">
-          <div className="workspace-card-heading"><div><h2>Verbruik laatste 8 weken</h2><p>Alle geregistreerde stickeruitgiftes</p></div><span>+12% vs. vorige periode</span></div>
-          <div className="bar-chart" aria-label="Weekverbruik">
-            {weeklyUsage.map((value, index) => (
-              <div key={index}><span style={{ height: `${Math.round(value / maxUsage * 100)}%` }}><b>{value}</b></span><small>W{index + 21}</small></div>
-            ))}
-          </div>
-        </section>
-        <section className="panel report-card">
-          <div className="workspace-card-heading"><div><h2>Snelste dalers</h2><p>Gemiddeld verbruik per week</p></div></div>
-          <div className="ranking-list">
-            {topItems.map((item, index) => (
-              <div key={item.sku}><span>{index + 1}</span><p><strong>{item.model}</strong><small>{item.sku}</small></p><b>{item.averageWeeklyDemand}/wk</b></div>
-            ))}
-          </div>
-        </section>
-        <section className="panel report-card forecast-card">
-          <div className="workspace-card-heading"><div><h2>Vooruitblik</h2><p>Verwacht verbruik op basis van huidige run-rate</p></div></div>
-          <div className="forecast-horizons">
-            <div><span>1 maand</span><strong>{Math.round(totalWeekly * 4.33)}</strong><small>verwachte vellen</small></div>
-            <div><span>3 maanden</span><strong>{Math.round(totalWeekly * 13)}</strong><small>verwachte vellen</small></div>
-            <div><span>6 maanden</span><strong>{Math.round(totalWeekly * 26)}</strong><small>verwachte vellen</small></div>
-          </div>
-          <p className="forecast-disclaimer">Eerste statistische basis. Seizoenscorrectie wordt betrouwbaar zodra minimaal 12 maanden transactiedata beschikbaar is.</p>
-        </section>
+      <div className="report-period" role="group" aria-label="Periode kiezen">
+        {reportPeriods.map((option) => (
+          <button
+            key={option.id}
+            type="button"
+            className={option.id === periodId ? "active" : ""}
+            aria-pressed={option.id === periodId}
+            onClick={() => setPeriodId(option.id)}
+          >
+            {option.label}
+          </button>
+        ))}
       </div>
+
+      <section className="workspace-stats">
+        <article>
+          <span>Conversies</span>
+          <strong>{totals.current}</strong>
+          <small>{formatDelta(totals.delta, totals.deltaPercentage)}</small>
+        </article>
+        <article>
+          <span>Per werkdag</span>
+          <strong>{totals.perActiveDay === 0 ? "—" : formatNumber(totals.perActiveDay)}</strong>
+          <small>{totals.activeDays} {totals.activeDays === 1 ? "dag" : "dagen"} gewerkt in deze periode</small>
+        </article>
+        <article>
+          <span>Vellen verbruikt</span>
+          <strong>{trend.current}</strong>
+          <small>{formatDelta(trend.delta, trend.deltaPercentage)}</small>
+        </article>
+        <article className={totals.awaitingPrint > 0 ? "attention" : ""}>
+          <span>Wacht op Noviply</span>
+          <strong>{totals.awaitingPrint}</strong>
+          <small>aangevraagd, nog niet geprint</small>
+        </article>
+      </section>
+
+      {!hasConversions && (
+        <section className="panel report-empty">
+          <h2>Nog geen conversies geregistreerd</h2>
+          <p>
+            Dit scherm vult zich zodra medewerkers conversies afronden. Elke afgeronde
+            laptop telt hier mee, ook wanneer er geen voorraadvel aan te pas kwam.
+          </p>
+          {baseline > 0 && (
+            <p className="report-note">
+              De import bracht {baseline} vellen verbruik mee als beginstand. Die staat op
+              één datum geboekt en telt daarom niet mee in het dagverloop — anders zou hier
+              een piek staan die nooit heeft plaatsgevonden.
+            </p>
+          )}
+        </section>
+      )}
+
+      {hasConversions && (
+        <div className="report-grid">
+          <section className="panel report-card usage-chart">
+            <div className="workspace-card-heading">
+              <div>
+                <h2>Conversies per dag</h2>
+                <p>Elke afgeronde laptop, gekleurd naar de gebruikte oplossing.</p>
+              </div>
+              <span>{period.label}</span>
+            </div>
+            <div className="conversion-chart" aria-label={`Conversies per dag over ${period.label}`}>
+              {buckets.map((bucket, index) => (
+                <div key={bucket.startDay} className="conversion-column">
+                  <div className="conversion-stack" title={`${bucket.total} conversies`}>
+                    {methodsInTierOrder.map((method) => {
+                      const count = bucket.byMethod[method];
+                      if (count === 0) return null;
+                      return (
+                        <span
+                          key={method}
+                          className={`conversion-slice tone-${conversionMethods[method].tone}`}
+                          style={{ height: `${(count / tallest) * 100}%` }}
+                        />
+                      );
+                    })}
+                    {bucket.total > 0 && <b>{bucket.total}</b>}
+                  </div>
+                  <small>{index % labelEvery === 0 || index === buckets.length - 1
+                    ? formatDayLabel(bucket)
+                    : " "}</small>
+                </div>
+              ))}
+            </div>
+            <div className="conversion-legend">
+              {methodsInTierOrder.map((method) => (
+                <span key={method}>
+                  <i className={`tone-${conversionMethods[method].tone}`} />
+                  {conversionMethods[method].name}
+                </span>
+              ))}
+            </div>
+          </section>
+
+          <section className="panel report-card">
+            <div className="workspace-card-heading">
+              <div><h2>Welke oplossing gebruiken we</h2><p>Aandeel in deze periode, met het verschil t.o.v. de vorige.</p></div>
+            </div>
+            <div className="method-share-list">
+              {shares.map((row) => (
+                <div key={row.method}>
+                  <div className="method-share-head">
+                    <span className={`method-share-name tone-${conversionMethods[row.method].tone}`}>
+                      <i className={`tone-${conversionMethods[row.method].tone}`} />
+                      {conversionMethods[row.method].name}
+                    </span>
+                    <b>{row.share.toFixed(0)}%</b>
+                  </div>
+                  <div className="method-share-bar">
+                    <span
+                      className={`tone-${conversionMethods[row.method].tone}`}
+                      style={{ width: `${row.share}%` }}
+                    />
+                  </div>
+                  <small>
+                    {row.current} conversies
+                    {row.delta !== 0 && ` · ${row.delta > 0 ? "+" : ""}${row.delta} t.o.v. vorige periode`}
+                  </small>
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+      )}
+
+      <section className="panel">
+        <div className="order-heading">
+          <div>
+            <span className="workspace-kicker">HARDLOPERS EN STILSTAANDERS</span>
+            <h2>Welke hangmappen bewegen</h2>
+            <p>Verbruik in deze periode, en hoe lang de huidige voorraad bij dit tempo meegaat.</p>
+          </div>
+        </div>
+        {activeMovers.length === 0 ? (
+          <div className="empty">
+            In deze periode is geen enkel vel afgeboekt. Kies een langere periode, of wacht
+            tot de eerste conversies binnen zijn.
+          </div>
+        ) : (
+          <div className="table-wrap">
+            <table className="operations-table">
+              <thead>
+                <tr>
+                  <th>Hangmap</th>
+                  <th>Artikelnummer</th>
+                  <th>Verbruikt</th>
+                  <th>Vorige periode</th>
+                  <th>Voorraad</th>
+                  <th>Nog toereikend</th>
+                </tr>
+              </thead>
+              <tbody>
+                {activeMovers.slice(0, 15).map((row) => (
+                  <tr key={row.catalogKey}>
+                    <td><strong className="storage-number">Nr. {row.storageNumber}</strong><span>{row.model}</span></td>
+                    <td>{displayStickerSku(row.sku)}</td>
+                    <td><b>{row.used}</b><span>{layoutWithCountry(row.layout, row.sku)}</span></td>
+                    <td>
+                      <strong>{row.previousUsed}</strong>
+                      <span className={row.delta > 0 ? "mover-up" : row.delta < 0 ? "mover-down" : ""}>
+                        {row.delta === 0
+                          ? "gelijk gebleven"
+                          : `${Math.abs(row.delta)} ${row.delta > 0 ? "meer" : "minder"}`}
+                      </span>
+                    </td>
+                    <td><b className={row.stock === 0 ? "zero" : ""}>{row.stock}</b></td>
+                    <td>
+                      {row.weeksOfStock === null
+                        ? "—"
+                        : row.weeksOfStock < 2
+                          ? <span className="resupply-flag">{formatNumber(row.weeksOfStock)} wk</span>
+                          : `${formatNumber(row.weeksOfStock)} wk`}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {activeMovers.length > 15 && (
+              <p className="report-note">
+                De vijftien drukste hangmappen staan hier. Nog {activeMovers.length - 15} andere
+                hangmappen hadden verbruik in deze periode.
+              </p>
+            )}
+          </div>
+        )}
+        <footer className="report-footer">
+          <span>{idleWithStock.length} hangmappen met voorraad zonder verbruik in deze periode</span>
+          {depth > 0 && <span>{depth} dagen historie opgebouwd</span>}
+        </footer>
+      </section>
     </div>
   );
 }
