@@ -48,7 +48,12 @@ export async function POST(request: Request) {
       path: "/",
       maxAge: 24 * 60 * 60,
     });
-    return Response.json({ userId: result.userId, role: result.role, name: result.name });
+    return Response.json({
+      userId: result.userId,
+      role: result.role,
+      name: result.name,
+      mustChangePin: result.mustChangePin,
+    });
   } catch (error) {
     const response = apiErrorResponse(error);
     return Response.json(response.body, { status: response.status });

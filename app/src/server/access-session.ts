@@ -1,5 +1,5 @@
 import "server-only";
-import { createHmac, randomBytes, scrypt, timingSafeEqual } from "node:crypto";
+import { createHmac, randomBytes, randomUUID, scrypt, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
 import { cookies } from "next/headers";
 import type { UserRole } from "@/domain/access-control";
@@ -11,6 +11,7 @@ import {
   type LockoutState,
 } from "@/domain/pin-lockout";
 import { pilotActorFor } from "@/domain/pilot-actors";
+import { requirePermission } from "./authorization-service";
 import { database } from "./database";
 
 const scryptAsync = promisify(scrypt) as (
@@ -81,24 +82,60 @@ export async function listPilotAccounts() {
   }));
 }
 
-export async function setPin(userId: string, pin: string) {
-  if (!/^\d{4}$/.test(pin.trim())) {
+/** Vier cijfers, en niet allemaal dezelfde of een rijtje op. */
+export function validatePin(pin: string) {
+  const value = pin.trim();
+  if (!/^\d{4}$/.test(value)) {
+    throw new AccessCodeError("Een pincode bestaat uit vier cijfers.");
+  }
+  if (new Set(value).size === 1) {
+    throw new AccessCodeError("Kies geen pincode van vier dezelfde cijfers.");
+  }
+  if ("0123456789".includes(value) || "9876543210".includes(value)) {
+    throw new AccessCodeError("Kies geen pincode die oploopt of aflopend telt.");
+  }
+  return value;
+}
+
+export async function setPin(userId: string, pin: string, temporary = true) {
+  const value = temporary ? pin.trim() : validatePin(pin);
+  if (!/^\d{4}$/.test(value)) {
     throw new AccessCodeError("Een pincode bestaat uit vier cijfers.");
   }
   const sql = database();
   await sql`
-    insert into pilot_credentials (user_id, pin_hash)
-    values (${userId}, ${await hashPin(pin.trim())})
+    insert into pilot_credentials (user_id, pin_hash, must_change_pin)
+    values (${userId}, ${await hashPin(value)}, ${temporary})
     on conflict (user_id) do update
     set pin_hash = excluded.pin_hash,
+        must_change_pin = excluded.must_change_pin,
         failed_attempts = 0,
         locked_until = null,
         updated_at = now()
   `;
 }
 
+/**
+ * De gebruiker kiest zelf een nieuwe pincode. De oude moet erbij: anders kan
+ * iemand die even achter een open scherm zit het slot omzetten.
+ */
+export async function changeOwnPin(userId: string, currentPin: string, newPin: string) {
+  const value = validatePin(newPin);
+  const sql = database();
+  const [row] = await sql<{ pin_hash: string }[]>`
+    select pin_hash from pilot_credentials where user_id = ${userId}
+  `;
+  if (!row || !(await pinMatches(currentPin.trim(), row.pin_hash))) {
+    throw new AccessCodeError("De huidige pincode klopt niet.");
+  }
+  if (await pinMatches(value, row.pin_hash)) {
+    throw new AccessCodeError("Kies een andere pincode dan de vorige.");
+  }
+  await setPin(userId, value, false);
+}
+
 export type SignInResult =
-  | { ok: true; userId: string; role: UserRole; name: string }
+  | { ok: true; userId: string; role: UserRole; name: string; mustChangePin: boolean }
   | { ok: false; message: string };
 
 export async function signInWithPin(userId: string, pin: string): Promise<SignInResult> {
@@ -107,10 +144,12 @@ export async function signInWithPin(userId: string, pin: string): Promise<SignIn
     pin_hash: string;
     failed_attempts: number;
     locked_until: Date | null;
+    must_change_pin: boolean;
     display_name: string;
     role_code: UserRole;
   }[]>`
-    select c.pin_hash, c.failed_attempts, c.locked_until, u.display_name, ur.role_code
+    select c.pin_hash, c.failed_attempts, c.locked_until, c.must_change_pin,
+           u.display_name, ur.role_code
     from pilot_credentials c
     join users u on u.id = c.user_id
     join user_roles ur on ur.user_id = u.id
@@ -146,7 +185,13 @@ export async function signInWithPin(userId: string, pin: string): Promise<SignIn
     set failed_attempts = ${cleared.failedAttempts}, locked_until = ${cleared.lockedUntil}
     where user_id = ${userId}
   `;
-  return { ok: true, userId, role: row.role_code, name: row.display_name };
+  return {
+    ok: true,
+    userId,
+    role: row.role_code,
+    name: row.display_name,
+    mustChangePin: row.must_change_pin,
+  };
 }
 
 /* ---------- het bewijs dat je binnen bent ---------- */
@@ -192,4 +237,76 @@ export async function resolvePilotClaim(): Promise<AccessClaim> {
 
 export async function resolvePilotActorId() {
   return (await resolvePilotClaim()).userId;
+}
+
+/* ---------- accountbeheer door management ---------- */
+
+/** Een tijdelijke pincode om mee te beginnen; de gebruiker kiest zelf een eigen. */
+export function generateTemporaryPin() {
+  // Uit de veilige generator, en nooit een code die validatePin zou afwijzen.
+  for (;;) {
+    const pin = String(randomBytes(2).readUInt16BE(0) % 10_000).padStart(4, "0");
+    try {
+      return validatePin(pin);
+    } catch {
+      // opnieuw proberen
+    }
+  }
+}
+
+export async function createPilotAccount(name: string, role: UserRole, actorId: string) {
+  await requirePermission(actorId, "users.manage");
+  const displayName = name.trim();
+  if (displayName.length < 2) {
+    throw new AccessCodeError("Vul een naam in.");
+  }
+  if (!lockedRoles.includes(role)) {
+    throw new AccessCodeError("De werkvloer heeft geen account nodig — die komt zonder pincode binnen.");
+  }
+
+  const sql = database();
+  const temporaryPin = generateTemporaryPin();
+  const userId = randomUUID();
+
+  await sql.begin(async (transaction) => {
+    const [existing] = await transaction<{ id: string }[]>`
+      select id from users where display_name = ${displayName} limit 1
+    `;
+    if (existing) {
+      throw new AccessCodeError("Er bestaat al iemand met deze naam.");
+    }
+    await transaction`
+      insert into users (id, external_id, display_name, email)
+      values (${userId}, ${`keyflow-${userId}`}, ${displayName},
+              ${`${displayName.toLowerCase().replace(/[^a-z0-9]+/g, ".")}@local.invalid`})
+    `;
+    await transaction`
+      insert into user_roles (user_id, role_code, assigned_by)
+      values (${userId}, ${role}, ${actorId})
+    `;
+    await transaction`
+      insert into pilot_credentials (user_id, pin_hash, must_change_pin)
+      values (${userId}, ${await hashPin(temporaryPin)}, true)
+    `;
+  });
+
+  // De tijdelijke code komt hier één keer terug en wordt nergens bewaard.
+  return { id: userId, name: displayName, role, temporaryPin };
+}
+
+export async function resetAccountPin(userId: string, actorId: string) {
+  await requirePermission(actorId, "users.manage");
+  const temporaryPin = generateTemporaryPin();
+  await setPin(userId, temporaryPin, true);
+  return { temporaryPin };
+}
+
+export async function deactivateAccount(userId: string, actorId: string) {
+  await requirePermission(actorId, "users.manage");
+  if (userId === actorId) {
+    throw new AccessCodeError("Je kunt je eigen toegang niet intrekken.");
+  }
+  const sql = database();
+  // De persoon blijft in de historie staan; alleen aanmelden kan niet meer.
+  await sql`delete from pilot_credentials where user_id = ${userId}`;
 }

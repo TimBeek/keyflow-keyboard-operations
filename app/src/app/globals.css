@@ -2081,3 +2081,189 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
   padding: 0;
   min-height: 54px;
 }
+
+/* ---------------------------------------------------------------------------
+   Aanmelden en rolwissel. Het emoji-slotje maakte de kop goedkoop; dit is een
+   knop en een naambalk in dezelfde taal als de rest van de app.
+   --------------------------------------------------------------------------- */
+
+.sign-in-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 46px;
+  padding: 0 18px;
+  border: 1px solid var(--signal-soft);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--text-2);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: border-color .15s, color .15s;
+}
+
+.sign-in-chip:hover { border-color: var(--teal); color: var(--teal); }
+.sign-in-chip svg { flex: none; }
+
+.session-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.role-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 12px;
+  background: var(--signal-soft);
+}
+
+.role-tabs button {
+  height: 38px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.role-tabs button:hover { color: var(--text); }
+.role-tabs button.active { background: var(--surface); color: var(--teal); box-shadow: var(--shadow); }
+
+.session-user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 46px;
+  padding: 0 6px 0 13px;
+  border: 1px solid var(--signal-soft);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--text-2);
+  box-shadow: var(--shadow);
+}
+
+.session-user > svg { flex: none; color: var(--teal); }
+.session-user > span { display: grid; line-height: 1.25; }
+.session-user strong { color: var(--text); font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+.session-user small { color: var(--text-3); font-size: 10.5px; }
+
+.session-user button {
+  height: 34px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-3);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.session-user button:hover { background: var(--signal-soft); color: var(--text); }
+
+@media (max-width: 1100px) {
+  .session-user > span { display: none; }
+  .role-tabs button { padding: 0 10px; font-size: 12px; }
+}
+
+/* Accountbeheer: toevoegen, pincode opnieuw zetten, toegang intrekken. */
+.account-actions { display: flex; gap: 6px; }
+.account-actions button {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-2);
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.account-actions button:hover:not(:disabled) { color: var(--text); border-color: var(--text-3); }
+.account-actions button:disabled { opacity: .5; cursor: not-allowed; }
+
+.account-new { margin-top: 22px; padding-top: 18px; border-top: 1px solid var(--line); }
+.account-new h4 { margin: 0 0 10px; font-size: 13px; color: var(--text); }
+.account-new-fields { display: flex; gap: 8px; flex-wrap: wrap; }
+.account-new-fields label { flex: 1 1 160px; }
+.account-new-fields input, .account-new-fields select {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 13px;
+}
+.account-hint { margin: 10px 0 0; color: var(--text-3); font-size: 11.5px; }
+
+.fresh-pin {
+  display: grid;
+  gap: 6px;
+  margin-top: 16px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
+  border-radius: 12px;
+  background: var(--warn-soft);
+}
+.fresh-pin strong { font-size: 12.5px; color: var(--text); }
+.fresh-pin b { font-size: 30px; letter-spacing: 10px; font-weight: 800; color: var(--warn); }
+.fresh-pin small { color: var(--text-2); font-size: 11.5px; line-height: 1.6; }
+
+/* Het aanmeldvenster gebruikte klassen die hier niet bestaan, waardoor het
+   zonder vlak over het dashboard zweefde. */
+.unlock-modal {
+  width: min(440px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  box-shadow: var(--shadow-pop);
+}
+
+.unlock-modal .modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 26px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.unlock-modal .modal-head h2 { margin: 0; font-size: 19px; letter-spacing: -.2px; }
+
+.unlock-modal .modal-head button {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-3);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.unlock-modal .modal-head button:hover { background: var(--surface-2); color: var(--text); }
+
+.unlock-modal .modal-body { padding: 22px 26px; display: grid; gap: 14px; }
+
+.unlock-modal .modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 0 26px 22px;
+}

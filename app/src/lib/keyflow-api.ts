@@ -205,10 +205,40 @@ export function fetchAccessRole() {
 }
 
 export function signInWithPin(userId: string, pin: string) {
-  return request<{ userId: string; role: "management" | "noviply"; name: string }>(
-    "/api/access",
-    { method: "POST", body: JSON.stringify({ userId, pin }) },
+  return request<{
+    userId: string;
+    role: "management" | "noviply";
+    name: string;
+    mustChangePin: boolean;
+  }>("/api/access", { method: "POST", body: JSON.stringify({ userId, pin }) });
+}
+
+export function changeOwnPin(currentPin: string, newPin: string) {
+  return request<{ ok: true }>("/api/access/pin", {
+    method: "POST",
+    body: JSON.stringify({ currentPin, newPin }),
+  });
+}
+
+export function createAccount(name: string, role: "management" | "noviply") {
+  return request<{ id: string; name: string; role: string; temporaryPin: string }>(
+    "/api/access/accounts",
+    { method: "POST", body: JSON.stringify({ name, role }) },
   );
+}
+
+export function resetAccountPin(userId: string) {
+  return request<{ temporaryPin: string }>("/api/access/accounts", {
+    method: "PATCH",
+    body: JSON.stringify({ userId }),
+  });
+}
+
+export function removeAccount(userId: string) {
+  return request<{ ok: true }>("/api/access/accounts", {
+    method: "DELETE",
+    body: JSON.stringify({ userId }),
+  });
 }
 
 export function lockAccess() {

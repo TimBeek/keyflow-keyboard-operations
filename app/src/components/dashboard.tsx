@@ -81,6 +81,7 @@ import {
   postPrintRequest,
   fetchAccessRole,
   signInWithPin,
+  changeOwnPin,
   lockAccess,
   type PilotAccount,
   putOperationsPolicy,
@@ -140,7 +141,9 @@ type IconName =
   | "plus"
   | "minus"
   | "alert"
-  | "arrow";
+  | "arrow"
+  | "lock"
+  | "user";
 
 type ViewName =
   | "overview" | "movers" | "layoutgroups" | "reports"
@@ -161,6 +164,8 @@ function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
     minus: <path d="M5 12h14"/>,
     alert: <><path d="M12 3 2.8 20h18.4Z"/><path d="M12 9v5M12 17h.01"/></>,
     arrow: <path d="m9 18 6-6-6-6"/>,
+    lock: <><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></>,
+    user: <><circle cx="12" cy="8" r="3.6"/><path d="M5 20a7 7 0 0 1 14 0"/></>,
   };
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -1344,6 +1349,11 @@ export function Dashboard({
   const [chosenAccount, setChosenAccount] = useState<string>("");
   const [unlockCode, setUnlockCode] = useState("");
   const [signedInName, setSignedInName] = useState("");
+  const [signedInUserId, setSignedInUserId] = useState("");
+  // Een code die iemand anders bedacht en die blijft staan, is geen code.
+  const [mustChangePin, setMustChangePin] = useState(false);
+  const [newPin, setNewPin] = useState("");
+  const [newPinAgain, setNewPinAgain] = useState("");
   const [unlockError, setUnlockError] = useState("");
   const [unlocking, setUnlocking] = useState(false);
 
@@ -1353,7 +1363,9 @@ export function Dashboard({
       .then((access) => {
         setUnlockedRole(access.role);
         setRole(access.role);
+        setSignedInUserId(access.userId);
         setAccounts(access.accounts);
+        setSignedInName(access.accounts.find((a) => a.id === access.userId)?.name ?? "");
         setChosenAccount((current) => current || access.accounts[0]?.id || "");
       })
       .catch(() => setUnlockedRole("employee"));
@@ -1368,14 +1380,44 @@ export function Dashboard({
       setUnlockedRole(result.role);
       setRole(result.role);
       setSignedInName(result.name);
-      setUnlockOpen(false);
-      setUnlockCode("");
+      setSignedInUserId(result.userId);
       setActiveView("overview");
+      if (result.mustChangePin) {
+        // Wel binnen, maar het venster blijft staan: eerst een eigen pincode.
+        setMustChangePin(true);
+      } else {
+        setUnlockOpen(false);
+        setUnlockCode("");
+      }
       await refreshSharedState();
     } catch (error) {
       setUnlockError(error instanceof KeyflowApiError
         ? error.message
         : "Er is geen verbinding om de code te controleren.");
+    } finally {
+      setUnlocking(false);
+    }
+  }
+
+  async function submitNewPin() {
+    if (newPin !== newPinAgain) {
+      setUnlockError("De twee pincodes zijn niet gelijk.");
+      return;
+    }
+    setUnlocking(true);
+    setUnlockError("");
+    try {
+      await changeOwnPin(unlockCode, newPin);
+      setMustChangePin(false);
+      setUnlockOpen(false);
+      setUnlockCode("");
+      setNewPin("");
+      setNewPinAgain("");
+      setLastAction("Je eigen pincode is ingesteld.");
+    } catch (error) {
+      setUnlockError(error instanceof KeyflowApiError
+        ? error.message
+        : "De pincode kon niet worden gewijzigd.");
     } finally {
       setUnlocking(false);
     }
@@ -1387,6 +1429,7 @@ export function Dashboard({
     setRole("employee");
     setSignedInName("");
     setUnlockCode("");
+    setMustChangePin(false);
     setActiveView("overview");
     await refreshSharedState();
   }
@@ -1586,37 +1629,39 @@ export function Dashboard({
           </div>
           <div className="top-actions">
             {demoAccess ? (
-              <div className="role-switcher" aria-label="Rol kiezen">
-                <span>{unlockedRole === "employee" ? "WERKVLOER" : (signedInName || roleLabel(unlockedRole)).toUpperCase()}</span>
-                <div>
-                  <button className={role === "employee" ? "active" : ""} onClick={() => switchRole("employee")}>
-                    Werknemer
-                  </button>
-                  {/* Management ziet ook het Noviply-scherm; Noviply ziet alleen zichzelf. */}
-                  {(unlockedRole === "management" || unlockedRole === "noviply") && (
-                    <button
-                      className={role === "noviply" ? "active" : ""}
-                      onClick={() => switchRole("noviply")}
-                    >
+              unlockedRole === "employee" ? (
+                <button className="sign-in-chip" onClick={() => setUnlockOpen(true)}>
+                  <Icon name="lock" size={15} />
+                  <span>Aanmelden</span>
+                </button>
+              ) : (
+                <div className="session-bar">
+                  <div className="role-tabs" role="group" aria-label="Scherm kiezen">
+                    <button className={role === "employee" ? "active" : ""} onClick={() => switchRole("employee")}>
+                      Werkvloer
+                    </button>
+                    {/* Management ziet ook het Noviply-scherm; Noviply alleen zichzelf. */}
+                    <button className={role === "noviply" ? "active" : ""} onClick={() => switchRole("noviply")}>
                       Noviply
                     </button>
-                  )}
-                  {unlockedRole === "management" && (
-                    <button className={role === "management" ? "active" : ""} onClick={() => switchRole("management")}>
-                      Management
-                    </button>
-                  )}
-                  {unlockedRole === "employee" ? (
-                    <button className="lock-button" onClick={() => setUnlockOpen(true)}>
-                      🔒 Aanmelden
-                    </button>
-                  ) : (
-                    <button className="lock-button" onClick={() => void lockOut()}>
+                    {unlockedRole === "management" && (
+                      <button className={role === "management" ? "active" : ""} onClick={() => switchRole("management")}>
+                        Management
+                      </button>
+                    )}
+                  </div>
+                  <div className="session-user">
+                    <Icon name="user" size={15} />
+                    <span>
+                      <strong>{signedInName || roleLabel(unlockedRole)}</strong>
+                      <small>{roleLabel(unlockedRole)}</small>
+                    </span>
+                    <button onClick={() => void lockOut()} title="Afmelden" aria-label="Afmelden">
                       Afmelden
                     </button>
-                  )}
+                  </div>
                 </div>
-              </div>
+              )
             ) : (
               <div className="identity-badge">
                 <span>MICROSOFT ENTRA ID</span>
@@ -1852,62 +1897,110 @@ export function Dashboard({
           <div className="modal-backdrop" role="dialog" aria-modal="true" aria-label="Aanmelden">
             <div className="modal unlock-modal">
               <div className="modal-head">
-                <h2>Aanmelden</h2>
-                <button onClick={() => { setUnlockOpen(false); setUnlockError(""); }} aria-label="Sluiten">×</button>
+                <h2>{mustChangePin ? "Kies je eigen pincode" : "Aanmelden"}</h2>
+                {!mustChangePin && (
+                  <button onClick={() => { setUnlockOpen(false); setUnlockError(""); }} aria-label="Sluiten">×</button>
+                )}
               </div>
-              <div className="modal-body">
-                <p className="unlock-intro">
-                  De werkvloer heeft geen pincode nodig. Voor management en Noviply wel,
-                  omdat daar beleid, inkoop en een externe partij achter zitten.
-                </p>
-                <div className="unlock-people" role="group" aria-label="Wie ben je?">
-                  {accounts.map((account) => (
+
+              {mustChangePin ? (
+                <>
+                  <div className="modal-body">
+                    <p className="unlock-intro">
+                      Je bent binnen met een tijdelijke code die iemand anders heeft gezet.
+                      Kies er nu een die alleen jij kent — daarna gebruik je die.
+                    </p>
+                    <label className="unlock-field">
+                      <span>Nieuwe pincode</span>
+                      <input
+                        type="password"
+                        inputMode="numeric"
+                        autoComplete="new-password"
+                        maxLength={4}
+                        value={newPin}
+                        autoFocus
+                        onChange={(event) => { setNewPin(event.target.value.replace(/[^0-9]/g, "").slice(0, 4)); setUnlockError(""); }}
+                        placeholder="••••"
+                      />
+                    </label>
+                    <label className="unlock-field">
+                      <span>Nog een keer</span>
+                      <input
+                        type="password"
+                        inputMode="numeric"
+                        autoComplete="new-password"
+                        maxLength={4}
+                        value={newPinAgain}
+                        onChange={(event) => { setNewPinAgain(event.target.value.replace(/[^0-9]/g, "").slice(0, 4)); setUnlockError(""); }}
+                        onKeyDown={(event) => { if (event.key === "Enter") void submitNewPin(); }}
+                        placeholder="••••"
+                      />
+                    </label>
+                    {unlockError && <p className="form-error">{unlockError}</p>}
+                  </div>
+                  <div className="modal-actions">
                     <button
-                      key={account.id}
-                      type="button"
-                      className={chosenAccount === account.id ? "active" : ""}
-                      onClick={() => { setChosenAccount(account.id); setUnlockError(""); }}
+                      className="primary-button"
+                      disabled={unlocking || newPin.length !== 4 || newPinAgain.length !== 4}
+                      onClick={() => void submitNewPin()}
                     >
-                      <strong>{account.name}</strong>
-                      <small>{roleLabel(account.role)}</small>
+                      {unlocking ? "Opslaan…" : "Pincode instellen"}
                     </button>
-                  ))}
-                  {accounts.length === 0 && (
-                    <p className="unlock-empty">Er is nog niemand aangemeld met een pincode.</p>
-                  )}
-                </div>
-                <label className="unlock-field">
-                  <span>Pincode</span>
-                  <input
-                    type="password"
-                    inputMode="numeric"
-                    autoComplete="off"
-                    maxLength={4}
-                    value={unlockCode}
-                    autoFocus
-                    onChange={(event) => {
-                      // Alleen cijfers: dan kan er niets anders in dan wat past.
-                      setUnlockCode(event.target.value.replace(/\D/g, "").slice(0, 4));
-                      setUnlockError("");
-                    }}
-                    onKeyDown={(event) => { if (event.key === "Enter") void submitUnlock(); }}
-                    placeholder="••••"
-                  />
-                </label>
-                {unlockError && <p className="form-error">{unlockError}</p>}
-              </div>
-              <div className="modal-actions">
-                <button className="secondary-button" onClick={() => { setUnlockOpen(false); setUnlockError(""); }}>
-                  Annuleren
-                </button>
-                <button
-                  className="primary-button"
-                  disabled={unlocking || unlockCode.length !== 4 || !chosenAccount}
-                  onClick={() => void submitUnlock()}
-                >
-                  {unlocking ? "Controleren…" : "Aanmelden"}
-                </button>
-              </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="modal-body">
+                    <p className="unlock-intro">
+                      De werkvloer heeft geen pincode nodig. Voor management en Noviply wel,
+                      omdat daar beleid, inkoop en een externe partij achter zitten.
+                    </p>
+                    <div className="unlock-people" role="group" aria-label="Wie ben je?">
+                      {accounts.map((account) => (
+                        <button
+                          key={account.id}
+                          type="button"
+                          className={chosenAccount === account.id ? "active" : ""}
+                          onClick={() => { setChosenAccount(account.id); setUnlockError(""); }}
+                        >
+                          <strong>{account.name}</strong>
+                          <small>{roleLabel(account.role)}</small>
+                        </button>
+                      ))}
+                      {accounts.length === 0 && (
+                        <p className="unlock-empty">Er is nog niemand met een pincode.</p>
+                      )}
+                    </div>
+                    <label className="unlock-field">
+                      <span>Pincode</span>
+                      <input
+                        type="password"
+                        inputMode="numeric"
+                        autoComplete="off"
+                        maxLength={4}
+                        value={unlockCode}
+                        autoFocus
+                        onChange={(event) => { setUnlockCode(event.target.value.replace(/[^0-9]/g, "").slice(0, 4)); setUnlockError(""); }}
+                        onKeyDown={(event) => { if (event.key === "Enter") void submitUnlock(); }}
+                        placeholder="••••"
+                      />
+                    </label>
+                    {unlockError && <p className="form-error">{unlockError}</p>}
+                  </div>
+                  <div className="modal-actions">
+                    <button className="secondary-button" onClick={() => { setUnlockOpen(false); setUnlockError(""); }}>
+                      Annuleren
+                    </button>
+                    <button
+                      className="primary-button"
+                      disabled={unlocking || unlockCode.length !== 4 || !chosenAccount}
+                      onClick={() => void submitUnlock()}
+                    >
+                      {unlocking ? "Controleren…" : "Aanmelden"}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -1915,7 +2008,7 @@ export function Dashboard({
         <AccessManagementDialog
           open={accessOpen}
           onClose={() => setAccessOpen(false)}
-          identity={identity}
+          currentUserId={signedInUserId}
         />
         <InventoryImportDialog
           open={importOpen}

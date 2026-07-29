@@ -1,12 +1,20 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { permissionsForRole, type UserRole } from "@/domain/access-control";
-import type { KeyFlowIdentity } from "@/domain/identity";
+import {
+  createAccount,
+  fetchAccessRole,
+  removeAccount,
+  resetAccountPin,
+  KeyflowApiError,
+  type PilotAccount,
+} from "@/lib/keyflow-api";
 
 type Props = {
   open: boolean;
   onClose: () => void;
-  identity: KeyFlowIdentity;
+  currentUserId: string;
 };
 
 const permissionLabels: Record<string, string> = {
@@ -21,66 +29,192 @@ const permissionLabels: Record<string, string> = {
   "reports.view": "Rapportages bekijken",
   "users.manage": "Gebruikers beheren",
   "policies.manage": "Beleid beheren",
+  "print.fulfil": "Printaanvragen afhandelen",
 };
 
-export function AccessManagementDialog({ open, onClose, identity }: Props) {
+const roleLabels: Record<UserRole, string> = {
+  management: "Management",
+  employee: "Werkvloer",
+  noviply: "Noviply",
+};
+
+export function AccessManagementDialog({ open, onClose, currentUserId }: Props) {
+  const [accounts, setAccounts] = useState<PilotAccount[]>([]);
+  const [name, setName] = useState("");
+  const [role, setRole] = useState<"management" | "noviply">("management");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  /** Een tijdelijke pincode is één keer te zien; daarna kent niemand hem meer. */
+  const [freshPin, setFreshPin] = useState<{ name: string; pin: string } | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const access = await fetchAccessRole();
+        if (cancelled) return;
+        setAccounts(access.accounts);
+        setError("");
+        // De vorige tijdelijke code hoort niet te blijven staan als het
+        // venster opnieuw opengaat.
+        setFreshPin(null);
+      } catch {
+        if (!cancelled) setError("De accounts konden niet worden opgehaald.");
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [open]);
+
   if (!open) return null;
 
+  async function run(action: () => Promise<void>) {
+    setBusy(true);
+    setError("");
+    try {
+      await action();
+      const access = await fetchAccessRole();
+      setAccounts(access.accounts);
+    } catch (caught) {
+      setError(caught instanceof KeyflowApiError ? caught.message : "Dat is niet gelukt.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
-    <div className="modal-backdrop" role="presentation" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+    <div
+      className="modal-backdrop"
+      role="presentation"
+      onMouseDown={(event) => event.target === event.currentTarget && onClose()}
+    >
       <section className="access-modal" role="dialog" aria-modal="true" aria-labelledby="access-title">
         <header className="modal-header">
-          <div><span className="modal-kicker">TOEGANGSBEHEER</span><h2 id="access-title">Gebruikers en rollen</h2><p>Management bepaalt wie mag uitvoeren, plannen en goedkeuren.</p></div>
+          <div>
+            <span className="modal-kicker">TOEGANGSBEHEER</span>
+            <h2 id="access-title">Wie mag waarbij</h2>
+            <p>De werkvloer komt zonder pincode binnen. Management en Noviply niet.</p>
+          </div>
           <button className="close-button" onClick={onClose} aria-label="Sluiten">×</button>
         </header>
+
         <div className="modal-body access-body">
           <section className="access-users">
-            <h3>Actieve gebruikers</h3>
-            {identity.mode === "entra" ? (
-              <div>
-                <span className={`avatar ${identity.role === "employee" ? "employee" : ""}`}>{initialsFor(identity.displayName)}</span>
-                <p><strong>{identity.displayName}</strong><small>{identity.email}</small></p>
-                <span className={`role-badge ${identity.role === "management" ? "management" : ""}`}>{identity.role === "management" ? "Management" : "Werknemer"}</span>
+            <h3>Accounts met een pincode</h3>
+            {accounts.map((account) => (
+              <div key={account.id}>
+                <span className={`avatar ${account.role === "noviply" ? "employee" : ""}`}>
+                  {initialsFor(account.name)}
+                </span>
+                <p>
+                  <strong>{account.name}</strong>
+                  <small>{roleLabels[account.role]}</small>
+                </p>
+                <div className="account-actions">
+                  <button
+                    disabled={busy}
+                    onClick={() => void run(async () => {
+                      const { temporaryPin } = await resetAccountPin(account.id);
+                      setFreshPin({ name: account.name, pin: temporaryPin });
+                    })}
+                  >
+                    Nieuwe pincode
+                  </button>
+                  {account.id !== currentUserId && (
+                    <button
+                      className="danger-ghost-button"
+                      disabled={busy}
+                      onClick={() => void run(async () => { await removeAccount(account.id); })}
+                    >
+                      Toegang intrekken
+                    </button>
+                  )}
+                </div>
               </div>
-            ) : (
-              <>
-                <div><span className="avatar">TB</span><p><strong>Tim Beek</strong><small>keyflow-beheerder@local.invalid</small></p><span className="role-badge management">Management</span></div>
-                <div><span className="avatar employee">MW</span><p><strong>KeyFlow werknemer</strong><small>keyflow-werknemer@local.invalid</small></p><span className="role-badge">Werknemer</span></div>
-              </>
+            ))}
+            {accounts.length === 0 && <p className="unlock-empty">Nog geen accounts.</p>}
+
+            <div className="account-new">
+              <h4>Iemand toevoegen</h4>
+              <div className="account-new-fields">
+                <label>
+                  <span className="sr-only">Naam</span>
+                  <input
+                    value={name}
+                    placeholder="Naam"
+                    maxLength={80}
+                    onChange={(event) => setName(event.target.value)}
+                  />
+                </label>
+                <label>
+                  <span className="sr-only">Rol</span>
+                  <select value={role} onChange={(event) => setRole(event.target.value as "management" | "noviply")}>
+                    <option value="management">Management</option>
+                    <option value="noviply">Noviply</option>
+                  </select>
+                </label>
+                <button
+                  className="primary-button"
+                  disabled={busy || name.trim().length < 2}
+                  onClick={() => void run(async () => {
+                    const created = await createAccount(name.trim(), role);
+                    setFreshPin({ name: created.name, pin: created.temporaryPin });
+                    setName("");
+                  })}
+                >
+                  Toevoegen
+                </button>
+              </div>
+              <p className="account-hint">
+                De werkvloer heeft geen account nodig; die komt zonder pincode binnen.
+              </p>
+            </div>
+
+            {freshPin && (
+              <div className="fresh-pin" role="status">
+                <strong>Tijdelijke pincode voor {freshPin.name}</strong>
+                <b>{freshPin.pin}</b>
+                <small>
+                  Geef deze persoonlijk door. Bij de eerste aanmelding kiest {freshPin.name} zelf
+                  een eigen pincode — daarna is deze code niets meer waard. Je ziet hem hierna
+                  niet opnieuw.
+                </small>
+              </div>
             )}
+            {error && <p className="form-error">{error}</p>}
           </section>
+
           <section>
             <h3>Rechtenmatrix</h3>
             <div className="permission-matrix">
-              <div className="permission-head"><span>Recht</span><b>Werknemer</b><b>Management</b></div>
+              <div className="permission-head">
+                <span>Recht</span><b>Werkvloer</b><b>Noviply</b><b>Management</b>
+              </div>
               {Object.entries(permissionLabels).map(([permission, label]) => (
-                <div key={permission}>
+                <div key={permission} className="permission-row">
                   <span>{label}</span>
-                  <b className={hasPermission("employee", permission) ? "allowed" : "denied"}>{hasPermission("employee", permission) ? "✓" : "—"}</b>
-                  <b className="allowed">✓</b>
+                  <b>{has("employee", permission) ? "✓" : "—"}</b>
+                  <b>{has("noviply", permission) ? "✓" : "—"}</b>
+                  <b>{has("management", permission) ? "✓" : "—"}</b>
                 </div>
               ))}
             </div>
           </section>
-          <div className="access-note">
-            <strong>{identity.mode === "entra" ? "Microsoft Entra ID actief" : "Entra-login technisch voorbereid"}</strong>
-            <span>{identity.mode === "entra"
-              ? "De persoonlijke app-rol uit Microsoft bepaalt de werkruimte; handmatig wisselen is uitgeschakeld."
-              : "De pilot gebruikt nog lokale demorollen. Vul de Entra-appregistratie, app-rollen en productieomgeving in om persoonlijke toegang te activeren."}</span>
-          </div>
         </div>
-        <footer className="modal-footer"><button className="primary-button" onClick={onClose}>Sluiten</button></footer>
       </section>
     </div>
   );
 }
 
-function hasPermission(role: UserRole, permission: string) {
-  return permissionsForRole(role).includes(permission as ReturnType<typeof permissionsForRole>[number]);
+function has(role: UserRole, permission: string) {
+  return (permissionsForRole(role) as string[]).includes(permission);
 }
 
-function initialsFor(displayName: string) {
-  const parts = displayName.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "KF";
-  return `${parts[0][0] ?? ""}${parts.at(-1)?.[0] ?? ""}`.toUpperCase();
+function initialsFor(value: string) {
+  return value
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("") || "?";
 }
