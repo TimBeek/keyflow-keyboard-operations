@@ -1744,3 +1744,19 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 .method-number.premium, .method-status.premium { background: color-mix(in srgb, var(--tier-premium) 20%, transparent); color: var(--tier-premium); }
 .method-number.professional, .method-status.professional { background: color-mix(in srgb, var(--tier-professional) 20%, transparent); color: var(--tier-professional); }
 .method-status.basic, .method-status.stock, .method-status.premium, .method-status.professional { letter-spacing: 1px; }
+
+/* De omhuizing van het antwoord krijgt de kleur van het gekozen niveau, zodat
+   de medewerker van een afstand al ziet met welke sticker hij werkt. */
+.answer.tone-basic { border-color: color-mix(in srgb, var(--tier-basic) 46%, transparent); background: linear-gradient(180deg, color-mix(in srgb, var(--tier-basic) 9%, transparent), transparent 62%); }
+.answer.tone-stock { border-color: color-mix(in srgb, var(--tier-stock) 46%, transparent); background: linear-gradient(180deg, color-mix(in srgb, var(--tier-stock) 9%, transparent), transparent 62%); }
+.answer.tone-premium { border-color: color-mix(in srgb, var(--tier-premium) 50%, transparent); background: linear-gradient(180deg, color-mix(in srgb, var(--tier-premium) 11%, transparent), transparent 62%); }
+.answer.tone-professional { border-color: color-mix(in srgb, var(--tier-professional) 50%, transparent); background: linear-gradient(180deg, color-mix(in srgb, var(--tier-professional) 11%, transparent), transparent 62%); }
+.answer.tone-basic .answer-head > div > span:first-child { color: var(--tier-basic); }
+.answer.tone-stock .answer-head > div > span:first-child { color: var(--tier-stock); }
+.answer.tone-premium .answer-head > div > span:first-child { color: var(--tier-premium); }
+.answer.tone-professional .answer-head > div > span:first-child { color: var(--tier-professional); }
+
+/* Volledige voorraad, met de echt lage regels gemarkeerd. */
+.stock-low { background: color-mix(in srgb, var(--warn) 8%, transparent); }
+.resupply-flag { display: inline-block; padding: 2px 9px; border-radius: 999px; background: var(--warn-soft); color: var(--warn); font-size: 11px; font-weight: 800; }
+.stock-ok { color: var(--muted); font-size: 11.5px; font-weight: 700; }

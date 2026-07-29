@@ -57,8 +57,11 @@ export function NoviplyWorkspace({
     .sort((left, right) => (right.handledAt ?? "").localeCompare(left.handledAt ?? ""))
     .slice(0, 25);
 
-  /** Wat bijna op is, moet Noviply nazenden. Alleen dat is hier relevant. */
-  const running = useMemo(() => inventoryCatalog
+  /**
+   * De volledige voorraad, van leeg naar vol. Noviply wil het geheel zien en
+   * niet alleen een selectie; wat écht onder het minimum zit is gemarkeerd.
+   */
+  const stockRows = useMemo(() => inventoryCatalog
     .filter((item) => item.dataQuality === "ready")
     .map((item) => {
       const stock = inventoryQuantity(quantities, item);
@@ -69,9 +72,9 @@ export function NoviplyWorkspace({
       );
       return { item, stock, threshold, shortfall: threshold - stock };
     })
-    .filter((row) => row.shortfall > 0)
-    .sort((left, right) => right.shortfall - left.shortfall)
-    .slice(0, 25), [quantities]);
+    .sort((left, right) => left.stock - right.stock || right.shortfall - left.shortfall),
+    [quantities]);
+  const running = stockRows.filter((row) => row.shortfall > 0);
 
   function settle(
     record: PrintRequestRecord,
@@ -209,7 +212,7 @@ export function NoviplyWorkspace({
         <div className="noviply-panel-head">
           <div>
             <h3>Stock running low</h3>
-            <p>Folders whose stock has dropped below the calculated minimum.</p>
+            <p>All folders, emptiest first. Flagged rows are below their calculated minimum.</p>
           </div>
         </div>
         <div className="table-wrap">
@@ -224,19 +227,23 @@ export function NoviplyWorkspace({
               </tr>
             </thead>
             <tbody>
-              {running.map(({ item, stock, threshold, shortfall }) => (
-                <tr key={item.catalogKey}>
+              {stockRows.map(({ item, stock, threshold, shortfall }) => (
+                <tr key={item.catalogKey} className={shortfall > 0 ? "stock-low" : ""}>
                   <td><strong className="storage-number">No. {item.storageNumber}</strong><span>{item.model}</span></td>
                   <td>{item.sku}</td>
                   <td>{layoutWithCountry(item.layout, item.sku)}</td>
                   <td><b className={stock === 0 ? "zero" : ""}>{stock}</b><span> / min. {threshold}</span></td>
-                  <td><strong>{shortfall}</strong></td>
+                  <td>
+                    {shortfall > 0
+                      ? <span className="resupply-flag">Resupply {shortfall}</span>
+                      : <span className="stock-ok">OK</span>}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          {running.length === 0 && (
-            <div className="empty">All folders are above their minimum.</div>
+          {stockRows.length === 0 && (
+            <div className="empty">No stock data available.</div>
           )}
         </div>
       </section>

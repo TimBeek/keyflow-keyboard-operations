@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { PrintRequestRecord } from "./print-requests";
 import type { CompatibilityEvidenceRecord } from "@/domain/compatibility-evidence";
 import type {
   InventoryTransactionEntry,
@@ -100,6 +101,25 @@ const modelGroupDecisionSchema = z.object({
     photoConfirmed: z.boolean(),
     dryFitPassed: z.boolean(),
   }),
+  // Standaardwaarden, zodat opslag van vóór deze velden blijft werken.
+  excludedModels: z.array(z.string()).default([]),
+  addedModels: z.array(z.string()).default([]),
+});
+
+const printRequestRecordSchema = z.object({
+  id: z.string().min(1),
+  brand: z.string(),
+  model: z.string().min(1),
+  layout: z.string(),
+  variant: z.string(),
+  orderReference: z.string(),
+  reason: z.string(),
+  requestedAt: z.string().min(10),
+  requestedBy: z.string(),
+  status: z.enum(["requested", "printed", "not_printable"]),
+  handledAt: z.string().nullable(),
+  handledBy: z.string().nullable(),
+  note: z.string(),
 });
 
 const compatibilityEvidenceRecordSchema = z.object({
@@ -185,13 +205,15 @@ const persistedOperationsStateSchema = z.object({
   catalogQuantities: z.record(z.string(), z.number().int().nonnegative()),
   transactions: z.array(transactionSchema).max(2500),
   operationsPolicy: policySchema,
-  verificationReports: z.array(stickerVerificationReportSchema).max(2500).default([]),
-  stockCounts: z.array(stockCountRecordSchema).max(2500).default([]),
-  modelGroupDecisions: z.array(modelGroupDecisionSchema).max(2500).default([]),
-  compatibilityEvidenceRecords: z.array(compatibilityEvidenceRecordSchema).max(2500).default([]),
-  recoveryDrills: z.array(recoveryDrillRecordSchema).max(250).default([]),
-  goLiveAcceptanceRecords: z.array(goLiveAcceptanceRecordSchema).max(500).default([]),
-  workfloorTrials: z.array(workfloorTrialRecordSchema).max(500).default([]),
+  verificationReports: z.array(stickerVerificationReportSchema).max(2500).catch([]).default([]),
+  stockCounts: z.array(stockCountRecordSchema).max(2500).catch([]).default([]),
+  modelGroupDecisions: z.array(modelGroupDecisionSchema).max(2500).catch([]).default([]),
+  compatibilityEvidenceRecords: z.array(compatibilityEvidenceRecordSchema).max(2500).catch([]).default([]),
+  recoveryDrills: z.array(recoveryDrillRecordSchema).max(250).catch([]).default([]),
+  goLiveAcceptanceRecords: z.array(goLiveAcceptanceRecordSchema).max(500).catch([]).default([]),
+  workfloorTrials: z.array(workfloorTrialRecordSchema).max(500).catch([]).default([]),
+  printRequests: z.array(printRequestRecordSchema).max(2500).catch([]).default([]),
+  skuOverrides: z.record(z.string(), z.string()).catch({}).default({}),
 });
 
 export type PersistedOperationsState = {
@@ -208,6 +230,8 @@ export type PersistedOperationsState = {
   recoveryDrills: RecoveryDrillRecord[];
   goLiveAcceptanceRecords: GoLiveAcceptanceRecord[];
   workfloorTrials: WorkfloorTrialRecord[];
+  printRequests: PrintRequestRecord[];
+  skuOverrides: Record<string, string>;
 };
 
 export type OperationsStateInput = Omit<

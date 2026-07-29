@@ -500,7 +500,7 @@ export function EmployeeWorkspace({
           )}
 
           {hasAnswer && (
-            <div className={`answer${usesSheet ? "" : " answer-nosheet"}`}>
+            <div className={`answer tone-${methodProfile(recommendation.primary).tone}${usesSheet ? "" : " answer-nosheet"}`}>
               <div className="answer-head">
                 <div>
                   <span>DIT MOET JE GEBRUIKEN</span>

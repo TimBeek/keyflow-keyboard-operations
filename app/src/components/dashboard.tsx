@@ -308,6 +308,10 @@ export function Dashboard({
         setOperationsPolicy(restored.state.operationsPolicy);
         setVerificationReports(restored.state.verificationReports);
         setStockCounts(restored.state.stockCounts);
+    setPrintRequests(restored.state.printRequests);
+    setSkuOverrides(restored.state.skuOverrides);
+        setPrintRequests(restored.state.printRequests);
+        setSkuOverrides(restored.state.skuOverrides);
         setModelGroupDecisions(restored.state.modelGroupDecisions);
         setCompatibilityEvidenceRecords(restored.state.compatibilityEvidenceRecords);
         if (identity.mode === "pilot") {
@@ -487,6 +491,8 @@ export function Dashboard({
         workfloorTrials: identity.mode === "pilot"
           ? workfloorTrials
           : locallyStoredWorkfloorTrials,
+        printRequests,
+        skuOverrides,
       });
       writeOperationsState(window.localStorage, snapshot);
       savedAt = snapshot.savedAt;
@@ -511,6 +517,8 @@ export function Dashboard({
     recoveryDrills,
     goLiveAcceptanceRecords,
     workfloorTrials,
+    printRequests,
+    skuOverrides,
     identity.mode,
   ]);
 
@@ -964,6 +972,8 @@ export function Dashboard({
       workfloorTrials: identity.mode === "pilot"
         ? workfloorTrials
         : locallyStoredWorkfloorTrials,
+      printRequests,
+      skuOverrides,
     });
     const blob = new Blob([serializeOperationsSnapshot(snapshot)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -987,6 +997,8 @@ export function Dashboard({
     setOperationsPolicy(restored.state.operationsPolicy);
     setVerificationReports(restored.state.verificationReports);
     setStockCounts(restored.state.stockCounts);
+    setPrintRequests(restored.state.printRequests);
+    setSkuOverrides(restored.state.skuOverrides);
     setModelGroupDecisions(restored.state.modelGroupDecisions);
     setCompatibilityEvidenceRecords(restored.state.compatibilityEvidenceRecords);
     if (identity.mode === "pilot") {
