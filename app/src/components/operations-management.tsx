@@ -99,6 +99,8 @@ type Props = {
   onExportBackup: () => void;
   onRestoreBackup: (file: File) => Promise<{ success: boolean; message: string }>;
   onResetPilotData: () => void;
+  /** Welke tabbladen tonen. Weglaten = alle (oude gedrag). Eén tabblad verbergt de tabbalk. */
+  tabs?: Tab[];
 };
 
 type Tab =
@@ -113,6 +115,11 @@ type Tab =
   | "workfloor"
   | "scenarios"
   | "policy";
+
+export const allTabs: Tab[] = [
+  "abc", "ledger", "counts", "verification", "model_groups",
+  "evidence", "continuity", "release", "workfloor", "scenarios", "policy",
+];
 
 type ModelGroupFilter = "pending" | "approved" | "rejected" | "all";
 
@@ -159,9 +166,17 @@ export function OperationsManagement({
   onExportBackup,
   onRestoreBackup,
   onResetPilotData,
+  tabs,
 }: Props) {
   const backupInputRef = useRef<HTMLInputElement>(null);
-  const [tab, setTab] = useState<Tab>("abc");
+  /**
+   * Zonder `tabs` gedraagt dit scherm zich als vanouds (alle tabbladen).
+   * De vernieuwde navigatie geeft één tabblad mee, zodat "Hardlopers" en
+   * "Layoutgroepen" eigen menu-items zijn in plaats van tabbladen diep
+   * weggestopt onder Beheer & analyse.
+   */
+  const shownTabs = tabs && tabs.length > 0 ? tabs : allTabs;
+  const [tab, setTab] = useState<Tab>(shownTabs[0]);
   const [draft, setDraft] = useState(policy);
   const [saved, setSaved] = useState("");
   const [backupMessage, setBackupMessage] = useState("");
@@ -435,62 +450,71 @@ export function OperationsManagement({
     }
   }
 
+  const tabMeta: Record<Tab, { label: string; count?: () => number }> = {
+    abc: { label: "ABC & hardlopers" },
+    ledger: { label: "Boekingen" },
+    counts: { label: "Voorraad tellen" },
+    verification: { label: "Hangmapcontroles" },
+    model_groups: { label: "AI-modelgroepen", count: () => modelGroupCounts.pending },
+    evidence: { label: "Bewijsbibliotheek", count: () => compatibilityEvidenceRecords.length },
+    continuity: { label: "Continuïteit", count: () => recoveryDrills.length },
+    release: { label: "Vrijgave", count: () => goLiveAcceptanceRecords.length },
+    workfloor: { label: "Werkvloerproef", count: () => workfloorTrials.length },
+    scenarios: { label: "Scenariotest", count: () => 29 },
+    policy: { label: "Configuratie" },
+  };
+
+  /**
+   * Bij één tabblad is dit scherm een eigen menu-bestemming met een eigen
+   * paginatitel. De generieke kop en de voorraad-KPI's zouden die dan
+   * tegenspreken, dus die tonen we alleen in de volledige beheerweergave.
+   */
+  const singleTab = shownTabs.length === 1;
+  const showStockStats = !singleTab || shownTabs[0] === "abc";
+
   return (
     <div className="workspace-view operations-workspace">
-      <section className="workspace-stats">
-        <article><span>Actuele catalogusvoorraad</span><strong>{currentStock}</strong><small>vellen per fysieke hangmap</small></article>
-        <article><span>Uitgeboekt</span><strong>{issued}</strong><small>12-wekenbasis + live sessie</small></article>
-        <article><span>Ingeboekt</span><strong>{received}</strong><small>leveringen en correcties</small></article>
-        <article className={mismatchCount + blockedUnusedCount > 0 ? "attention" : ""}><span>Controle-afwijkingen</span><strong>{verificationAlertCount}</strong><small>{mismatchCount} uitval · {blockedUnusedCount} zonder afboeking</small></article>
-      </section>
+      {showStockStats && (
+        <section className="workspace-stats">
+          <article><span>Actuele catalogusvoorraad</span><strong>{currentStock}</strong><small>vellen per fysieke hangmap</small></article>
+          <article><span>Uitgeboekt</span><strong>{issued}</strong><small>12-wekenbasis + live sessie</small></article>
+          <article><span>Ingeboekt</span><strong>{received}</strong><small>leveringen en correcties</small></article>
+          <article className={mismatchCount + blockedUnusedCount > 0 ? "attention" : ""}><span>Controle-afwijkingen</span><strong>{verificationAlertCount}</strong><small>{mismatchCount} uitval · {blockedUnusedCount} zonder afboeking</small></article>
+        </section>
+      )}
 
       <section className="panel operations-panel">
-        <div className="order-heading">
-          <div>
-            <span className="workspace-kicker">OPERATIONEEL BEHEER</span>
-            <h2>Voorraadbewegingen en conversiebeleid</h2>
-            <p>Beheer het werknemersadvies en stuur op werkelijk in- en uitgaand gebruik.</p>
+        {!singleTab && (
+          <div className="order-heading">
+            <div>
+              <span className="workspace-kicker">OPERATIONEEL BEHEER</span>
+              <h2>Voorraadbewegingen en conversiebeleid</h2>
+              <p>Beheer het werknemersadvies en stuur op werkelijk in- en uitgaand gebruik.</p>
+            </div>
+            <span className="data-badge">12 weken voorbeelddata + sessieboekingen</span>
           </div>
-          <span className="data-badge">12 weken voorbeelddata + sessieboekingen</span>
-        </div>
+        )}
 
-        <div className="operations-tabs" role="tablist" aria-label="Operationeel beheer">
-          <button className={tab === "abc" ? "active" : ""} onClick={() => setTab("abc")}>ABC & hardlopers</button>
-          <button className={tab === "ledger" ? "active" : ""} onClick={() => setTab("ledger")}>Boekingen</button>
-          <button className={tab === "counts" ? "active" : ""} onClick={() => setTab("counts")}>Voorraad tellen</button>
-          <button className={tab === "verification" ? "active" : ""} onClick={() => setTab("verification")}>Hangmapcontroles</button>
-          <button className={tab === "model_groups" ? "active" : ""} onClick={() => setTab("model_groups")}>
-            AI-modelgroepen
-            {modelGroupCounts.pending > 0 && <span className="tab-count">{modelGroupCounts.pending}</span>}
-          </button>
-          <button className={tab === "evidence" ? "active" : ""} onClick={() => setTab("evidence")}>
-            Bewijsbibliotheek
-            {compatibilityEvidenceRecords.length > 0 && (
-              <span className="tab-count">{compatibilityEvidenceRecords.length}</span>
-            )}
-          </button>
-          <button className={tab === "continuity" ? "active" : ""} onClick={() => setTab("continuity")}>
-            Continuïteit
-            {recoveryDrills.length > 0 && <span className="tab-count">{recoveryDrills.length}</span>}
-          </button>
-          <button className={tab === "release" ? "active" : ""} onClick={() => setTab("release")}>
-            Vrijgave
-            {goLiveAcceptanceRecords.length > 0 && (
-              <span className="tab-count">{goLiveAcceptanceRecords.length}</span>
-            )}
-          </button>
-          <button className={tab === "workfloor" ? "active" : ""} onClick={() => setTab("workfloor")}>
-            Werkvloerproef
-            {workfloorTrials.length > 0 && (
-              <span className="tab-count">{workfloorTrials.length}</span>
-            )}
-          </button>
-          <button className={tab === "scenarios" ? "active" : ""} onClick={() => setTab("scenarios")}>
-            Scenariotest
-            <span className="tab-count">29</span>
-          </button>
-          <button className={tab === "policy" ? "active" : ""} onClick={() => setTab("policy")}>Configuratie</button>
-        </div>
+        {shownTabs.length > 1 && (
+          <div className="operations-tabs" role="tablist" aria-label="Operationeel beheer">
+            {shownTabs.map((id) => {
+              const meta = tabMeta[id];
+              const count = meta.count?.();
+              return (
+                <button
+                  key={id}
+                  role="tab"
+                  aria-selected={tab === id}
+                  className={tab === id ? "active" : ""}
+                  onClick={() => setTab(id)}
+                >
+                  {meta.label}
+                  {count ? <span className="tab-count">{count}</span> : null}
+                </button>
+              );
+            })}
+          </div>
+        )}
 
         {tab === "abc" && (
           <div className="operations-tab-content">
