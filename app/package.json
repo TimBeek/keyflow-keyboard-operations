@@ -10,6 +10,7 @@
     "test": "vitest run",
     "import:analyze": "node scripts/analyze-inventory.mjs",
     "inventory:seed": "node scripts/generate-inventory-seed.mjs",
+    "stock:sync": "node scripts/sync-stock-from-source.mjs",
     "db:migrate": "node scripts/migrate.mjs",
     "db:preflight": "tsx scripts/preflight-production-database.ts",
     "db:bootstrap": "tsx scripts/bootstrap-production-inventory.ts",

@@ -1,10 +1,10 @@
 {
   "metadata": {
-    "fileName": "Toetsenbordstickers voorraad.xlsx",
+    "fileName": "Toetsenbordstickers voorraad - Productie (2).csv",
     "sheet": "Productie",
-    "sha256": "38fcd3f3e311838550ced257547f227ade723c925d5b24a4d46daddc58adcca5",
+    "sha256": "26766f379d524f543bfe9cc6081e9ca5b1421e039fbf12325427ecb71323a8c1",
     "rowCount": 148,
-    "totalQuantity": 3164
+    "totalQuantity": 3133
   },
   "rows": [
     {
@@ -1311,7 +1311,7 @@
       "sourceRow": 133,
       "storageNumber": 131,
       "model": "Fujitsu Lifebook E5410",
-      "stock": 31,
+      "stock": 0,
       "layout": "QWERTY US",
       "sku": "NB10209E1NL",
       "linkedModels": "Fujitsu Lifebook E5510, Fujitsu lifebook E5411",

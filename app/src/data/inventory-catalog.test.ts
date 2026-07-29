@@ -18,11 +18,12 @@ describe("volledige Excelvoorraadcatalogus", () => {
   });
 
   it("legt de gecontroleerde bronherkomst vast", () => {
-    expect(inventoryCatalogSummary).toMatchObject({
-      fileName: "Toetsenbordstickers voorraad.xlsx",
-      sheet: "Productie",
-      rowCount: 148,
-    });
+    // Bewust niet één bestandsnaam: elke nieuwe telling levert een nieuw
+    // bestand op, en dan zou deze test omvallen op iets wat juist goed gaat.
+    // Wat moet kloppen is dat er een herleidbare bron ís.
+    expect(inventoryCatalogSummary.fileName).toMatch(/\.(xlsx|csv)$/i);
+    expect(inventoryCatalogSummary.sha256).toMatch(/^[0-9a-f]{64}$/);
+    expect(inventoryCatalogSummary).toMatchObject({ sheet: "Productie", rowCount: 148 });
   });
 
   it("blokkeert ontbrekende en dubbele artikelnummers voor operationeel gebruik", () => {
