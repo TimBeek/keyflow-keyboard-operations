@@ -45,28 +45,39 @@ export const currentLayoutOptions: KeyboardLayoutOption[] = [
   { value: "QWERTY US", label: "QWERTY US / US International", group: "Veelgebruikt", exact: true },
   { value: "QWERTY NL", label: "QWERTY NL — Nederlands", group: "Veelgebruikt", exact: true },
   { value: "QWERTY UK", label: "QWERTY UK", group: "Veelgebruikt", exact: true },
+  { value: "AZERTY BE", label: "AZERTY BE — Belgisch", group: "Veelgebruikt", exact: true },
   { value: "AZERTY FR", label: "AZERTY FR — Frans", group: "Veelgebruikt", exact: true },
   { value: "QWERTZ DE", label: "QWERTZ DE — Duits", group: "Veelgebruikt", exact: true },
-  { value: "QWERTY ES", label: "QWERTY ES — Spaans", group: "Overig", exact: true },
-  { value: "QWERTY IT", label: "QWERTY IT — Italiaans", group: "Overig", exact: true },
-  { value: "QWERTY PT", label: "QWERTY PT — Portugees", group: "Overig", exact: true },
+  { value: "QWERTY ES", label: "QWERTY ES — Spaans", group: "Veelgebruikt", exact: true },
+  { value: "QWERTY IT", label: "QWERTY IT — Italiaans", group: "Veelgebruikt", exact: true },
+  { value: "QWERTY PT", label: "QWERTY PT — Portugees", group: "Veelgebruikt", exact: true },
   { value: "QWERTY PL", label: "QWERTY PL — Pools", group: "Overig", exact: true },
 ];
 
-export const targetLayoutOptions = [
-  currentLayoutOptions.find((layout) => layout.value === "QWERTY US"),
-  currentLayoutOptions.find((layout) => layout.value === "QWERTY NL"),
-  currentLayoutOptions.find((layout) => layout.value === "QWERTY UK"),
-  currentLayoutOptions.find((layout) => layout.value === "QWERTY SE/FI"),
-  currentLayoutOptions.find((layout) => layout.value === "QWERTY NO"),
-  currentLayoutOptions.find((layout) => layout.value === "QWERTY DK"),
-  currentLayoutOptions.find((layout) => layout.value === "AZERTY FR"),
-  currentLayoutOptions.find((layout) => layout.value === "QWERTZ DE"),
-  currentLayoutOptions.find((layout) => layout.value === "QWERTY ES"),
-  currentLayoutOptions.find((layout) => layout.value === "QWERTY IT"),
-  currentLayoutOptions.find((layout) => layout.value === "QWERTY PT"),
-  currentLayoutOptions.find((layout) => layout.value === "QWERTY PL"),
-].filter((layout): layout is KeyboardLayoutOption => Boolean(layout));
+/**
+ * De volgorde is de volgorde waarin ze op de werkvloer voorbijkomen: wat het
+ * meest verkocht wordt staat bovenaan, zodat de medewerker niet hoeft te
+ * scrollen voor de gewone gevallen.
+ */
+export const targetLayoutOrder = [
+  "QWERTY NL",
+  "AZERTY BE",
+  "QWERTZ DE",
+  "QWERTY ES",
+  "QWERTY IT",
+  "AZERTY FR",
+  "QWERTY PT",
+  "QWERTY US",
+  "QWERTY UK",
+  "QWERTY SE/FI",
+  "QWERTY NO",
+  "QWERTY DK",
+  "QWERTY PL",
+] as const;
+
+export const targetLayoutOptions = targetLayoutOrder
+  .map((value) => currentLayoutOptions.find((layout) => layout.value === value))
+  .filter((layout): layout is KeyboardLayoutOption => Boolean(layout));
 
 export const scandinavianLayoutReferences: ScandinavianLayoutReference[] = [
   {

@@ -119,6 +119,7 @@ export async function readOperationsState(actorId: string) {
     conversionLog,
     operationsPolicy: policy?.policy ?? null,
     operationsPolicyVersion: policy?.version ?? 0,
+    directPrintLayouts: policy?.directPrintLayouts ?? [],
     skuOverrides,
     stockCounts,
     modelGroupDecisions,

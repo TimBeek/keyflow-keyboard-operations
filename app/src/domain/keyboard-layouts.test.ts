@@ -33,7 +33,13 @@ describe("keyboardlayoutkeuzes", () => {
 
   it("laat de onbepaalde Nordic-keuze niet als klantlayout opslaan", () => {
     expect(targetLayoutOptions.some((layout) => layout.value === genericNordicLayout)).toBe(false);
-    expect(targetLayoutOptions[0].value).toBe("QWERTY US");
+    // Wat het meest verkocht wordt staat bovenaan, zodat de medewerker niet
+    // hoeft te scrollen voor de gewone gevallen.
+    expect(targetLayoutOptions[0].value).toBe("QWERTY NL");
+    expect(targetLayoutOptions.map((layout) => layout.value).slice(0, 7)).toEqual([
+      "QWERTY NL", "AZERTY BE", "QWERTZ DE", "QWERTY ES",
+      "QWERTY IT", "AZERTY FR", "QWERTY PT",
+    ]);
   });
 
   it("houdt Nederlands QWERTY apart van US International", () => {

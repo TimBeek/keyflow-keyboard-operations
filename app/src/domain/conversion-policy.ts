@@ -30,6 +30,11 @@ export const conversionPolicyInputSchema = z.object({
     printed_sticker: z.boolean(),
     direct_reprint: z.boolean(),
   }),
+  /**
+   * De layouts die de toetsenbordsprinter aankan. Leeg betekent: nog niet
+   * ingevuld — dan houden we alles open in plaats van alles te blokkeren.
+   */
+  directPrintLayouts: z.array(z.string()).default([]),
 });
 
 export type ConversionPolicyInput = z.input<typeof conversionPolicyInputSchema>;
@@ -43,7 +48,22 @@ export type ConversionRecommendation = {
     thresholdEur: number;
     rule: string;
   };
+  /**
+   * Gezet wanneer deze laptop eigenlijk een toetsenbordsprint hoorde te krijgen
+   * en daar niet doorheen kwam. Die gevallen moeten naar Roemenië, en de sticker
+   * die er in plaats van komt moet meteen bij Noviply aangevraagd worden.
+   */
+  fellBackFrom?: OperationalMethodId;
 };
+
+export type OperationalMethodId = Exclude<ConversionMethodId, "none">;
+
+/** Kan de toetsenbordsprinter deze layout aan? */
+export function directPrintCovers(layouts: string[], targetLayout: string) {
+  // Nog niets ingevuld: dan is er geen reden om iets te blokkeren.
+  if (layouts.length === 0) return true;
+  return layouts.some((layout) => normalizeLayout(layout) === normalizeLayout(targetLayout));
+}
 
 /**
  * De vier oplossingen in oplopende kwaliteit. De naam alleen zei niets over de
@@ -124,8 +144,12 @@ export function recommendConversion(rawInput: ConversionPolicyInput): Conversion
     };
   }
 
+  const printerCovers = directPrintCovers(input.directPrintLayouts, input.targetLayout);
   const canUse = (method: Exclude<ConversionMethodId, "none">) =>
-    input.available[method] && input.compatible[method];
+    input.available[method]
+    && input.compatible[method]
+    // Een advies dat de printer niet kan uitvoeren is geen advies.
+    && (method !== "direct_reprint" || printerCovers);
 
   const usable = ([
     "direct_reprint",
@@ -170,7 +194,19 @@ export function recommendConversion(rawInput: ConversionPolicyInput): Conversion
   const ranked = preferred.filter(canUse);
   const primary = ranked[0];
 
-  if (primary !== preferred[0]) {
+  // De toetsenbordsprinter kan deze taal niet: dat is geen storing maar een
+  // grens, en de medewerker hoort te weten waarom hij iets anders krijgt.
+  const blockedByPrinter = isPremium
+    && !printerCovers
+    && input.available.direct_reprint
+    && input.compatible.direct_reprint;
+
+  if (blockedByPrinter) {
+    warnings.push(
+      `${methodLabel("direct_reprint")} kan deze layout (${input.targetLayout}) niet printen. `
+      + "Vraag de sticker meteen aan bij Noviply en meld dit model bij Notebook Service.",
+    );
+  } else if (primary !== preferred[0]) {
     warnings.push(`${methodLabel(preferred[0])} is niet beschikbaar of niet geschikt; het advies gebruikt de eerstvolgende toegestane fallback.`);
   }
   if (primary === "loose_stickers") {
@@ -186,9 +222,12 @@ export function recommendConversion(rawInput: ConversionPolicyInput): Conversion
   return {
     primary,
     alternatives: ranked.slice(1),
-    reason,
+    reason: blockedByPrinter
+      ? `${reason} Deze layout kan de toetsenbordsprinter echter niet aan, dus valt het advies terug op ${methodLabel(primary)}.`
+      : reason,
     warnings,
-    policy: { thresholdEur: input.thresholdEur, rule },
+    policy: { thresholdEur: input.thresholdEur, rule: blockedByPrinter ? "direct_print_out_of_scope" : rule },
+    ...(blockedByPrinter ? { fellBackFrom: "direct_reprint" as const } : {}),
   };
 }
 

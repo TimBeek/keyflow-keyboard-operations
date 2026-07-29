@@ -106,6 +106,8 @@ type Props = {
   orders: WorkOrderSnapshot[];
   quantities: Record<string, number>;
   policy: OperationsPolicy;
+  /** De layouts die de toetsenbordsprinter aankan; leeg = nog niet ingevuld. */
+  directPrintLayouts: string[];
   compatibilityEvidenceRecords: CompatibilityEvidenceRecord[];
   onInventoryMutation: (request: InventoryMutationRequest) => Promise<InventoryMutationOutcome>;
   onStickerVerification: (input: StickerVerificationReportInput) => unknown;
@@ -118,6 +120,7 @@ export function EmployeeWorkspace({
   actorName,
   quantities,
   policy,
+  directPrintLayouts,
   compatibilityEvidenceRecords,
   onInventoryMutation,
   onStickerVerification,
@@ -180,13 +183,20 @@ export function EmployeeWorkspace({
     targetLayout,
     workload: policy.workload,
     available: policy.methodEnabled,
+    directPrintLayouts,
     compatible: {
       loose_stickers: true,
       noviply_sheet: noviplyMatch.status === "matched" && evidence?.status !== "rejected",
       printed_sticker: true,
       direct_reprint: true,
     },
-  }), [assumedCurrentLayout, evidence?.status, noviplyMatch.status, policy, saleBand.label, saleValue, targetLayout]);
+  }), [assumedCurrentLayout, directPrintLayouts, evidence?.status, noviplyMatch.status, policy, saleBand.label, saleValue, targetLayout]);
+
+  /**
+   * De toetsenbordsprinter kan deze taal niet. De laptop krijgt dan de
+   * premiumsticker, maar die ligt er niet vanzelf: Noviply moet hem printen.
+   */
+  const printerFallback = recommendation.fellBackFrom === "direct_reprint";
 
   const hasAnswer = model !== "";
   const usesSheet = recommendation.primary === "noviply_sheet";
@@ -228,6 +238,7 @@ export function EmployeeWorkspace({
           targetLayout,
           variant: enterShape,
           orderReference,
+          ...(printerFallback ? { fellBackFrom: "direct_reprint" as const } : {}),
         });
       }
       setAdviceMessage({ tone: "ok", text: "Klaar. Deze methode gebruikt geen voorraadvel, er is niets afgeboekt. Pak de volgende laptop." });
@@ -576,13 +587,27 @@ export function EmployeeWorkspace({
                 </dl>
               )}
 
+              {printerFallback && (
+                <div className="answer-fallback">
+                  <b>De toetsenbordsprinter kan {targetLayout} niet</b>
+                  <p>
+                    Deze laptop hoorde een toetsenbordsprint te krijgen, maar Notebook
+                    Service print deze taal niet. Hij gaat daarom met een
+                    Noviply Premium Sticker, en die moet Noviply nog printen.
+                  </p>
+                </div>
+              )}
+
               {recommendation.primary === "printed_sticker" ? (
                 <div className="answer-todo">
-                  <b>Ligt deze sticker al klaar?</b>
+                  <b>{printerFallback ? "Vraag de sticker aan bij Noviply" : "Ligt deze sticker al klaar?"}</b>
                   <p>
-                    De buitenlandse orders worden &apos;s ochtends automatisch voorgeprint.
+                    {printerFallback
+                      ? "Er ligt niets voorgeprint voor dit geval — de ochtendronde kende hem niet."
+                      : "De buitenlandse orders worden 's ochtends automatisch voorgeprint."}
                   </p>
                   <div className="print-ready-choice">
+                    {!printerFallback && (
                     <button
                       type="button"
                       className="primary-button"
@@ -593,6 +618,7 @@ export function EmployeeWorkspace({
                     >
                       Ja, ligt klaar
                     </button>
+                    )}
                     <button
                       type="button"
                       className="secondary-button"
@@ -627,6 +653,7 @@ export function EmployeeWorkspace({
                             targetLayout,
                             variant: enterShape,
                             orderReference,
+                            ...(printerFallback ? { fellBackFrom: "direct_reprint" as const } : {}),
                           });
                           setAdviceMessage({
                             tone: "ok",
@@ -645,7 +672,7 @@ export function EmployeeWorkspace({
                         }
                       }}
                     >
-                      Nee, aanvragen
+                      {printerFallback ? "Aanvragen bij Noviply" : "Nee, aanvragen"}
                     </button>
                   </div>
                 </div>

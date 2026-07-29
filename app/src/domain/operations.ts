@@ -1,10 +1,11 @@
 import type { InventoryCatalogItem } from "@/data/inventory-catalog";
 import { normalizeLayoutName } from "./keyboard-layouts";
-import type { ConversionMethodId } from "@/domain/conversion-policy";
+import type { OperationalMethodId } from "@/domain/conversion-policy";
 import { inventoryQuantity } from "./inventory-quantities";
 import { modelMatchesCatalogItem } from "./model-catalog";
 
-export type OperationalMethodId = Exclude<ConversionMethodId, "none">;
+// Hoort bij het beleid, niet bij de voorraad; hier alleen doorgegeven.
+export type { OperationalMethodId };
 
 export type OperationsPolicy = {
   thresholdEur: number;

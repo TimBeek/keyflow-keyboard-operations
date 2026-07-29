@@ -304,6 +304,8 @@ export function Dashboard({
   // De versie die we zagen; daarmee merken we dat een ander het beleid
   // ondertussen heeft aangepast in plaats van hem stil te overschrijven.
   const [policyVersion, setPolicyVersion] = useState(0);
+  /** Welke layouts de toetsenbordsprinter aankan; leeg = nog niet ingevuld. */
+  const [directPrintLayouts, setDirectPrintLayouts] = useState<string[]>([]);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
   const [persistenceMessage, setPersistenceMessage] = useState("Lokale pilotopslag laden…");
   const [mutation, setMutation] = useState<{
@@ -415,6 +417,7 @@ export function Dashboard({
     setCompatibilityEvidenceRecords(state.compatibilityEvidenceRecords);
     if (state.operationsPolicy) setOperationsPolicy(state.operationsPolicy);
     setPolicyVersion(state.operationsPolicyVersion);
+    setDirectPrintLayouts(state.directPrintLayouts);
     setStockItems((items) => items.map((item) => ({
       ...item,
       stock: quantityForInventoryItem(state.catalogQuantities, item),
@@ -1203,21 +1206,26 @@ export function Dashboard({
    * Het beleid geldt voor iedereen. Heeft een ander het ondertussen aangepast,
    * dan overschrijven we dat niet stilzwijgend maar tonen we wat er nu staat.
    */
-  async function savePolicy(nextPolicy: OperationsPolicy) {
+  async function savePolicy(nextPolicy: OperationsPolicy, nextLayouts = directPrintLayouts) {
     const previous = operationsPolicy;
+    const previousLayouts = directPrintLayouts;
     setOperationsPolicy(nextPolicy);
+    setDirectPrintLayouts(nextLayouts);
     try {
       const result = await putOperationsPolicy({
         policy: nextPolicy,
+        directPrintLayouts: nextLayouts,
         expectedVersion: policyVersion,
         actorId,
       });
       setOperationsPolicy(result.policy);
+      setDirectPrintLayouts(result.directPrintLayouts);
       setPolicyVersion(result.version);
       setLastAction(`Conversiebeleid bijgewerkt voor iedereen · grens €${result.policy.thresholdEur}`);
     } catch (error) {
       if (error instanceof KeyflowOfflineError) {
         setOperationsPolicy(previous);
+        setDirectPrintLayouts(previousLayouts);
         setLastAction("Geen verbinding — het beleid is niet gewijzigd. Probeer het zo opnieuw.");
         return;
       }
@@ -1227,6 +1235,7 @@ export function Dashboard({
         return;
       }
       setOperationsPolicy(previous);
+      setDirectPrintLayouts(previousLayouts);
       setLastAction(error instanceof Error ? error.message : "Het beleid is niet bewaard.");
     }
   }
@@ -1293,6 +1302,7 @@ export function Dashboard({
       sku: input.sku ?? "",
       storageNumber: input.storageNumber ?? null,
       orderReference: input.orderReference ?? "",
+      fellBackFrom: input.fellBackFrom ?? null,
       idempotencyKey,
       actorId,
     };
@@ -1695,6 +1705,7 @@ export function Dashboard({
 
         {role === "employee" && (
           <EmployeeWorkspace
+            directPrintLayouts={directPrintLayouts}
             onRequestPrintSticker={requestPrintSticker}
             onRecordConversion={recordConversion}
             catalog={inventoryCatalog}

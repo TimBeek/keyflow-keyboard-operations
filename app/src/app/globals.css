@@ -2267,3 +2267,17 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
   gap: 10px;
   padding: 0 26px 22px;
 }
+
+/* De toetsenbordsprinter kan deze taal niet: geen storing, maar een grens.
+   Daarom een waarschuwing en niet een foutmelding. */
+.answer-fallback {
+  display: grid;
+  gap: 6px;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
+  border-left-width: 3px;
+  border-radius: 12px;
+  background: var(--warn-soft);
+}
+.answer-fallback b { font-size: 13.5px; color: var(--text); }
+.answer-fallback p { margin: 0; color: var(--text-2); font-size: 12.5px; line-height: 1.6; }

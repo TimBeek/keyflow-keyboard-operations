@@ -28,6 +28,11 @@ export type ConversionLogEntry = {
   storageNumber: number | null;
   orderReference: string;
   actor: string;
+  /**
+   * Gezet wanneer deze laptop een toetsenbordsprint hoorde te krijgen en daar
+   * niet doorheen kwam. Precies deze lijst gaat naar Notebook Service.
+   */
+  fellBackFrom?: OperationalMethodId;
 };
 
 export type ConversionLogInput = {
@@ -39,6 +44,7 @@ export type ConversionLogInput = {
   sku?: string;
   storageNumber?: number | null;
   orderReference?: string;
+  fellBackFrom?: OperationalMethodId;
 };
 
 type LogMetadata = {
@@ -79,5 +85,6 @@ export function createConversionLogEntry(
     storageNumber: input.storageNumber ?? null,
     orderReference: input.orderReference?.trim() ?? "",
     actor,
+    ...(input.fellBackFrom ? { fellBackFrom: input.fellBackFrom } : {}),
   };
 }

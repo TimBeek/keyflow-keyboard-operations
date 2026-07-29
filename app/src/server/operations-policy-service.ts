@@ -31,6 +31,11 @@ const policySchema = z.object({
 
 const updateSchema = z.object({
   policy: policySchema,
+  /**
+   * De layouts die de toetsenbordsprinter aankan. Leeg betekent "nog niet
+   * ingevuld": dan blijft alles mogelijk in plaats van alles geblokkeerd.
+   */
+  directPrintLayouts: z.array(z.string().min(2).max(40)).max(60).default([]),
   /** De versie die de gebruiker zag toen hij begon te wijzigen. */
   expectedVersion: z.number().int().nonnegative(),
   actorId: databaseUuidSchema,
@@ -52,6 +57,7 @@ type PolicyRow = {
   employee_permissions: Record<string, boolean>;
   abc_a_threshold: number;
   abc_b_threshold: number;
+  direct_print_layouts: string[];
   version: number;
 };
 
@@ -76,12 +82,16 @@ export async function readOperationsPolicy() {
   const sql = database();
   const [row] = await sql<PolicyRow[]>`
     select threshold_eur, workload, method_enabled, employee_permissions,
-           abc_a_threshold, abc_b_threshold, version
+           abc_a_threshold, abc_b_threshold, direct_print_layouts, version
     from operations_settings
     where setting_key = 'active'
   `;
   if (!row) return null;
-  return { policy: toPolicy(row), version: row.version };
+  return {
+    policy: toPolicy(row),
+    directPrintLayouts: row.direct_print_layouts ?? [],
+    version: row.version,
+  };
 }
 
 export async function updateOperationsPolicy(rawInput: UpdateOperationsPolicyInput) {
@@ -92,7 +102,7 @@ export async function updateOperationsPolicy(rawInput: UpdateOperationsPolicyInp
   return sql.begin(async (transaction) => {
     const [current] = await transaction<PolicyRow[]>`
       select threshold_eur, workload, method_enabled, employee_permissions,
-             abc_a_threshold, abc_b_threshold, version
+             abc_a_threshold, abc_b_threshold, direct_print_layouts, version
       from operations_settings
       where setting_key = 'active'
       for update
@@ -117,13 +127,18 @@ export async function updateOperationsPolicy(rawInput: UpdateOperationsPolicyInp
           })},
           abc_a_threshold = ${input.policy.abcAThreshold},
           abc_b_threshold = ${input.policy.abcBThreshold},
+          direct_print_layouts = ${transaction.json([...new Set(input.directPrintLayouts)])},
           version = version + 1,
           updated_by = ${input.actorId},
           updated_at = now()
       where setting_key = 'active'
       returning threshold_eur, workload, method_enabled, employee_permissions,
-                abc_a_threshold, abc_b_threshold, version
+                abc_a_threshold, abc_b_threshold, direct_print_layouts, version
     `;
-    return { policy: toPolicy(updated), version: updated.version };
+    return {
+      policy: toPolicy(updated),
+      directPrintLayouts: updated.direct_print_layouts ?? [],
+      version: updated.version,
+    };
   });
 }

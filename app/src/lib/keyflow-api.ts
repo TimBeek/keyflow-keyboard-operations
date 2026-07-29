@@ -25,6 +25,8 @@ export type SharedOperationsState = {
   operationsPolicy: OperationsPolicy | null;
   /** Waarmee we merken dat iemand anders het beleid ondertussen aanpaste. */
   operationsPolicyVersion: number;
+  /** Layouts die de toetsenbordsprinter aankan; leeg = nog niet ingevuld. */
+  directPrintLayouts: string[];
   skuOverrides: Record<string, string>;
   stockCounts: StockCountRecord[];
   modelGroupDecisions: ModelGroupDecision[];
@@ -151,10 +153,11 @@ export function postConversion(payload: ConversionPayload) {
 
 export function putOperationsPolicy(payload: {
   policy: OperationsPolicy;
+  directPrintLayouts: string[];
   expectedVersion: number;
   actorId: string;
 }) {
-  return request<{ policy: OperationsPolicy; version: number }>(
+  return request<{ policy: OperationsPolicy; directPrintLayouts: string[]; version: number }>(
     "/api/operations/policy",
     { method: "PUT", body: JSON.stringify(payload) },
   );
