@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ConversionAdvisor } from "@/components/conversion-advisor";
 import { AccessManagementDialog } from "@/components/access-management";
 import { EmployeeWorkspace } from "@/components/employee-workspace";
+import { NoviplyWorkspace } from "@/components/noviply-workspace";
 import { ImportReviewDialog } from "@/components/import-review";
 import { InventoryImportDialog } from "@/components/inventory-import";
 import { InventoryCatalog } from "@/components/inventory-catalog";
@@ -41,6 +42,7 @@ import {
 import { calculateInventoryMutation } from "@/domain/inventory";
 import { calculateForecastAdvice } from "@/domain/forecasting";
 import {
+  calculateCatalogThreshold,
   inventoryQuantity,
   migrateInventoryQuantities,
   withInventoryQuantity,
@@ -51,6 +53,13 @@ import {
   type ModelGroupProposal,
   type ModelGroupReviewInput,
 } from "@/domain/model-grouping";
+import {
+  createPrintRequest,
+  settlePrintRequest,
+  type PrintRequestInput,
+  type PrintRequestRecord,
+  type PrintRequestStatus,
+} from "@/domain/print-requests";
 import {
   defaultOperationsPolicy,
   type InventoryMutationRequest,
@@ -208,6 +217,7 @@ export function Dashboard({
   const [operationsPolicy, setOperationsPolicy] = useState<OperationsPolicy>(defaultOperationsPolicy);
   const [verificationReports, setVerificationReports] = useState<StickerVerificationReport[]>([]);
   const [stockCounts, setStockCounts] = useState<StockCountRecord[]>([]);
+  const [printRequests, setPrintRequests] = useState<PrintRequestRecord[]>([]);
   const [modelGroupDecisions, setModelGroupDecisions] = useState<ModelGroupDecision[]>([]);
   const [compatibilityEvidenceRecords, setCompatibilityEvidenceRecords] = useState<CompatibilityEvidenceRecord[]>([]);
   const [recoveryDrills, setRecoveryDrills] = useState<RecoveryDrillRecord[]>([]);
@@ -253,7 +263,9 @@ export function Dashboard({
     ? identity.displayName
     : role === "management"
       ? "Tim Beek"
-      : "Medewerker";
+      : role === "noviply"
+        ? "Noviply"
+        : "Medewerker";
   const actorInitials = initialsFor(actorName);
   const filteredStock = useMemo(
     () => stockItems.filter((item) => `${item.model} ${item.sku} ${item.layout}`.toLowerCase().includes(query.toLowerCase())),
@@ -880,6 +892,29 @@ export function Dashboard({
     }
   }
 
+  function requestPrintSticker(input: PrintRequestInput) {
+    const record = createPrintRequest(input, {
+      id: crypto.randomUUID(),
+      requestedAt: new Date().toISOString(),
+      requestedBy: actorName,
+    });
+    setPrintRequests((current) => [...current, record]);
+    return record;
+  }
+
+  function settlePrintRequestRecord(
+    record: PrintRequestRecord,
+    status: Exclude<PrintRequestStatus, "requested">,
+    note: string,
+  ) {
+    const settled = settlePrintRequest(record, status, note, {
+      handledAt: new Date().toISOString(),
+      handledBy: actorName,
+    });
+    setPrintRequests((current) =>
+      current.map((item) => (item.id === settled.id ? settled : item)));
+  }
+
   function switchRole(nextRole: UserRole) {
     if (!demoAccess) return;
     setRole(nextRole);
@@ -1020,7 +1055,7 @@ export function Dashboard({
           <button className="nav-item" onClick={() => role === "management" && setAccessOpen(true)}><Icon name="settings" /><span>{role === "management" ? "Toegangsbeheer" : "Hulp"}</span></button>
           <div className="profile">
             <div className="avatar">{actorInitials}</div>
-            <div><strong>{actorName}</strong><span>{role === "management" ? "Management" : "Uitvoering"}</span></div>
+            <div><strong>{actorName}</strong><span>{role === "management" ? "Management" : role === "noviply" ? "Partner" : "Uitvoering"}</span></div>
             <button
               aria-label={onSignOut ? "Afmelden" : "Profielmenu"}
               onClick={onSignOut}
@@ -1034,8 +1069,16 @@ export function Dashboard({
         <header className="topbar">
           <div>
             <p className="eyebrow">MAANDAG 27 JULI</p>
-            <h1>{role === "employee" ? "Uitvoering keyboardconversies" : viewHeadings[activeView].title}</h1>
-            <p>{role === "employee" ? "Eén duidelijke taak tegelijk, met automatisch methodeadvies." : viewHeadings[activeView].subtitle}</p>
+            <h1>{role === "employee"
+              ? "Uitvoering keyboardconversies"
+              : role === "noviply"
+                ? "Bestellijst en voorraad"
+                : viewHeadings[activeView].title}</h1>
+            <p>{role === "employee"
+              ? "Eén duidelijke taak tegelijk, met automatisch methodeadvies."
+              : role === "noviply"
+                ? "Wat er extra geprint moet worden en welke hangmappen leeg lopen."
+                : viewHeadings[activeView].subtitle}</p>
           </div>
           <div className="top-actions">
             {demoAccess ? (
@@ -1044,12 +1087,13 @@ export function Dashboard({
                 <div>
                   <button className={role === "employee" ? "active" : ""} onClick={() => switchRole("employee")}>Werknemer</button>
                   <button className={role === "management" ? "active" : ""} onClick={() => switchRole("management")}>Management</button>
+                  <button className={role === "noviply" ? "active" : ""} onClick={() => switchRole("noviply")}>Noviply</button>
                 </div>
               </div>
             ) : (
               <div className="identity-badge">
                 <span>MICROSOFT ENTRA ID</span>
-                <strong>{role === "management" ? "Management" : "Werknemer"}</strong>
+                <strong>{roleLabel(role)}</strong>
               </div>
             )}
             {role === "management" && <label className="global-search">
@@ -1067,8 +1111,17 @@ export function Dashboard({
           </div>
         </header>
 
+        {role === "noviply" && (
+          <NoviplyWorkspace
+            printRequests={printRequests}
+            quantities={catalogQuantities}
+            onSettlePrintRequest={settlePrintRequestRecord}
+          />
+        )}
+
         {role === "employee" && (
           <EmployeeWorkspace
+            onRequestPrintSticker={requestPrintSticker}
             catalog={inventoryCatalog}
             actorName={actorName}
             orders={demoWorkOrders}
@@ -1286,8 +1339,10 @@ export function Dashboard({
   );
 }
 
-function calculateCatalogThreshold(averageWeeklyDemand: number, leadTimeDays: number, safetyStockWeeks: number) {
-  return Math.ceil(averageWeeklyDemand * (leadTimeDays / 7 + safetyStockWeeks));
+function roleLabel(role: UserRole) {
+  if (role === "management") return "Management";
+  if (role === "noviply") return "Noviply";
+  return "Werknemer";
 }
 
 function initialsFor(displayName: string) {

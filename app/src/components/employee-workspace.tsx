@@ -12,7 +12,6 @@ import {
   recommendConversion,
   type ConversionMethodId,
 } from "@/domain/conversion-policy";
-import Image from "next/image";
 import {
   findNoviplySku,
   layoutWithCountry,
@@ -37,6 +36,7 @@ import {
   targetLayoutOptions,
 } from "@/domain/keyboard-layouts";
 import { catalogModelOptions } from "@/domain/model-catalog";
+import type { PrintRequestInput } from "@/domain/print-requests";
 
 /**
  * Eén concrete handeling per methode. Bewust geen lijst met werkinstructies:
@@ -77,18 +77,21 @@ type Tab = "advice" | "receive";
  */
 type EnterShapeId = "" | "E1" | "E2";
 
+/** Bestanden uit /public krijgen het basispad van een projectsite niet vanzelf. */
+const assetBase = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+
 const enterShapeChoices: { id: EnterShapeId; label: string; detail: string; image?: string }[] = [
   {
     id: "E1",
     label: "E1",
     detail: "Rechthoekige Enter",
-    image: "/keyboard-reference-e1-dell-v3.png",
+    image: `${assetBase}/keyboard-reference-e1-dell-v3.png`,
   },
   {
     id: "E2",
     label: "E2",
     detail: "Hoge, omgekeerde L",
-    image: "/keyboard-reference-e2-dell-v3.png",
+    image: `${assetBase}/keyboard-reference-e2-dell-v3.png`,
   },
   { id: "", label: "Weet ik niet", detail: "Zoek alleen op model" },
 ];
@@ -102,6 +105,7 @@ type Props = {
   compatibilityEvidenceRecords: CompatibilityEvidenceRecord[];
   onInventoryMutation: (request: InventoryMutationRequest) => InventoryMutationOutcome;
   onStickerVerification: (input: StickerVerificationReportInput) => unknown;
+  onRequestPrintSticker: (input: PrintRequestInput) => unknown;
 };
 
 export function EmployeeWorkspace({
@@ -112,6 +116,7 @@ export function EmployeeWorkspace({
   compatibilityEvidenceRecords,
   onInventoryMutation,
   onStickerVerification,
+  onRequestPrintSticker,
 }: Props) {
   const [tab, setTab] = useState<Tab>("advice");
 
@@ -122,6 +127,7 @@ export function EmployeeWorkspace({
   const [targetLayout, setTargetLayout] = useState("QWERTY US");
   const [saleBandId, setSaleBandId] = useState<SaleValueBandId>("200_299");
   const [enterShape, setEnterShape] = useState<EnterShapeId>("");
+  const [shapeHelpOpen, setShapeHelpOpen] = useState(false);
   const [orderReference, setOrderReference] = useState("");
   const [confirmed, setConfirmed] = useState(false);
   const [adviceMessage, setAdviceMessage] = useState<{ tone: "ok" | "warn"; text: string } | null>(null);
@@ -364,7 +370,7 @@ export function EmployeeWorkspace({
             </label>
 
             <fieldset className="worker-bands">
-              <legend>3 · Wat kost de laptop?</legend>
+              <legend>4 · Wat kost de laptop?</legend>
               <div>
                 {saleValueBands.map((band) => (
                   <button
@@ -380,7 +386,17 @@ export function EmployeeWorkspace({
             </fieldset>
 
             <fieldset className="worker-variants">
-              <legend>4 · Welke Enter-toets zit erop?</legend>
+              <legend>
+                3 · Welke Enter-toets zit erop?
+                <button
+                  type="button"
+                  className="worker-help"
+                  onClick={() => setShapeHelpOpen(true)}
+                  aria-label="Voorbeeldfoto's van de Enter-vormen bekijken"
+                >
+                  i
+                </button>
+              </legend>
               <div>
                 {enterShapeChoices.map((choice) => (
                   <button
@@ -389,9 +405,6 @@ export function EmployeeWorkspace({
                     className={choice.id === enterShape ? "active" : ""}
                     onClick={() => { setEnterShape(choice.id); setConfirmed(false); }}
                   >
-                    {choice.image && (
-                      <Image src={choice.image} alt="" width={132} height={66} unoptimized />
-                    )}
                     <strong>{choice.label}</strong>
                     <small>{choice.detail}</small>
                   </button>
@@ -399,6 +412,48 @@ export function EmployeeWorkspace({
               </div>
             </fieldset>
           </div>
+
+          {shapeHelpOpen && (
+            <div
+              className="shape-help"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Voorbeelden van de Enter-vormen"
+              onClick={(event) => {
+                if (event.target === event.currentTarget) setShapeHelpOpen(false);
+              }}
+            >
+              <div className="shape-help-panel">
+                <div className="shape-help-head">
+                  <h3>Welke Enter-toets zit erop?</h3>
+                  <button type="button" onClick={() => setShapeHelpOpen(false)} aria-label="Sluiten">×</button>
+                </div>
+                <div className="shape-help-grid">
+                  {enterShapeChoices.filter((choice) => choice.image).map((choice) => (
+                    <figure key={choice.id}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={choice.image} alt={`Toetsenbord met ${choice.label}-entervorm`} />
+                      <figcaption>
+                        <strong>{choice.label}</strong>
+                        <span>{choice.detail}</span>
+                      </figcaption>
+                      <button
+                        type="button"
+                        className={choice.id === enterShape ? "primary-button" : "secondary-button"}
+                        onClick={() => {
+                          setEnterShape(choice.id);
+                          setConfirmed(false);
+                          setShapeHelpOpen(false);
+                        }}
+                      >
+                        Dit is het
+                      </button>
+                    </figure>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           {!hasAnswer && (
             <div className="worker-waiting">
@@ -448,10 +503,59 @@ export function EmployeeWorkspace({
                 </dl>
               )}
 
-              <div className="answer-todo">
-                <b>Wat moet je doen</b>
-                <p>{todoFor(recommendation.primary, storageNumber)}</p>
-              </div>
+              {recommendation.primary === "printed_sticker" ? (
+                <div className="answer-todo">
+                  <b>Ligt deze sticker al klaar?</b>
+                  <p>
+                    De buitenlandse orders worden &apos;s ochtends automatisch voorgeprint.
+                  </p>
+                  <div className="print-ready-choice">
+                    <button
+                      type="button"
+                      className="primary-button"
+                      onClick={() => setAdviceMessage({
+                        tone: "ok",
+                        text: "Pak de voorgeprinte sticker uit de klaargelegde stapel en breng hem in één keer aan.",
+                      })}
+                    >
+                      Ja, ligt klaar
+                    </button>
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      onClick={() => {
+                        try {
+                          onRequestPrintSticker({
+                            model,
+                            layout: matched
+                              ? layoutWithCountry(matched.item.layout, matched.item.sku)
+                              : targetLayout,
+                            variant: enterShape,
+                            orderReference,
+                            reason: "Lag niet klaar bij de ochtendronde.",
+                          });
+                          setAdviceMessage({
+                            tone: "warn",
+                            text: "Op de bestellijst gezet. Noviply print hem in de middagronde; leg de laptop apart.",
+                          });
+                        } catch (error) {
+                          setAdviceMessage({
+                            tone: "warn",
+                            text: error instanceof Error ? error.message : "Aanvragen is niet gelukt.",
+                          });
+                        }
+                      }}
+                    >
+                      Nee, aanvragen
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="answer-todo">
+                  <b>Wat moet je doen</b>
+                  <p>{todoFor(recommendation.primary, storageNumber)}</p>
+                </div>
+              )}
 
               {noviplyMatch.status === "out_of_stock" && (
                 <p className="answer-warning">Dit vel is op. Meld het bij je teamleider en gebruik zolang een andere methode.</p>

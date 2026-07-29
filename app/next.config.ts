@@ -13,6 +13,9 @@ if (basePath && !basePath.startsWith("/")) {
 const nextConfig: NextConfig = {
   output: "standalone",
   ...(basePath ? { basePath, assetPrefix: basePath } : {}),
+  // Gewone <img>-tags krijgen het basispad niet automatisch mee. Componenten
+  // die een bestand uit /public tonen plakken dit er zelf voor.
+  env: { NEXT_PUBLIC_BASE_PATH: basePath },
   images: {
     // De private Sites-preview heeft geen dynamische /_next/image-optimizer.
     // Public-assets moeten daar rechtstreeks als bestanden worden geladen.
