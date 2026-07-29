@@ -43,7 +43,13 @@ export async function POST(request: Request) {
     }
 
     const jar = await cookies();
-    jar.set(ACCESS_COOKIE, createAccessToken(result.userId, result.role, Math.floor(Date.now() / 1000)), {
+    const token = createAccessToken(
+      result.userId,
+      result.role,
+      Math.floor(Date.now() / 1000),
+      result.mustChangePin,
+    );
+    jar.set(ACCESS_COOKIE, token, {
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",

@@ -200,12 +200,24 @@ function sign(payload: string) {
   return createHmac("sha256", sessionSecret()).update(payload).digest("base64url");
 }
 
-export function createAccessToken(userId: string, role: UserRole, nowSeconds: number) {
-  const payload = `${userId}.${role}.${nowSeconds + sessionSeconds}`;
+/**
+ * Een tijdelijke pincode geeft een halve sessie: `provisional` staat mee in
+ * het bewijs, en zolang die aan staat mag je niets anders dan je eigen code
+ * kiezen. Zonder dat zou de code die per mail of appje is rondgestuurd blijven
+ * werken voor wie het aanmeldscherm overslaat — en die code staat dan al in
+ * iemands berichtgeschiedenis.
+ */
+export function createAccessToken(
+  userId: string,
+  role: UserRole,
+  nowSeconds: number,
+  provisional = false,
+) {
+  const payload = `${userId}.${role}.${nowSeconds + sessionSeconds}.${provisional ? "t" : "f"}`;
   return `${payload}.${sign(payload)}`;
 }
 
-export type AccessClaim = { userId: string; role: UserRole };
+export type AccessClaim = { userId: string; role: UserRole; provisional: boolean };
 
 export function readAccessToken(
   token: string | undefined,
@@ -213,26 +225,36 @@ export function readAccessToken(
 ): AccessClaim | null {
   if (!token) return null;
   const parts = token.split(".");
-  if (parts.length !== 4) return null;
-  const [userId, role, expiry, signature] = parts;
-  const expected = sign(`${userId}.${role}.${expiry}`);
+  if (parts.length !== 5) return null;
+  const [userId, role, expiry, provisional, signature] = parts;
+  const expected = sign(`${userId}.${role}.${expiry}.${provisional}`);
   // Ongeldige handtekening betekent geknoei, verlopen betekent opnieuw
   // aanmelden. Allebei: geen toegang.
   if (signature.length !== expected.length) return null;
   if (!timingSafeEqual(Buffer.from(signature), Buffer.from(expected))) return null;
   if (Number(expiry) <= nowSeconds) return null;
   if (!lockedRoles.includes(role as UserRole)) return null;
-  return { userId, role: role as UserRole };
+  if (provisional !== "t" && provisional !== "f") return null;
+  return { userId, role: role as UserRole, provisional: provisional === "t" };
 }
 
 /**
  * Wie de server aan dit verzoek toekent. Niet wat de browser beweert: zonder
  * geldig bewijs is iedereen werkvloer, en die mag niets van management.
+ *
+ * Wie nog op een tijdelijke code zit, telt hier ook als werkvloer. Alleen de
+ * route die de pincode wijzigt vraagt naar het echte account.
  */
 export async function resolvePilotClaim(): Promise<AccessClaim> {
+  const claim = await resolveSignedClaim();
+  return claim.provisional ? { userId: pilotActorFor(openRole), role: openRole, provisional: true } : claim;
+}
+
+/** Het account achter het bewijs, ook als de pincode nog tijdelijk is. */
+export async function resolveSignedClaim(): Promise<AccessClaim> {
   const jar = await cookies();
   return readAccessToken(jar.get(ACCESS_COOKIE)?.value, Math.floor(Date.now() / 1000))
-    ?? { userId: pilotActorFor(openRole), role: openRole };
+    ?? { userId: pilotActorFor(openRole), role: openRole, provisional: false };
 }
 
 export async function resolvePilotActorId() {
