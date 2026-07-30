@@ -77,11 +77,11 @@ export function PrintBatchPanel({
       const result = await onUpload(file);
       setMessage(result.duplicate
         ? (result.sameFile
-          ? "Deze ronde stond er al; er is niets dubbel aangemaakt."
-          : "Er staat al een ronde met dit nummer voor deze dag. Die is niet overschreven.")
-        : `${result.rows} regels ingelezen.`);
+          ? "This run was already loaded — nothing was duplicated."
+          : "A run with this number already exists for that day. It was not overwritten.")
+        : `${result.rows} lines loaded.`);
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Inlezen is niet gelukt.");
+      setMessage(error instanceof Error ? error.message : "Loading the file failed.");
     } finally {
       setBusy(false);
       if (fileRef.current) fileRef.current.value = "";
@@ -94,7 +94,7 @@ export function PrintBatchPanel({
       setBlockedRow("");
       setBlockedNote("");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "Opslaan is niet gelukt.");
+      setMessage(error instanceof Error ? error.message : "Saving failed.");
     }
   }
 
@@ -151,7 +151,7 @@ export function PrintBatchPanel({
             ))}
             {running.length === 0 && (
               <span className="batch-none">
-                Alles afgerond. Voeg de volgende ronde toe met “Add a run”.
+                All done. Use “Add a run” to load the next one.
               </span>
             )}
           </div>

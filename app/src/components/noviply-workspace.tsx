@@ -250,7 +250,7 @@ export function NoviplyWorkspace({
       {unseenBatches(printBatches).length > 0 && tab !== "runs" && (
         <div className="batch-notice" role="status">
           <span className="batch-notice-dot" aria-hidden="true" />
-          <span className="batch-notice-chip">NIEUW</span>
+          <span className="batch-notice-chip">NEW</span>
           <span>
             <strong>
               {unseenBatches(printBatches).length === 1

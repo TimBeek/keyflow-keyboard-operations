@@ -643,17 +643,31 @@ export function Dashboard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sharedStatus, pendingWrites.length]);
 
+  /**
+   * De werkvloer en management werken in het Nederlands, Noviply in het Engels.
+   * Deze regel staat in de voet van elk scherm, dus ook in het hunne — en dan
+   * hoort hij in hun taal te staan.
+   */
   const syncLabel = (() => {
-    if (!persistenceReady || sharedStatus === "loading") return "Verbinden met de database…";
+    const engels = role === "noviply";
+    if (!persistenceReady || sharedStatus === "loading") {
+      return engels ? "Connecting to the database…" : "Verbinden met de database…";
+    }
     const waiting = pendingWritesMessage(pendingWrites.length);
     if (sharedStatus === "offline") {
-      return waiting || "Geen verbinding — er wordt getoond wat het laatst bekend was.";
+      return waiting || (engels
+        ? "No connection — showing the last known state."
+        : "Geen verbinding — er wordt getoond wat het laatst bekend was.");
     }
     if (sharedStatus === "local") {
-      return "Alleen op dit apparaat bewaard; de database is niet aangesloten.";
+      return engels
+        ? "Saved on this device only; the database is not connected."
+        : "Alleen op dit apparaat bewaard; de database is niet aangesloten.";
     }
     if (waiting) return waiting;
-    return `Gedeeld met iedereen${lastSyncedAt ? ` · bijgewerkt ${formatPersistenceTime(lastSyncedAt)}` : ""}`;
+    const moment = lastSyncedAt ? formatPersistenceTime(lastSyncedAt) : "";
+    if (engels) return `Shared with everyone${moment ? ` · updated ${moment}` : ""}`;
+    return `Gedeeld met iedereen${moment ? ` · bijgewerkt ${moment}` : ""}`;
   })();
 
   function queueWrite(write: PendingWrite) {
