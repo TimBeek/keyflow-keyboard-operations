@@ -2777,3 +2777,21 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 /* Meer dan één vel voor dezelfde order: dat is het geval waar te weinig
    geprint wordt, dus dat mag niet wegvallen tussen de enen. */
 .quantity-many { color: var(--warn); font-weight: 800; }
+
+/* Een uitzondering per taal gaat vóór de waarderegel. Dat moet je zien staan,
+   anders zet je iets om zonder te weten dat het de rest overstemt. */
+.rule-badge {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+.policy-preview .preview-method b { color: var(--accent); letter-spacing: .06em; }
+.policy-preview .preview-plain { color: var(--text-3); }
+.policy-preview tr.has-rule td { background: var(--warn-soft); }

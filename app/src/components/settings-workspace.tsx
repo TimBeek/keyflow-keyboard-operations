@@ -5,6 +5,8 @@ import { conversionMethods } from "@/domain/conversion-policy";
 import { targetLayoutOptions } from "@/domain/keyboard-layouts";
 import type { LayoutRule, OperationalMethodId, OperationsPolicy } from "@/domain/operations";
 import { minimumHistoryDays, usageWindowWeeks } from "@/domain/resupply";
+import { policyPreview } from "@/domain/policy-preview";
+import type { ConversionMethodId } from "@/domain/conversion-policy";
 
 /**
  * Eén plek voor de regels die de werkvloer aansturen.
@@ -14,6 +16,17 @@ import { minimumHistoryDays, usageWindowWeeks } from "@/domain/resupply";
  * uitzonderingen per taal. "Nederlands altijd met de premiumsticker" is beleid,
  * en beleid hoort door management gezet te worden, niet door een programmeur.
  */
+
+/** Sterren erbij: "3 sterren" is hoe er op de werkvloer over gepraat wordt. */
+function methodCell(method: ConversionMethodId) {
+  if (method === "none") return <span className="preview-plain">Geen conversie</span>;
+  const profile = conversionMethods[method];
+  return (
+    <span className="preview-method">
+      <b>{"★".repeat(profile.tier)}</b> {profile.name}
+    </span>
+  );
+}
 
 const methodOrder: OperationalMethodId[] = [
   "loose_stickers",
@@ -35,17 +48,24 @@ export function SettingsWorkspace({ policy, directPrintLayouts, onSave }: Props)
 
   /**
    * Past een ander het beleid aan, dan hoort dit scherm mee te bewegen in
-   * plaats van stilletjes op een oude stand te blijven staan. De sleutel dwingt
-   * dat af zonder een effect dat state zet — en houdt tegelijk in de gaten dat
-   * eigen, nog niet bewaarde wijzigingen niet worden weggegooid zolang de
-   * server niets nieuws stuurt.
+   * plaats van stilletjes op een oude stand te blijven staan.
+   *
+   * Vergelijken op inhoud en niet op het object zelf: de statuspolling levert
+   * elke twintig seconden een nieuw object met dezelfde inhoud op. Op
+   * objectidentiteit gooide dit scherm daardoor elke twintig seconden weg waar
+   * iemand net mee bezig was.
    */
-  const [seen, setSeen] = useState({ policy, directPrintLayouts });
-  if (seen.policy !== policy || seen.directPrintLayouts !== directPrintLayouts) {
-    setSeen({ policy, directPrintLayouts });
+  const incoming = JSON.stringify({ policy, directPrintLayouts });
+  const [seen, setSeen] = useState(incoming);
+  if (seen !== incoming) {
+    setSeen(incoming);
     setDraft(policy);
     setLayouts(directPrintLayouts);
   }
+
+  // Meteen doorgerekend terwijl je nog aan het schuiven bent: het gevolg is
+  // waar je naar kijkt, niet de instelling zelf.
+  const preview = policyPreview(draft, layouts);
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(policy)
     || JSON.stringify(layouts) !== JSON.stringify(directPrintLayouts);
@@ -97,7 +117,10 @@ export function SettingsWorkspace({ policy, directPrintLayouts, onSave }: Props)
             const rule = draft.layoutRules.find((item) => item.layout === layout.value);
             return (
               <div key={layout.value} className={rule ? "has-rule" : ""}>
-                <span className="layout-rule-name">{layout.label}</span>
+                <span className="layout-rule-name">
+                  {layout.label}
+                  {rule && <b className="rule-badge">gaat vóór de waarderegel</b>}
+                </span>
                 <select
                   value={rule?.method ?? ""}
                   onChange={(event) => setRule(layout.value, event.target.value as OperationalMethodId | "")}
@@ -120,6 +143,57 @@ export function SettingsWorkspace({ policy, directPrintLayouts, onSave }: Props)
               </div>
             );
           })}
+        </div>
+      </section>
+
+      {/* Zonder dit was dit scherm een rij keuzelijsten zonder gevolg in beeld:
+          je zette iets om en moest maar aannemen dat het klopte. Deze tabel
+          rekent het echte advies uit met dezelfde functie als de werkvloer. */}
+      <section className="panel settings-panel">
+        <div className="order-heading">
+          <div>
+            <span className="workspace-kicker">CONTROLE</span>
+            <h2>Wat de werkvloer straks te zien krijgt</h2>
+            <p>
+              Uitgerekend met de instellingen zoals ze nu op dit scherm staan
+              {dirty ? " — inclusief wat je nog niet hebt opgeslagen" : ""}. Er
+              is uitgegaan van een normale dag: alles op voorraad en technisch
+              geschikt. Een lege hangmap is geen beleid maar een situatie, en
+              wordt op de werkvloer zelf opgevangen.
+            </p>
+          </div>
+        </div>
+        <div className="table-wrap">
+          <table className="operations-table policy-preview">
+            <thead>
+              <tr>
+                <th>Taal</th>
+                <th>Onder €{draft.thresholdEur}</th>
+                <th>Vanaf €{draft.thresholdEur}</th>
+                <th>Waarom</th>
+              </tr>
+            </thead>
+            <tbody>
+              {preview.map((row) => (
+                <tr key={row.layout} className={row.source === "exception" ? "has-rule" : ""}>
+                  <td><strong>{row.label}</strong></td>
+                  <td>{methodCell(row.below)}</td>
+                  <td>{methodCell(row.above)}</td>
+                  <td>
+                    {row.source === "exception"
+                      ? (
+                        <span className="rule-badge">
+                          Vaste keuze
+                          {row.exceptionFrom !== row.layout && ` via ${row.exceptionFrom}`}
+                          {row.note && ` · ${row.note}`}
+                        </span>
+                      )
+                      : <span className="preview-plain">Verkoopwaarde</span>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </section>
 
