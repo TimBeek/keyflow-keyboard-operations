@@ -34,20 +34,20 @@ const fitVariantReferences = [
   {
     variant: "E1",
     image: "/keyboard-reference-e1-dell-v3.png",
-    width: 1773,
-    height: 887,
+    width: 1805,
+    height: 871,
     tone: "e1",
-    label: "Brede horizontale Enter",
-    explanation: "E1: controleer de brede rechthoekige Enter op één toetsenrij.",
+    label: "Grote L-vormige Enter",
+    explanation: "E1: controleer de grote Enter met hoek over twee toetsenrijen.",
   },
   {
     variant: "E2",
     image: "/keyboard-reference-e2-dell-v3.png",
-    width: 1805,
-    height: 871,
+    width: 1773,
+    height: 887,
     tone: "e2",
-    label: "Hoge L-vormige Enter",
-    explanation: "E2: controleer de hoge Enter met hoek over twee toetsenrijen.",
+    label: "Kleine horizontale Enter",
+    explanation: "E2: controleer de kleine rechthoekige Enter op één toetsenrij.",
   },
 ] as const;
 

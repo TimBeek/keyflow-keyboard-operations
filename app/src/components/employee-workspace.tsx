@@ -108,13 +108,13 @@ const enterShapeChoices: { id: EnterShapeId; label: string; detail: string; imag
   {
     id: "E1",
     label: "E1",
-    detail: "Rechthoekige Enter",
+    detail: "Grote Enter, omgekeerde L",
     image: `${assetBase}/keyboard-reference-e1-dell-v3.png`,
   },
   {
     id: "E2",
     label: "E2",
-    detail: "Hoge, omgekeerde L",
+    detail: "Kleine, rechthoekige Enter",
     image: `${assetBase}/keyboard-reference-e2-dell-v3.png`,
   },
 ];

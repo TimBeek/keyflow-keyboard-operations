@@ -345,7 +345,7 @@ export function NoviplyWorkspace({
                   {/* Eén order kan meerdere laptops zijn; meer dan één valt op,
                       want dat is het geval waar misgeprint wordt. */}
                   <td><b className={request.quantity > 1 ? "quantity-many" : ""}>{request.quantity}×</b></td>
-                  <td>{request.orderReference || "—"}</td>
+                  <td><b className="order-cell">{request.orderReference || "—"}</b></td>
                   <td>
                     <strong>{formatMoment(request.requestedAt)}</strong>
                     <span>{request.reason || request.requestedBy}</span>
@@ -482,7 +482,14 @@ export function NoviplyWorkspace({
           <div className="table-wrap">
             <table className="operations-table">
               <thead>
-                <tr><th>Brand / model</th><th>Language</th><th>Sheets</th><th>Outcome</th><th>Handled</th></tr>
+                <tr>
+                  <th>Brand / model</th>
+                  <th>Language</th>
+                  <th>Sheets</th>
+                  <th>Order number</th>
+                  <th>Outcome</th>
+                  <th>Handled</th>
+                </tr>
               </thead>
               <tbody>
                 {handled.map((request) => (
@@ -490,6 +497,10 @@ export function NoviplyWorkspace({
                     <td><strong>{request.brand}</strong><span>{request.model}</span></td>
                     <td>{request.layout}</td>
                     <td><b className={request.quantity > 1 ? "quantity-many" : ""}>{request.quantity}×</b></td>
+                    {/* Waarop dit terug te vinden is in hun eigen administratie;
+                        zonder dit is een regel in de geschiedenis niet meer aan
+                        een order te koppelen. */}
+                    <td><b className="order-cell">{request.orderReference || "—"}</b></td>
                     <td>
                       <span className={`print-status ${request.status}`}>
                         {request.status === "printed" ? "✓" : "✕"} {printRequestStatusLabel(request.status)}

@@ -3000,3 +3000,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
   letter-spacing: .08em; text-transform: uppercase;
 }
 .method-supplier b { color: var(--text-2); font-size: 13px; font-weight: 700; }
+
+/* Het ordernummer is waarop Noviply een regel terugvindt in hun eigen
+   administratie. Dat mag niet het lichtste op de regel zijn. */
+.order-cell { color: var(--text); font-size: 15px; font-weight: 700; letter-spacing: .01em; }

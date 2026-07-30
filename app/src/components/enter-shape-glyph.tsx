@@ -22,7 +22,7 @@ export function EnterShapeGlyph({ shape }: { shape: "E1" | "E2" }) {
       <rect x="1.5" y="2.5" width="18" height="18" rx="3" className="enter-glyph-neighbour" />
       <rect x="1.5" y="23.5" width="18" height="18" rx="3" className="enter-glyph-neighbour" />
 
-      {shape === "E1" ? (
+      {shape === "E2" ? (
         <>
           {/* Eén rij hoog en breed; onder hem ligt de rechter shift. */}
           <rect x="23.5" y="2.5" width="47" height="18" rx="3" className="enter-glyph-key" />
