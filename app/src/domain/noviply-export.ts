@@ -18,18 +18,24 @@ export type NoviplyStockRow = {
   shortfall: number;
 };
 
-const stockHeaders = [
-  "Folder",
-  "Part number",
-  "Model",
-  "Layout",
-  "Stock",
-  "Minimum",
-  "Resupply",
-  "Status",
-] as const;
+const plainStockHeaders = ["Folder", "Part number", "Model", "Layout", "Stock"] as const;
+const stockHeaders = [...plainStockHeaders, "Minimum", "Resupply", "Status"] as const;
 
-export function createNoviplyStockCsv(rows: NoviplyStockRow[]) {
+/**
+ * Zolang er te weinig gemeten is voor een minimum blijven die drie kolommen
+ * weg. Een kolom "Resupply" die overal nul is, leest in Excel als "niets nodig"
+ * terwijl het "nog niet te zeggen" betekent — en daar wordt op besteld.
+ */
+export function createNoviplyStockCsv(rows: NoviplyStockRow[], withResupply = true) {
+  if (!withResupply) {
+    return toCsv(plainStockHeaders, rows.map((row): CsvValue[] => [
+      row.storageNumber,
+      displayStickerSku(row.sku),
+      row.model,
+      row.layout,
+      row.stock,
+    ]));
+  }
   return toCsv(stockHeaders, rows.map((row): CsvValue[] => [
     row.storageNumber,
     displayStickerSku(row.sku),

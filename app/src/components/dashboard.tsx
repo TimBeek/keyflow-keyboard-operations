@@ -41,6 +41,8 @@ import {
   type StockCountRecord,
 } from "@/domain/cycle-count";
 import { calculateInventoryMutation } from "@/domain/inventory";
+import { resupplyReady } from "@/domain/resupply";
+import { dayKey } from "@/domain/reporting";
 import {
   calculateCatalogThreshold,
   inventoryQuantity,
@@ -396,6 +398,17 @@ export function Dashboard({
    * Pas na het aankoppelen, anders wijkt de server af van de browser.
    */
   const [headerDate, setHeaderDate] = useState("");
+
+  /**
+   * Bijbestellen begint pas als er genoeg gewerkt is om verbruik uit af te
+   * lezen. Tot die tijd heet het scherm bij Noviply gewoon "Stock" — "running
+   * low" beloven zonder te kunnen weten wat laag is, is erger dan zwijgen.
+   */
+  const resupplyStarted = useMemo(
+    () => resupplyReady(transactions, dayKey(new Date())),
+    [transactions],
+  );
+
   useEffect(() => {
     setHeaderDate(new Date()
       .toLocaleDateString("nl-NL", { weekday: "long", day: "numeric", month: "long" })
@@ -1656,7 +1669,11 @@ export function Dashboard({
               bestemmingen in de zijbalk in plaats van als tabbladen. */}
           {role === "noviply" && ([
             { id: "orders" as const, label: "Print requests", icon: "orders" as const },
-            { id: "stock" as const, label: "Stock running low", icon: "stock" as const },
+            {
+              id: "stock" as const,
+              label: resupplyStarted ? "Stock running low" : "Stock",
+              icon: "stock" as const,
+            },
           ]).map((item) => (
             <button
               key={item.id}
@@ -1718,14 +1735,18 @@ export function Dashboard({
             <h1>{role === "employee"
               ? "Uitvoering keyboardconversies"
               : role === "noviply"
-                ? (noviplyTab === "orders" ? "Print request list" : "Stock running low")
+                ? (noviplyTab === "orders"
+                    ? "Print request list"
+                    : resupplyStarted ? "Stock running low" : "Stock")
                 : viewHeadings[activeView].title}</h1>
             <p>{role === "employee"
               ? "Eén duidelijke taak tegelijk, met automatisch methodeadvies."
               : role === "noviply"
                 ? (noviplyTab === "orders"
                     ? "Extra sticker sheets to print for today."
-                    : "Folders that need resupplying.")
+                    : resupplyStarted
+                      ? "Folders that need resupplying."
+                      : "Everything in the cabinet, emptiest first.")
                 : viewHeadings[activeView].subtitle}</p>
           </div>
           <div className="top-actions">

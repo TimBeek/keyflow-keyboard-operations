@@ -29,6 +29,20 @@ export const usageWindowWeeks = 8;
  */
 export const minimumHistoryDays = 14;
 
+/**
+ * Of er genoeg gemeten is om over bijbestellen te beginnen.
+ *
+ * Zolang dit vals is, hoort er bij Noviply geen minimum, geen tekort en geen
+ * verbruik in beeld te staan: dat zouden 139 streepjes zijn die eruitzien als
+ * een storing. De kolommen komen vanzelf terug zodra er echt gewerkt is.
+ */
+export function resupplyReady(
+  transactions: InventoryTransactionEntry[],
+  today: string,
+) {
+  return measuredHistoryDays(transactions, today) >= minimumHistoryDays;
+}
+
 export type ResupplyLevel = {
   /** Gemeten verbruik per week. */
   weeklyDemand: number;

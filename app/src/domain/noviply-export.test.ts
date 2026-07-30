@@ -55,6 +55,17 @@ describe("createNoviplyStockCsv", () => {
     expect(csv).toContain("Geen artikelnummer");
   });
 
+  it("laat de bijbestelkolommen weg zolang er geen minimum te geven is", () => {
+    // Een kolom "Resupply" die overal nul is, leest in Excel als "niets nodig"
+    // terwijl het "nog niet te zeggen" betekent — en daar wordt op besteld.
+    const csv = createNoviplyStockCsv([stockRow], false);
+    const [header, row] = csv.trimEnd().split(String.fromCharCode(13, 10));
+
+    expect(header).not.toContain("Resupply");
+    expect(header).not.toContain("Minimum");
+    expect(row).toBe('75;"NB10172E1NL";"Dell Latitude 5420";"QWERTY US NL";2');
+  });
+
   it("begint met een BOM, anders leest Excel de accenten verkeerd", () => {
     expect(createNoviplyStockCsv([stockRow]).charCodeAt(0)).toBe(0xfeff);
   });

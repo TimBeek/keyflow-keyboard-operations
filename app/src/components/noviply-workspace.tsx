@@ -144,7 +144,7 @@ export function NoviplyWorkspace({
         stock,
         threshold,
         shortfall,
-      }))),
+      })), !measuring),
       noviplyExportFilename("stock", moment),
     );
     setMessage(`Downloaded ${stockRows.length} folders as a spreadsheet.`);
@@ -203,7 +203,7 @@ export function NoviplyWorkspace({
             {withKnownMinimum === 0 ? empty : running.length}
           </strong>
           <small>{withKnownMinimum === 0
-            ? "minimums appear once usage is measured"
+            ? "nothing left in these"
             : "folders below their minimum"}</small>
         </article>
       </div>
@@ -379,10 +379,10 @@ export function NoviplyWorkspace({
       <section className="noviply-panel">
         <div className="noviply-panel-head">
           <div>
-            <h3>Stock running low</h3>
+            <h3>{measuring ? "Stock" : "Stock running low"}</h3>
             <p>
               {measuring
-                ? `Minimum levels follow measured usage, so a folder that starts moving faster raises its own minimum. That needs ${minimumHistoryDays} days of bookings — ${historyDays} so far.`
+                ? `The whole cabinet, emptiest first. Minimum levels come later: they follow measured usage, and that takes ${historyDays} of ${minimumHistoryDays} days so far.`
                 : `Sorted by what needs restocking first. A minimum covers the ${resupplyLeadTimeDays}-day delivery time plus one week spare, based on measured usage.`}
             </p>
           </div>
@@ -402,9 +402,9 @@ export function NoviplyWorkspace({
                 <th>Folder</th>
                 <th>Part number</th>
                 <th>Layout</th>
-                <th>Used</th>
+                {!measuring && <th>Used</th>}
                 <th>Stock</th>
-                <th>Shortfall</th>
+                {!measuring && <th>Shortfall</th>}
               </tr>
             </thead>
             <tbody>
@@ -413,20 +413,27 @@ export function NoviplyWorkspace({
                   <td><strong className="storage-number">No. {item.storageNumber}</strong><span>{item.model}</span></td>
                   <td>{displayStickerSku(item.sku)}</td>
                   <td>{layoutWithCountry(item.layout, item.sku)}</td>
-                  <td>{weeklyDemand === null
-                    ? "—"
-                    : `${weeklyDemand.toLocaleString("en-GB", { maximumFractionDigits: 1 })}/wk`}</td>
+                  {!measuring && (
+                    <td>{weeklyDemand === null
+                      ? "—"
+                      : `${weeklyDemand.toLocaleString("en-GB", { maximumFractionDigits: 1 })}/wk`}</td>
+                  )}
                   <td>
                     <b className={stock === 0 ? "zero" : ""}>{stock}</b>
-                    <span>{threshold === null ? "no minimum yet" : ` / min. ${threshold}`}</span>
+                    {!measuring && (
+                      <span>{threshold === null ? "no minimum yet" : ` / min. ${threshold}`}</span>
+                    )}
+                    {measuring && stock === 0 && <span>empty</span>}
                   </td>
-                  <td>
-                    {threshold === null
-                      ? <span className="stock-unknown">{stock === 0 ? "Empty" : "—"}</span>
-                      : shortfall > 0
-                        ? <span className="resupply-flag">Resupply {shortfall}</span>
-                        : <span className="stock-ok">OK</span>}
-                  </td>
+                  {!measuring && (
+                    <td>
+                      {threshold === null
+                        ? <span className="stock-unknown">{stock === 0 ? "Empty" : "—"}</span>
+                        : shortfall > 0
+                          ? <span className="resupply-flag">Resupply {shortfall}</span>
+                          : <span className="stock-ok">OK</span>}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>

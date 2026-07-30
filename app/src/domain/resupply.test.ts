@@ -6,6 +6,7 @@ import {
   measuredHistoryDays,
   minimumHistoryDays,
   resupplyLeadTimeDays,
+  resupplyReady,
   resupplySafetyStockWeeks,
 } from "./resupply";
 
@@ -47,6 +48,29 @@ describe("measuredHistoryDays", () => {
       [issue("2026-01-01", 400, { id: "baseline", aggregated: true })],
       today,
     )).toBe(0);
+  });
+});
+
+describe("resupplyReady", () => {
+  it("houdt bijbestellen dicht zolang er niets te meten valt", () => {
+    // Zonder dit zou Noviply bij de start 139 regels "geen minimum" zien; dat
+    // leest als een storing in plaats van als "we zijn net begonnen".
+    expect(resupplyReady([], today)).toBe(false);
+    expect(resupplyReady([issue("2026-07-28", 3)], today)).toBe(false);
+  });
+
+  it("gaat vanzelf open zodra er genoeg dagen gewerkt is", () => {
+    const eersteDag = "2026-07-01";
+
+    expect(measuredHistoryDays([issue(eersteDag, 3)], today))
+      .toBeGreaterThanOrEqual(minimumHistoryDays);
+    expect(resupplyReady([issue(eersteDag, 3)], today)).toBe(true);
+  });
+
+  it("laat de importregel het niet vroeger openzetten", () => {
+    const alleenImport = [issue("2026-01-01", 400, { id: "baseline", aggregated: true })];
+
+    expect(resupplyReady(alleenImport, today)).toBe(false);
   });
 });
 
