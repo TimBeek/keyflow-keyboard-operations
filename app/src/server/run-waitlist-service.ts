@@ -121,6 +121,12 @@ export async function addToRunWaitlist(rawInput: AddToRunWaitlistInput) {
       return { record: toRecord(existing), duplicate: true };
     }
 
+    /**
+     * De controle hierboven vangt het gewone geval. Drukken twee mensen op
+     * exact hetzelfde moment, dan komen ze er allebei doorheen en houdt de
+     * unieke sleutel in de database het tegen — dat is de bedoeling, maar het
+     * hoort geen storing op te leveren. Eén laptop apart leggen is geen fout.
+     */
     const [inserted] = await transaction<{ id: string }[]>`
       insert into print_run_waitlist (
         idempotency_key, model, layout, variant, order_reference, quantity,
@@ -131,8 +137,21 @@ export async function addToRunWaitlist(rawInput: AddToRunWaitlistInput) {
         ${input.variant.trim()}, ${input.orderReference.trim()}, ${input.quantity},
         ${expected}, ${input.expectedRunLabel.trim()}, ${input.actorId}
       )
+      on conflict do nothing
       returning id
     `;
+    if (!inserted) {
+      const [alGezet] = await transaction<Row[]>`
+        select ${transaction.unsafe(selectColumns)}
+        from print_run_waitlist w
+        join users creator on creator.id = w.created_by
+        left join users settler on settler.id = w.settled_by
+        where w.order_reference = ${input.orderReference.trim()}
+          and w.expected_run_at = ${expected}
+          and w.status = 'waiting'
+      `;
+      return { record: toRecord(alGezet), duplicate: true };
+    }
     const [row] = await transaction<Row[]>`
       select ${transaction.unsafe(selectColumns)}
       from print_run_waitlist w
