@@ -183,7 +183,10 @@ export function EmployeeWorkspace({
   const orderInputRef = useRef<HTMLInputElement>(null);
   const [modelQuery, setModelQuery] = useState("");
   const [chosenModel, setChosenModel] = useState<string | null>(null);
-  const [targetLayout, setTargetLayout] = useState("QWERTY US");
+  // Nederlands is wat er het vaakst langskomt; dat scheelt de werkvloer bij
+  // elke laptop een keuze. De aanname over de binnenkomende layout hieronder
+  // vangt op dat NL en QWERTY US op hetzelfde neerkomen.
+  const [targetLayout, setTargetLayout] = useState("QWERTY NL");
   const [saleBandId, setSaleBandId] = useState<SaleValueBandId>("200_299");
   const [enterShape, setEnterShape] = useState<EnterShapeId>("");
   const [shapeHelpOpen, setShapeHelpOpen] = useState(false);

@@ -163,7 +163,9 @@ type IconName =
   | "alert"
   | "arrow"
   | "lock"
-  | "user";
+  | "user"
+  | "sun"
+  | "moon";
 
 type ViewName =
   | "overview" | "movers" | "layoutgroups" | "reports" | "settings"
@@ -186,6 +188,8 @@ function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
     arrow: <path d="m9 18 6-6-6-6"/>,
     lock: <><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></>,
     user: <><circle cx="12" cy="8" r="3.6"/><path d="M5 20a7 7 0 0 1 14 0"/></>,
+    sun: <><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.5 1.5M17.6 17.6l1.5 1.5M19.1 4.9l-1.5 1.5M6.4 17.6l-1.5 1.5"/></>,
+    moon: <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/>,
   };
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -404,6 +408,28 @@ export function Dashboard({
    * Pas na het aankoppelen, anders wijkt de server af van de browser.
    */
   const [headerDate, setHeaderDate] = useState("");
+
+  /**
+   * Licht of donker. De keuze staat al op <html> voordat er iets getekend is
+   * (zie layout.tsx); hier lezen we hem alleen uit zodat de knop het juiste
+   * pictogram laat zien, en schrijven we hem weg als iemand hem omzet.
+   */
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  useEffect(() => {
+    const staat = document.documentElement.getAttribute("data-theme");
+    setTheme(staat === "light" ? "light" : "dark");
+  }, []);
+
+  function toggleTheme() {
+    const volgende = theme === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", volgende);
+    try {
+      localStorage.setItem("keyflow.theme", volgende);
+    } catch {
+      // Zonder opslag werkt het scherm nog, alleen onthoudt het de keuze niet.
+    }
+    setTheme(volgende);
+  }
 
   /**
    * Bijbestellen begint pas als er genoeg gewerkt is om verbruik uit af te
@@ -1839,6 +1865,14 @@ export function Dashboard({
               />
               <kbd>/</kbd>
             </label>}
+            <button
+              className="icon-button"
+              aria-label={theme === "dark" ? "Naar lichte weergave" : "Naar donkere weergave"}
+              title={theme === "dark" ? "Lichte weergave" : "Donkere weergave"}
+              onClick={toggleTheme}
+            >
+              <Icon name={theme === "dark" ? "sun" : "moon"} />
+            </button>
             <button className="icon-button" aria-label="Meldingen"><Icon name="alert" /><span className="notification-dot" /></button>
           </div>
         </header>
