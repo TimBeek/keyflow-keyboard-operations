@@ -174,6 +174,23 @@ export function batchSheetCount(batch: PrintBatch) {
   return batch.rows.reduce((sum, row) => sum + row.quantity, 0);
 }
 
+/**
+ * Een ronde is voltooid als er niets meer openstaat. Die hoort dan niet meer
+ * tussen het werk te staan — maar ook niet weg: de regels zitten in de
+ * geschiedenis en de ronde zelf is de herkomst daarvan. Dus opzij, niet weg.
+ */
+export function batchIsDone(batch: PrintBatch) {
+  return batch.rows.length > 0 && batch.rows.every((row) => row.status !== "open");
+}
+
+export function activeBatches(batches: PrintBatch[]) {
+  return batches.filter((batch) => !batchIsDone(batch));
+}
+
+export function completedBatches(batches: PrintBatch[]) {
+  return batches.filter(batchIsDone);
+}
+
 /** Rondes die Noviply nog niet heeft geopend; daar hoort een melding bij. */
 export function unseenBatches(batches: PrintBatch[]) {
   return batches.filter((batch) => batch.seenAt === null);

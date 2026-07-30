@@ -2,8 +2,11 @@
 
 import { useRef, useState } from "react";
 import {
+  activeBatches,
+  batchIsDone,
   batchLabel,
   batchSheetCount,
+  completedBatches,
   openBatchRows,
   unknownLanguageRows,
   type PrintBatch,
@@ -50,11 +53,21 @@ export function PrintBatchPanel({
   const [message, setMessage] = useState("");
   const [blockedRow, setBlockedRow] = useState("");
   const [blockedNote, setBlockedNote] = useState("");
-  // Welke ronde openstaat. De nieuwste, tenzij iemand een oudere aanklikt.
+  // Welke ronde openstaat. De nieuwste die nog loopt, tenzij iemand kiest.
   const [openId, setOpenId] = useState<string | null>(null);
+  const [archiveOpen, setArchiveOpen] = useState(false);
 
-  const newest = batches[0] ?? null;
-  const shown = batches.find((batch) => batch.id === (openId ?? newest?.id)) ?? null;
+  /**
+   * Een voltooide ronde hoort niet meer tussen het werk te staan. Weggooien
+   * doen we niet: de regels zitten in de geschiedenis en de ronde is de herkomst
+   * daarvan. Dus opzij, achter een mapje dat je open kunt klappen.
+   */
+  const running = activeBatches(batches);
+  const done = completedBatches(batches);
+  const shown = batches.find((batch) => batch.id === openId)
+    ?? running[0]
+    ?? done[0]
+    ?? null;
 
   async function pick(file: File | null | undefined) {
     if (!file) return;
@@ -120,7 +133,7 @@ export function PrintBatchPanel({
       ) : (
         <>
           <div className="batch-tabs" role="tablist">
-            {batches.slice(0, 6).map((batch) => (
+            {running.slice(0, 6).map((batch) => (
               <button
                 key={batch.id}
                 role="tab"
@@ -134,17 +147,46 @@ export function PrintBatchPanel({
               >
                 {batchLabel(batch)}
                 {batch.seenAt === null && <span className="batch-new" aria-label="New">•</span>}
-                {openBatchRows(batch) === 0 && <b aria-hidden="true">✓</b>}
               </button>
             ))}
+            {running.length === 0 && (
+              <span className="batch-none">
+                Alles afgerond. Voeg de volgende ronde toe met “Add a run”.
+              </span>
+            )}
           </div>
+
+          {done.length > 0 && (
+            <div className="batch-archive">
+              <button type="button" onClick={() => setArchiveOpen((open) => !open)}>
+                {archiveOpen ? "▾" : "▸"} Completed runs ({done.length})
+              </button>
+              {archiveOpen && (
+                <div className="batch-archive-list">
+                  {done.map((batch) => (
+                    <button
+                      key={batch.id}
+                      type="button"
+                      className={batch.id === shown?.id ? "active" : ""}
+                      onClick={() => setOpenId(batch.id)}
+                    >
+                      <b aria-hidden="true">✓</b> {batchLabel(batch)}
+                      <small>{batchSheetCount(batch)} sheets</small>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           {shown && (
             <>
               <div className="batch-summary">
                 <span>
                   <b>{batchSheetCount(shown)}</b> sheets · {shown.rows.length} lines ·{" "}
-                  {openBatchRows(shown)} still open
+                  {batchIsDone(shown)
+                    ? "all done"
+                    : `${openBatchRows(shown)} still open`}
                 </span>
                 <small>
                   Loaded {formatMoment(shown.uploadedAt)} by {shown.uploadedBy} · {shown.fileName}

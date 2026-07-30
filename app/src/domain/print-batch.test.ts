@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   PrintBatchError,
+  activeBatches,
+  batchIsDone,
+  completedBatches,
   batchNumberFromFileName,
   batchRowForOrder,
   batchRunDate,
@@ -160,6 +163,38 @@ describe("tellingen", () => {
 
   it("markeert regels waarvan de taal onbekend is", () => {
     expect(unknownLanguageRows(batch()).map((row) => row.orderReference)).toEqual(["000099263"]);
+  });
+});
+
+describe("voltooid of niet", () => {
+  it("noemt een ronde voltooid als er niets meer openstaat", () => {
+    const af = batch({
+      rows: batch().rows.map((row) => ({
+        ...row, status: "printed" as const,
+        handledAt: "2026-07-30T12:40:00.000Z", handledBy: "Noviply",
+      })),
+    });
+
+    expect(batchIsDone(af)).toBe(true);
+    expect(batchIsDone(batch())).toBe(false);
+  });
+
+  it("scheidt wat loopt van wat af is", () => {
+    const af = batch({
+      id: "b0",
+      rows: batch().rows.map((row) => ({
+        ...row, status: "printed" as const,
+        handledAt: "2026-07-30T12:40:00.000Z", handledBy: "Noviply",
+      })),
+    });
+
+    expect(activeBatches([batch(), af]).map((b) => b.id)).toEqual(["b1"]);
+    expect(completedBatches([batch(), af]).map((b) => b.id)).toEqual(["b0"]);
+  });
+
+  it("noemt een ronde zonder regels niet voltooid", () => {
+    // Anders zou een leeg geval stilletjes als afgehandeld gelden.
+    expect(batchIsDone(batch({ rows: [] }))).toBe(false);
   });
 });
 

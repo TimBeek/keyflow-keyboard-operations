@@ -28,6 +28,11 @@ import {
 import { displayStickerSku } from "@/domain/sticker-sku";
 import { PrintBatchPanel } from "@/components/print-batch-panel";
 import {
+  historyTotals,
+  noviplyHistory,
+  searchNoviplyHistory,
+} from "@/domain/noviply-history";
+import {
   batchLabel,
   batchSheetCount,
   unseenBatches,
@@ -110,15 +115,25 @@ export function NoviplyWorkspace({
   // Kort na het indrukken laat de knop zien dat het seintje weg is. Zonder dat
   // moment gebeurt er in beeld niets tot de server antwoordt.
   const [sending, setSending] = useState(false);
+  const [historyQuery, setHistoryQuery] = useState("");
 
   const totals = printRequestTotals(printRequests);
   const open = printRequests
     .filter((request) => request.status === "requested")
     .sort((left, right) => left.requestedAt.localeCompare(right.requestedAt));
-  const handled = printRequests
-    .filter((request) => request.status !== "requested")
-    .sort((left, right) => (right.handledAt ?? "").localeCompare(left.handledAt ?? ""))
-    .slice(0, 25);
+  /**
+   * De geschiedenis toonde alleen de losse aanvragen. Sinds de rondes hier
+   * worden ingelezen is dat het kleinste deel van het werk, en stonden de vellen
+   * uit een ronde nergens terug te vinden. Nu komen beide bronnen samen.
+   */
+  const historyAll = useMemo(
+    () => noviplyHistory(printRequests, printBatches),
+    [printRequests, printBatches],
+  );
+  const historyShown = useMemo(
+    () => searchNoviplyHistory(historyAll, historyQuery),
+    [historyAll, historyQuery],
+  );
 
   /**
    * De volledige voorraad, van leeg naar vol. Noviply wil het geheel zien en
@@ -235,6 +250,7 @@ export function NoviplyWorkspace({
       {unseenBatches(printBatches).length > 0 && tab !== "runs" && (
         <div className="batch-notice" role="status">
           <span className="batch-notice-dot" aria-hidden="true" />
+          <span className="batch-notice-chip">NIEUW</span>
           <span>
             <strong>
               {unseenBatches(printBatches).length === 1
@@ -531,8 +547,32 @@ export function NoviplyWorkspace({
       {tab === "orders" && (
         <section className="noviply-panel">
           <div className="noviply-panel-head">
-            <div><h3>History</h3><p>Everything you tick off stays here, with the time.</p></div>
+            <div>
+              <h3>History</h3>
+              <p>
+                Everything ticked off — the extra requests and the daily runs, in
+                one list with the time.
+              </p>
+            </div>
+            {/* Een lijst waarin je moet scrollen om één ordernummer terug te
+                vinden is geen administratie. */}
+            <label className="history-search">
+              <span className="sr-only">Search the history</span>
+              <input
+                value={historyQuery}
+                onChange={(event) => setHistoryQuery(event.target.value)}
+                placeholder="Order number, model, language, batch…"
+              />
+              {historyQuery && (
+                <button type="button" onClick={() => setHistoryQuery("")} aria-label="Clear">×</button>
+              )}
+            </label>
           </div>
+          <p className="history-count">
+            {historyTotals(historyShown).lines} of {historyTotals(historyAll).lines} lines ·{" "}
+            {historyTotals(historyShown).sheets} sheets ·{" "}
+            {historyTotals(historyShown).blocked} could not be printed
+          </p>
           <div className="table-wrap">
             <table className="operations-table">
               <thead>
@@ -541,33 +581,42 @@ export function NoviplyWorkspace({
                   <th>Language</th>
                   <th>Sheets</th>
                   <th>Order number</th>
+                  <th>Where from</th>
                   <th>Outcome</th>
                   <th>Handled</th>
                 </tr>
               </thead>
               <tbody>
-                {handled.map((request) => (
-                  <tr key={request.id}>
-                    <td><strong>{request.brand}</strong><span>{request.model}</span></td>
-                    <td>{request.layout}</td>
-                    <td><b className={request.quantity > 1 ? "quantity-many" : ""}>{request.quantity}×</b></td>
-                    {/* Waarop dit terug te vinden is in hun eigen administratie;
-                        zonder dit is een regel in de geschiedenis niet meer aan
-                        een order te koppelen. */}
-                    <td><b className="order-cell">{request.orderReference || "—"}</b></td>
+                {historyShown.map((entry) => (
+                  <tr key={entry.id}>
+                    <td><strong>{entry.brand}</strong><span>{entry.model}</span></td>
+                    <td>{entry.layout}{entry.variant && ` · ${entry.variant}`}</td>
                     <td>
-                      <span className={`print-status ${request.status}`}>
-                        {request.status === "printed" ? "✓" : "✕"} {printRequestStatusLabel(request.status)}
-                      </span>
-                      {request.note && <span>{request.note}</span>}
+                      <b className={entry.quantity > 1 ? "quantity-many" : ""}>{entry.quantity}×</b>
                     </td>
-                    <td>{request.handledAt ? formatMoment(request.handledAt) : "—"}</td>
+                    <td><b className="order-cell">{entry.orderReference || "—"}</b></td>
+                    <td>
+                      {entry.source === "run"
+                        ? <span className="from-run">{entry.sourceLabel}</span>
+                        : <span className="from-request">Extra request</span>}
+                    </td>
+                    <td>
+                      <span className={`print-status ${entry.outcome}`}>
+                        {entry.outcome === "printed" ? "✓ Printed" : "✕ Cannot print"}
+                      </span>
+                      {entry.note && <span>{entry.note}</span>}
+                    </td>
+                    <td>{entry.handledAt ? formatMoment(entry.handledAt) : "—"}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            {handled.length === 0 && (
-              <div className="empty">Nothing ticked off yet in this pilot.</div>
+            {historyShown.length === 0 && (
+              <div className="empty">
+                {historyQuery
+                  ? `Nothing matches “${historyQuery}”.`
+                  : "Nothing ticked off yet in this pilot."}
+              </div>
             )}
           </div>
         </section>

@@ -3008,24 +3008,38 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 /* ---- de dagelijkse printrondes ----
    De lijst uit het ordersysteem stond in een mailbox. Hier staat hij naast de
    losse aanvragen, en een nieuwe ronde valt op zonder het werk te onderbreken. */
+/* Amber en niet blauw: blauw is in dit scherm de knop waarmee je iets naar de
+   werkvloer stuurt. Dit is het omgekeerde — er is werk binnengekomen — en dat
+   hoort er niet uit te zien als iets wat je zelf in gang zet. */
 .batch-notice {
   display: flex;
   align-items: center;
   gap: 13px;
   padding: 13px 17px;
   margin-bottom: 14px;
-  border: 1px solid color-mix(in srgb, var(--signal) 40%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
+  border-left-width: 4px;
   border-radius: 13px;
-  background: var(--signal-soft);
+  background: var(--warn-soft);
 }
 .batch-notice strong { display: block; color: var(--text); font-size: 14px; }
 .batch-notice small { color: var(--text-2); font-size: 12.5px; }
+.batch-notice-chip {
+  flex: none;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--warn);
+  color: var(--signal-ink);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .06em;
+}
 .batch-notice-dot {
   flex: none;
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: var(--signal);
+  background: var(--warn);
   animation: printer-pulse 1.6s ease-in-out infinite;
 }
 
@@ -3075,3 +3089,60 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 /* Bevestigd in een ingelezen ronde: dan weet de werkvloer dat het vel er
    werkelijk aan komt en niet alleen dat het zou moeten. */
 .in-batch { color: var(--ok) !important; font-weight: 700; }
+
+/* Voltooide rondes staan opzij, niet tussen het werk. Weggooien doen we niet:
+   de regels zitten in de geschiedenis en de ronde is de herkomst daarvan. */
+.batch-none { color: var(--text-3); font-size: 13px; align-self: center; }
+.batch-archive { margin: -4px 0 14px; }
+.batch-archive > button {
+  padding: 6px 2px;
+  border: 0;
+  background: none;
+  color: var(--text-2);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+.batch-archive-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.batch-archive-list button {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
+  padding: 8px 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-2);
+  font-size: 12.5px;
+}
+.batch-archive-list button.active { border-color: var(--signal); color: var(--text); }
+.batch-archive-list b { color: var(--ok); }
+.batch-archive-list small { color: var(--text-3); font-size: 11.5px; }
+
+/* Zoeken in de geschiedenis: één veld dat op ordernummer, model, taal en ronde
+   kijkt. Meerdere woorden moeten allemaal voorkomen. */
+.history-search { position: relative; display: flex; align-items: center; }
+.history-search input {
+  min-width: 280px;
+  min-height: 42px;
+  padding: 0 34px 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 14px;
+}
+.history-search button {
+  position: absolute;
+  right: 8px;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--line);
+  color: var(--text-2);
+  font-size: 15px;
+  line-height: 1;
+}
+.history-count { margin: 0 0 12px; color: var(--text-3); font-size: 12.5px; }
+.from-run { color: var(--signal); font-weight: 700; font-size: 12.5px; }
+.from-request { color: var(--text-3); font-size: 12.5px; }
