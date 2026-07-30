@@ -52,6 +52,7 @@ import type { ConversionLogInput } from "@/domain/conversion-log";
 import { directPrintScopeFor } from "@/domain/direct-print-scope";
 import { EnterShapeGlyph } from "@/components/enter-shape-glyph";
 import { nextPrintRun, type PrintRun } from "@/domain/print-runs";
+import { batchLabel, batchRowForOrder, type PrintBatch } from "@/domain/print-batch";
 import {
   groupRunWaitlist,
   type RunWaitlistEntry,
@@ -137,6 +138,8 @@ type Props = {
   onRecordConversion: (input: ConversionLogInput) => unknown;
   /** Laptops die apart staan tot de volgende automatische printronde. */
   runWaitlist: RunWaitlistEntry[];
+  /** De ingelezen rondes; daarin is te zien of het vel er echt aan komt. */
+  printBatches: PrintBatch[];
   onWaitForPrintRun: (input: RunWaitlistInput) => Promise<unknown>;
   onSettleRunWait: (id: string, outcome: "collected" | "escalated") => void;
 };
@@ -156,6 +159,7 @@ export function EmployeeWorkspace({
   onRequestPrintSticker,
   onRecordConversion,
   runWaitlist,
+  printBatches,
   onWaitForPrintRun,
   onSettleRunWait,
 }: Props) {
@@ -1100,7 +1104,14 @@ export function EmployeeWorkspace({
                   </div>
                   <div className="request-order">
                     <b>{entry.orderReference}</b>
-                    <small>ronde van {entry.expectedRunLabel}</small>
+                    {/* Stond hij in de ingelezen ronde, dan hoort het vel er te
+                        liggen. Dat maakt de vraag makkelijker te beantwoorden. */}
+                    {(() => {
+                      const inRonde = batchRowForOrder(printBatches, entry.orderReference);
+                      return inRonde
+                        ? <small className="in-batch">stond in {batchLabel(inRonde.batch)}</small>
+                        : <small>ronde van {entry.expectedRunLabel}</small>;
+                    })()}
                   </div>
                   <div className="request-settle">
                     <button
@@ -1134,7 +1145,15 @@ export function EmployeeWorkspace({
                   </div>
                   <div className="request-order">
                     <b>{entry.orderReference}</b>
-                    <small>komt mee om {entry.expectedRunLabel}</small>
+                    {/* Staat de order in een ingelezen ronde, dan is bevestigd
+                        dat het vel eraan komt. Dat was eerst twee lijsten met
+                        de hand naast elkaar leggen. */}
+                    {(() => {
+                      const inRonde = batchRowForOrder(printBatches, entry.orderReference);
+                      return inRonde
+                        ? <small className="in-batch">staat in {batchLabel(inRonde.batch)}</small>
+                        : <small>komt mee om {entry.expectedRunLabel}</small>;
+                    })()}
                   </div>
                 </article>
               ))}

@@ -21,10 +21,18 @@ import {
 } from "@/domain/print-requests";
 import {
   createNoviplyPrintRequestCsv,
+  createPrintBatchCsv,
   createNoviplyStockCsv,
   noviplyExportFilename,
 } from "@/domain/noviply-export";
 import { displayStickerSku } from "@/domain/sticker-sku";
+import { PrintBatchPanel } from "@/components/print-batch-panel";
+import {
+  batchLabel,
+  batchSheetCount,
+  unseenBatches,
+  type PrintBatch,
+} from "@/domain/print-batch";
 import {
   latestAnswered,
   openCheck,
@@ -32,10 +40,16 @@ import {
   type PrinterCheckRecord,
 } from "@/domain/printer-check";
 
-export type NoviplyTab = "orders" | "stock";
+export type NoviplyTab = "orders" | "stock" | "runs";
 
 type Props = {
   tab: NoviplyTab;
+  /** De rondes uit het ordersysteem; leeg tot er één is ingelezen. */
+  printBatches: PrintBatch[];
+  onUploadBatch: (file: File) => Promise<{ rows: number; duplicate: boolean; sameFile: boolean }>;
+  onSettleBatchRow: (rowId: string, status: "printed" | "not_printable", note: string) => Promise<void>;
+  onSettleBatch: (batchId: string) => Promise<void>;
+  onBatchSeen: (batchId: string) => void;
   printRequests: PrintRequestRecord[];
   quantities: Record<string, number>;
   transactions: InventoryTransactionEntry[];
@@ -75,6 +89,11 @@ function formatMoment(value: string) {
 
 export function NoviplyWorkspace({
   tab,
+  printBatches,
+  onUploadBatch,
+  onSettleBatchRow,
+  onSettleBatch,
+  onBatchSeen,
   printRequests,
   quantities,
   transactions,
@@ -210,6 +229,41 @@ export function NoviplyWorkspace({
             : "folders below their minimum"}</small>
         </article>
       </div>
+
+      {/* Een nieuwe ronde hoort op te vallen zonder het werk te onderbreken:
+          geen pop-up, wel een regel bovenaan tot ze hem hebben geopend. */}
+      {unseenBatches(printBatches).length > 0 && tab !== "runs" && (
+        <div className="batch-notice" role="status">
+          <span className="batch-notice-dot" aria-hidden="true" />
+          <span>
+            <strong>
+              {unseenBatches(printBatches).length === 1
+                ? `New print run: ${batchLabel(unseenBatches(printBatches)[0])}`
+                : `${unseenBatches(printBatches).length} new print runs`}
+            </strong>
+            <small>
+              {batchSheetCount(unseenBatches(printBatches)[0])} sheets waiting to be printed
+            </small>
+          </span>
+        </div>
+      )}
+
+      {tab === "runs" && (
+        <PrintBatchPanel
+          batches={printBatches}
+          onUpload={onUploadBatch}
+          onSettleRow={onSettleBatchRow}
+          onSettleBatch={onSettleBatch}
+          onSeen={onBatchSeen}
+          onDownload={(batch) => {
+            downloadCsv(
+              createPrintBatchCsv(batch.rows),
+              noviplyExportFilename("run", new Date().toISOString()),
+            );
+            setMessage(`Downloaded ${batchLabel(batch)}.`);
+          }}
+        />
+      )}
 
       {tab === "orders" && (
         <section className="noviply-panel printer-panel">

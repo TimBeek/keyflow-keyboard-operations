@@ -3004,3 +3004,74 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 /* Het ordernummer is waarop Noviply een regel terugvindt in hun eigen
    administratie. Dat mag niet het lichtste op de regel zijn. */
 .order-cell { color: var(--text); font-size: 15px; font-weight: 700; letter-spacing: .01em; }
+
+/* ---- de dagelijkse printrondes ----
+   De lijst uit het ordersysteem stond in een mailbox. Hier staat hij naast de
+   losse aanvragen, en een nieuwe ronde valt op zonder het werk te onderbreken. */
+.batch-notice {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 13px 17px;
+  margin-bottom: 14px;
+  border: 1px solid color-mix(in srgb, var(--signal) 40%, transparent);
+  border-radius: 13px;
+  background: var(--signal-soft);
+}
+.batch-notice strong { display: block; color: var(--text); font-size: 14px; }
+.batch-notice small { color: var(--text-2); font-size: 12.5px; }
+.batch-notice-dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--signal);
+  animation: printer-pulse 1.6s ease-in-out infinite;
+}
+
+.batch-upload label { display: inline-flex; align-items: center; min-height: 42px; padding: 0 18px; }
+.batch-upload label.busy { opacity: .6; pointer-events: none; }
+
+.batch-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.batch-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 15px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-2);
+  font-size: 13px;
+  font-weight: 700;
+}
+.batch-tabs button.active { border-color: var(--signal); background: var(--signal-soft); color: var(--text); }
+.batch-tabs .batch-new { color: var(--signal); font-size: 20px; line-height: 0; }
+.batch-tabs button b { color: var(--ok); }
+
+.batch-summary { display: grid; gap: 4px; margin-bottom: 14px; }
+.batch-summary > span { color: var(--text); font-size: 14px; }
+.batch-summary > span b { font-size: 20px; font-weight: 800; }
+.batch-summary small { color: var(--text-3); font-size: 12px; }
+.batch-summary-actions { display: flex; gap: 9px; flex-wrap: wrap; margin-top: 8px; }
+
+/* Een onbekende landcode is geen reden om de regel te weigeren — Noviply print
+   hem toch — maar wel om ernaar te laten kijken. */
+.batch-warning {
+  padding: 11px 15px;
+  margin-bottom: 13px;
+  border-left: 3px solid var(--warn);
+  border-radius: 9px;
+  background: var(--warn-soft);
+  color: var(--text);
+  font-size: 13px;
+}
+.batch-unknown { color: var(--warn); font-weight: 700; }
+.batch-row-actions, .batch-blocked { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
+.batch-row-actions button, .batch-blocked button { min-height: 38px; padding: 0 14px; font-size: 13px; }
+.batch-blocked input { min-height: 38px; padding: 0 11px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--text); }
+.operations-table tr.settled td { opacity: .62; }
+
+/* Bevestigd in een ingelezen ronde: dan weet de werkvloer dat het vel er
+   werkelijk aan komt en niet alleen dat het zou moeten. */
+.in-batch { color: var(--ok) !important; font-weight: 700; }

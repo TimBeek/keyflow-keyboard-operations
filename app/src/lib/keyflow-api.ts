@@ -19,6 +19,7 @@ import type { PrinterCheckRecord } from "@/domain/printer-check";
 import type { PrintReminderRecord } from "@/domain/print-reminder";
 import type { StickerVerificationReport } from "@/domain/sticker-verification";
 import type { RunWaitlistEntry, RunWaitlistInput } from "@/domain/run-waitlist";
+import type { PrintBatch } from "@/domain/print-batch";
 
 export type SharedOperationsState = {
   savedAt: string;
@@ -40,6 +41,8 @@ export type SharedOperationsState = {
   printReminders: PrintReminderRecord[];
   /** Laptops die apart staan tot de volgende automatische printronde. */
   runWaitlist: RunWaitlistEntry[];
+  /** De twee dagelijkse printrondes zoals ze uit het ordersysteem komen. */
+  printBatches: PrintBatch[];
   /** Vellen die na de Excel-import zijn toegevoegd. */
   addedSheets: AddedSheet[];
 };
@@ -319,6 +322,42 @@ export function addStickerSheet(payload: {
     "/api/sticker-sheets",
     { method: "POST", body: JSON.stringify(payload) },
   );
+}
+
+/* ---------- de dagelijkse printrondes ---------- */
+
+export async function uploadPrintBatch(file: File, batchNumber?: number) {
+  const form = new FormData();
+  form.append("file", file);
+  if (batchNumber) form.append("batchNumber", String(batchNumber));
+  // Geen JSON: het bestand gaat als formulier mee zodat de server hem leest.
+  const response = await fetch("/api/print-batches", { method: "POST", body: form });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(body?.message ?? "Het bestand kon niet worden ingelezen.");
+  }
+  return body as { batchId: string; rows: number; duplicate: boolean; sameFile: boolean };
+}
+
+export function settleBatchRow(rowId: string, status: "printed" | "not_printable", note = "") {
+  return request<{ settled: true }>("/api/print-batches", {
+    method: "PATCH",
+    body: JSON.stringify({ rowId, status, note }),
+  });
+}
+
+export function settleWholePrintBatch(batchId: string) {
+  return request<{ settled: number }>("/api/print-batches", {
+    method: "PATCH",
+    body: JSON.stringify({ action: "settleBatch", batchId }),
+  });
+}
+
+export function markPrintBatchSeen(batchId: string) {
+  return request<{ seen: true }>("/api/print-batches", {
+    method: "PATCH",
+    body: JSON.stringify({ action: "seen", batchId }),
+  });
 }
 
 /* ---------- laptops die op de volgende printronde wachten ---------- */

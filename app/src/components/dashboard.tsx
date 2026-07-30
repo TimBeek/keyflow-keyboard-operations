@@ -43,6 +43,7 @@ import {
 import { calculateInventoryMutation } from "@/domain/inventory";
 import { resupplyReady } from "@/domain/resupply";
 import type { RunWaitlistEntry, RunWaitlistInput } from "@/domain/run-waitlist";
+import { unseenBatches, type PrintBatch } from "@/domain/print-batch";
 import { dayKey } from "@/domain/reporting";
 import {
   calculateCatalogThreshold,
@@ -92,6 +93,10 @@ import {
   closePrinterCheck,
   sendPrintReminder,
   addToRunWaitlist,
+  uploadPrintBatch,
+  settleBatchRow,
+  settleWholePrintBatch,
+  markPrintBatchSeen,
   settleRunWaitlistEntry,
   acknowledgePrintReminder,
   postVerificationReport,
@@ -301,6 +306,8 @@ export function Dashboard({
   // Laptops die apart staan tot hun vel met de volgende ronde meekomt. Dit is
   // geen aanvraag bij Noviply; zij zien deze lijst niet.
   const [runWaitlist, setRunWaitlist] = useState<RunWaitlistEntry[]>([]);
+  // De rondes uit het ordersysteem. Die lijst werd gemaild; nu staat hij hier.
+  const [printBatches, setPrintBatches] = useState<PrintBatch[]>([]);
   const [noviplyTab, setNoviplyTab] = useState<NoviplyTab>("orders");
   // Regels waar de Excel-import geen bruikbaar artikelnummer opleverde, kunnen
   // hier worden aangevuld zonder de bron aan te passen.
@@ -538,6 +545,7 @@ export function Dashboard({
     setPrinterChecks(state.printerChecks);
     setPrintReminders(state.printReminders);
     setRunWaitlist(state.runWaitlist ?? []);
+    setPrintBatches(state.printBatches ?? []);
     setVerificationReports(state.verificationReports);
     if (state.operationsPolicy) {
       setOperationsPolicy({ ...defaultOperationsPolicy, ...state.operationsPolicy });
@@ -1456,6 +1464,42 @@ export function Dashboard({
     }
   }
 
+  /* ---------- de dagelijkse printrondes ---------- */
+
+  async function uploadBatch(file: File) {
+    const result = await uploadPrintBatch(file);
+    await refreshSharedState();
+    return result;
+  }
+
+  async function settleBatchRowRecord(
+    rowId: string,
+    status: "printed" | "not_printable",
+    note: string,
+  ) {
+    await settleBatchRow(rowId, status, note);
+    await refreshSharedState();
+  }
+
+  async function settleBatch(batchId: string) {
+    try {
+      const { settled } = await settleWholePrintBatch(batchId);
+      await refreshSharedState();
+      setLastAction(`${settled} regels van de ronde op geprint gezet.`);
+    } catch (error) {
+      setLastAction(error instanceof Error ? error.message : "Dat is niet gelukt.");
+    }
+  }
+
+  function batchSeen(batchId: string) {
+    // Openen is gezien; de melding mag weg zonder dat het scherm wacht.
+    void markPrintBatchSeen(batchId)
+      .then(() => setPrintBatches((current) => current.map((batch) => batch.id === batchId
+        ? { ...batch, seenAt: new Date().toISOString() }
+        : batch)))
+      .catch(() => undefined);
+  }
+
   async function requestPrinterCheck() {
     try {
       const { check, alreadyOpen } = await askPrinterCheck("");
@@ -1732,6 +1776,12 @@ export function Dashboard({
           {/* Noviply is een partner met twee taken; die staan als eigen
               bestemmingen in de zijbalk in plaats van als tabbladen. */}
           {role === "noviply" && ([
+            {
+              id: "runs" as const,
+              // Het puntje verdwijnt zodra ze de ronde hebben geopend.
+              label: unseenBatches(printBatches).length > 0 ? "Print runs •" : "Print runs",
+              icon: "upload" as const,
+            },
             { id: "orders" as const, label: "Print requests", icon: "orders" as const },
             {
               id: "stock" as const,
@@ -1801,16 +1851,20 @@ export function Dashboard({
               : role === "noviply"
                 ? (noviplyTab === "orders"
                     ? "Print request list"
-                    : resupplyStarted ? "Stock running low" : "Stock")
+                    : noviplyTab === "runs"
+                      ? "Print runs"
+                      : resupplyStarted ? "Stock running low" : "Stock")
                 : viewHeadings[activeView].title}</h1>
             <p>{role === "employee"
               ? "Eén duidelijke taak tegelijk, met automatisch methodeadvies."
               : role === "noviply"
                 ? (noviplyTab === "orders"
                     ? "Extra sticker sheets to print for today."
-                    : resupplyStarted
-                      ? "Folders that need resupplying."
-                      : "Everything in the cabinet, emptiest first.")
+                    : noviplyTab === "runs"
+                      ? "The two daily lists from the order system."
+                      : resupplyStarted
+                        ? "Folders that need resupplying."
+                        : "Everything in the cabinet, emptiest first.")
                 : viewHeadings[activeView].subtitle}</p>
           </div>
           <div className="top-actions">
@@ -1889,6 +1943,11 @@ export function Dashboard({
             onAskPrinterCheck={() => void requestPrinterCheck()}
             onStartPrinting={(id: string) => void startPrinting(id)}
             onSettlePrintRequest={settlePrintRequestRecord}
+            printBatches={printBatches}
+            onUploadBatch={uploadBatch}
+            onSettleBatchRow={settleBatchRowRecord}
+            onSettleBatch={settleBatch}
+            onBatchSeen={batchSeen}
           />
         )}
 
@@ -1900,6 +1959,7 @@ export function Dashboard({
             onRemindNoviply={() => void remindNoviply()}
             onRequestPrintSticker={requestPrintSticker}
             runWaitlist={runWaitlist}
+            printBatches={printBatches}
             onWaitForPrintRun={waitForPrintRun}
             onSettleRunWait={(id, outcome) => void settleRunWaitlist(id, outcome)}
             onRecordConversion={recordConversion}

@@ -85,7 +85,45 @@ export function createNoviplyPrintRequestCsv(records: PrintRequestRecord[]) {
   ]));
 }
 
+const batchHeaders = [
+  "Line",
+  "Model",
+  "Language",
+  "Enter",
+  "Sheets",
+  "Order number",
+  "Status",
+  "Note",
+] as const;
+
+/**
+ * Dezelfde ronde terug als bestand, met wat er inmiddels van is afgevinkt. Hun
+ * eigen administratie wil de stand, niet alleen de opdracht.
+ */
+export function createPrintBatchCsv(rows: {
+  lineNumber: number;
+  model: string;
+  languageCode: string;
+  layout: string;
+  variant: string;
+  quantity: number;
+  orderReference: string;
+  status: "open" | "printed" | "not_printable";
+  note: string;
+}[]) {
+  return toCsv(batchHeaders, rows.map((row): CsvValue[] => [
+    row.lineNumber,
+    row.model,
+    row.layout || row.languageCode,
+    row.variant,
+    row.quantity,
+    row.orderReference,
+    row.status === "printed" ? "Printed" : row.status === "not_printable" ? "Cannot print" : "Open",
+    row.note,
+  ]));
+}
+
 /** Een bestandsnaam waarin de datum voorop staat, zodat sorteren op naam werkt. */
-export function noviplyExportFilename(kind: "stock" | "print-requests", isoMoment: string) {
+export function noviplyExportFilename(kind: "stock" | "print-requests" | "run", isoMoment: string) {
   return `noviply-${kind}-${isoMoment.slice(0, 10)}.csv`;
 }
