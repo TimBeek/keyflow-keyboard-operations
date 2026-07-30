@@ -9,9 +9,24 @@ import { defaultPrintRunTimes, type PrintRunTimes } from "./print-runs";
 export type { OperationalMethodId };
 export type { PrintRunTimes };
 
+/**
+ * Voor welke prijsklasse een regel geldt. Ontbreekt hij, dan geldt de regel
+ * voor beide — zo blijven regels van vóór deze splitsing gewoon werken.
+ */
+export type PriceBand = "below" | "above";
+
 export type LayoutRule = {
   layout: string;
+  band?: PriceBand;
   method: OperationalMethodId;
+  /**
+   * Wat er moet gebeuren als die methode niet kan — een lege hangmap, een
+   * model dat de toetsenbordsprinter niet aankan. Zonder dit valt het advies
+   * terug op de standaardvolgorde, en die kiest niet altijd wat jij zou
+   * kiezen: bij QWERTY US onder de grens is dat de toetsenbordsprint, terwijl
+   * de premiumsticker vaak de bedoeling is.
+   */
+  fallback?: OperationalMethodId;
   note: string;
 };
 

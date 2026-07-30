@@ -3,7 +3,12 @@
 import { useState } from "react";
 import { conversionMethods } from "@/domain/conversion-policy";
 import { targetLayoutOptions } from "@/domain/keyboard-layouts";
-import type { LayoutRule, OperationalMethodId, OperationsPolicy } from "@/domain/operations";
+import type {
+  LayoutRule,
+  OperationalMethodId,
+  OperationsPolicy,
+  PriceBand,
+} from "@/domain/operations";
 import { minimumHistoryDays, usageWindowWeeks } from "@/domain/resupply";
 import { policyPreview } from "@/domain/policy-preview";
 import type { ConversionMethodId } from "@/domain/conversion-policy";
@@ -26,6 +31,16 @@ function methodCell(method: ConversionMethodId) {
       <b>{"★".repeat(profile.tier)}</b> {profile.name}
     </span>
   );
+}
+
+const bands: PriceBand[] = ["below", "above"];
+
+function stars(method: OperationalMethodId) {
+  return "*".repeat(conversionMethods[method].tier);
+}
+
+function methodName(method: ConversionMethodId) {
+  return method === "none" ? "geen conversie" : conversionMethods[method].name;
 }
 
 const methodOrder: OperationalMethodId[] = [
@@ -70,22 +85,62 @@ export function SettingsWorkspace({ policy, directPrintLayouts, onSave }: Props)
   const dirty = JSON.stringify(draft) !== JSON.stringify(policy)
     || JSON.stringify(layouts) !== JSON.stringify(directPrintLayouts);
 
-  function setRule(layout: string, method: OperationalMethodId | "") {
-    setDraft((current) => {
-      const rest = current.layoutRules.filter((rule) => rule.layout !== layout);
-      if (!method) return { ...current, layoutRules: rest };
-      const existing = current.layoutRules.find((rule) => rule.layout === layout);
-      const rule: LayoutRule = { layout, method, note: existing?.note ?? "" };
-      return { ...current, layoutRules: [...rest, rule] };
+  /**
+   * Regels worden vanaf hier altijd per prijsklasse gezet. Een oudere regel
+   * zonder klasse gold voor allebei; die wordt bij de eerste wijziging in twee
+   * losse regels uit elkaar gehaald, zodat je de ene kunt aanpassen zonder de
+   * andere ongemerkt mee te veranderen.
+   */
+  function splitBands(rules: LayoutRule[], layout: string): LayoutRule[] {
+    const key = layout.toLowerCase();
+    return rules.flatMap((rule) => {
+      if (rule.layout.toLowerCase() !== key || rule.band) return [rule];
+      return [
+        { ...rule, band: "below" as PriceBand },
+        { ...rule, band: "above" as PriceBand },
+      ];
     });
   }
 
-  function setNote(layout: string, note: string) {
-    setDraft((current) => ({
-      ...current,
-      layoutRules: current.layoutRules.map((rule) =>
-        rule.layout === layout ? { ...rule, note } : rule),
-    }));
+  function editRule(
+    layout: string,
+    band: PriceBand,
+    change: (rule: LayoutRule | null) => LayoutRule | null,
+  ) {
+    setDraft((current) => {
+      const rules = splitBands(current.layoutRules, layout);
+      const key = layout.toLowerCase();
+      const existing = rules.find(
+        (rule) => rule.layout.toLowerCase() === key && rule.band === band,
+      ) ?? null;
+      const rest = rules.filter((rule) => rule !== existing);
+      const next = change(existing);
+      return { ...current, layoutRules: next ? [...rest, next] : rest };
+    });
+  }
+
+  function setRule(layout: string, band: PriceBand, method: OperationalMethodId | "") {
+    editRule(layout, band, (existing) => method
+      ? {
+        layout,
+        band,
+        method,
+        ...(existing?.fallback ? { fallback: existing.fallback } : {}),
+        note: existing?.note ?? "",
+      }
+      : null);
+  }
+
+  function setFallback(layout: string, band: PriceBand, fallback: OperationalMethodId | "") {
+    editRule(layout, band, (existing) => {
+      if (!existing) return existing;
+      const { fallback: _weg, ...rest } = existing;
+      return fallback ? { ...rest, fallback } : rest;
+    });
+  }
+
+  function setNote(layout: string, band: PriceBand, note: string) {
+    editRule(layout, band, (existing) => existing ? { ...existing, note } : existing);
   }
 
   async function save() {
@@ -103,99 +158,114 @@ export function SettingsWorkspace({ policy, directPrintLayouts, onSave }: Props)
         <div className="order-heading">
           <div>
             <span className="workspace-kicker">WANNEER WELKE OPLOSSING</span>
-            <h2>Regel per taal</h2>
+            <h2>Regel per taal en prijsklasse</h2>
             <p>
-              Normaal kiest KeyFlow op verkoopwaarde: boven de grens een
-              toetsenbordsprint, eronder een sticker. Wil je voor één taal altijd
-              iets anders, dan zet je dat hier. De werkvloer ziet het meteen.
+              Elk vakje is de keuze zelf en het gevolg tegelijk: je klikt aan wat
+              de werkvloer moet doen, en je ziet er meteen onder wat eruit komt.
+              Staat een vakje op <em>Volgt de verkoopwaarde</em>, dan kiest
+              KeyFlow zoals altijd. Zet je er iets neer, dan gaat dat voor.
             </p>
-          </div>
-        </div>
-
-        <div className="layout-rules">
-          {targetLayoutOptions.map((layout) => {
-            const rule = draft.layoutRules.find((item) => item.layout === layout.value);
-            return (
-              <div key={layout.value} className={rule ? "has-rule" : ""}>
-                <span className="layout-rule-name">
-                  {layout.label}
-                  {rule && <b className="rule-badge">gaat vóór de waarderegel</b>}
-                </span>
-                <select
-                  value={rule?.method ?? ""}
-                  onChange={(event) => setRule(layout.value, event.target.value as OperationalMethodId | "")}
-                >
-                  <option value="">Volgt de verkoopwaarde</option>
-                  {methodOrder.map((method) => (
-                    <option key={method} value={method}>
-                      {"★".repeat(conversionMethods[method].tier)} {conversionMethods[method].name}
-                    </option>
-                  ))}
-                </select>
-                {rule && (
-                  <input
-                    value={rule.note}
-                    maxLength={200}
-                    placeholder="Waarom? (komt bij de medewerker in beeld)"
-                    onChange={(event) => setNote(layout.value, event.target.value)}
-                  />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </section>
-
-      {/* Zonder dit was dit scherm een rij keuzelijsten zonder gevolg in beeld:
-          je zette iets om en moest maar aannemen dat het klopte. Deze tabel
-          rekent het echte advies uit met dezelfde functie als de werkvloer. */}
-      <section className="panel settings-panel">
-        <div className="order-heading">
-          <div>
-            <span className="workspace-kicker">CONTROLE</span>
-            <h2>Wat de werkvloer straks te zien krijgt</h2>
             <p>
-              Uitgerekend met de instellingen zoals ze nu op dit scherm staan
-              {dirty ? " — inclusief wat je nog niet hebt opgeslagen" : ""}. Er
-              is uitgegaan van een normale dag: alles op voorraad en technisch
-              geschikt. Een lege hangmap is geen beleid maar een situatie, en
-              wordt op de werkvloer zelf opgevangen.
+              Onder elke keuze staat wat er gebeurt als die methode niet kan: een
+              lege hangmap, of een model dat de toetsenbordsprinter niet aankan.
+              Laat je dat op <em>vanzelf</em> staan, dan zoekt KeyFlow zelf het
+              dichtstbijzijnde alternatief.
             </p>
           </div>
         </div>
         <div className="table-wrap">
-          <table className="operations-table policy-preview">
+          <table className="operations-table policy-editor">
             <thead>
               <tr>
                 <th>Taal</th>
                 <th>Onder €{draft.thresholdEur}</th>
                 <th>Vanaf €{draft.thresholdEur}</th>
-                <th>Waarom</th>
               </tr>
             </thead>
             <tbody>
               {preview.map((row) => (
-                <tr key={row.layout} className={row.source === "exception" ? "has-rule" : ""}>
-                  <td><strong>{row.label}</strong></td>
-                  <td>{methodCell(row.below)}</td>
-                  <td>{methodCell(row.above)}</td>
-                  <td>
-                    {row.source === "exception"
-                      ? (
-                        <span className="rule-badge">
-                          Vaste keuze
-                          {row.exceptionFrom !== row.layout && ` via ${row.exceptionFrom}`}
-                          {row.note && ` · ${row.note}`}
+                <tr key={row.layout}>
+                  <td className="policy-language"><strong>{row.label}</strong></td>
+                  {bands.map((band) => {
+                    const cell = band === "below" ? row.below : row.above;
+                    // Een regel die van een andere taal komt hoort niet
+                    // bewerkbaar te zijn alsof hij van deze rij is: dan zet je
+                    // per ongeluk twee regels neer die elkaar tegenspreken.
+                    const eigen = cell.rule !== null
+                      && cell.from.toLowerCase() === row.layout.toLowerCase();
+                    const rule = eigen ? cell.rule : null;
+                    return (
+                      <td key={band} className={cell.rule ? "has-rule" : ""}>
+                        <select
+                          value={rule ? rule.method : ""}
+                          onChange={(event) => setRule(
+                            row.layout,
+                            band,
+                            event.target.value as OperationalMethodId | "",
+                          )}
+                        >
+                          <option value="">Volgt de verkoopwaarde</option>
+                          {methodOrder.map((method) => (
+                            <option key={method} value={method}>
+                              {stars(method)} {conversionMethods[method].name}
+                            </option>
+                          ))}
+                        </select>
+
+                        <span className="policy-outcome">
+                          {cell.rule && !eigen && (
+                            <b className="rule-badge">via {cell.from}</b>
+                          )}
+                          Werkvloer krijgt: {methodCell(cell.method)}
                         </span>
-                      )
-                      : <span className="preview-plain">Verkoopwaarde</span>}
-                  </td>
+
+                        <label className="policy-fallback">
+                          <span>Kan dat niet?</span>
+                          <select
+                            value={rule && rule.fallback ? rule.fallback : ""}
+                            disabled={!rule}
+                            onChange={(event) => setFallback(
+                              row.layout,
+                              band,
+                              event.target.value as OperationalMethodId | "",
+                            )}
+                          >
+                            <option value="">— zoekt zelf: {methodName(cell.ifBlocked)}</option>
+                            {methodOrder
+                              .filter((method) => !rule || method !== rule.method)
+                              .map((method) => (
+                                <option key={method} value={method}>
+                                  {stars(method)} {conversionMethods[method].name}
+                                </option>
+                              ))}
+                          </select>
+                        </label>
+
+                        {rule && (
+                          <input
+                            value={rule.note}
+                            maxLength={200}
+                            placeholder="Waarom? (komt bij de medewerker in beeld)"
+                            onChange={(event) => setNote(row.layout, band, event.target.value)}
+                          />
+                        )}
+                      </td>
+                    );
+                  })}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+        <p className="policy-footnote">
+          Uitgerekend met de instellingen zoals ze nu op dit scherm staan
+          {dirty ? " (inclusief wat je nog niet hebt opgeslagen)" : ""}, met
+          dezelfde functie die de werkvloer gebruikt. Er is uitgegaan van een
+          normale dag: alles op voorraad en technisch geschikt.
+        </p>
       </section>
+
+
 
       <section className="panel settings-panel">
         <div className="order-heading">

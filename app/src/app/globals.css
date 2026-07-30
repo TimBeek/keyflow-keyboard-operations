@@ -2792,6 +2792,34 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
   background: var(--warn-soft);
   color: var(--warn);
 }
-.policy-preview .preview-method b { color: var(--accent); letter-spacing: .06em; }
-.policy-preview .preview-plain { color: var(--text-3); }
-.policy-preview tr.has-rule td { background: var(--warn-soft); }
+.policy-editor .preview-method b { color: var(--accent); letter-spacing: .06em; }
+.policy-editor .preview-plain { color: var(--text-3); }
+
+/* Elk vakje is de keuze en het gevolg tegelijk: de keuzelijst bovenaan, wat
+   eruit komt eronder. Anders moet je twee tabellen naast elkaar leggen. */
+.policy-editor td { vertical-align: top; padding: 12px 14px; }
+.policy-editor td.has-rule { background: var(--warn-soft); }
+.policy-editor .policy-language { min-width: 190px; }
+.policy-editor select { width: 100%; }
+.policy-editor input { width: 100%; margin-top: 8px; }
+.policy-outcome {
+  display: block;
+  margin-top: 7px;
+  font-size: 12px;
+  color: var(--text-3);
+}
+/* De badge staat op zijn eigen regel: anders plakt "via QWERTY NL" tegen de
+   uitkomst aan en lees je er één zin van die er niet staat. */
+.policy-outcome .rule-badge { display: block; margin: 0 0 5px; }
+.policy-fallback { display: block; margin-top: 9px; }
+.policy-fallback > span {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.policy-fallback select:disabled { opacity: .55; }
+.policy-footnote { margin: 14px 0 0; font-size: 12px; color: var(--text-3); }

@@ -29,9 +29,12 @@ const policySchema = z.object({
   abcBThreshold: z.number().int().min(2).max(99),
   layoutRules: z.array(z.object({
     layout: z.string().min(2).max(40),
+    // Geen band = geldt voor beide prijsklassen; zo blijven oudere regels werken.
+    band: z.enum(["below", "above"]).optional(),
     method: z.enum(["loose_stickers", "noviply_sheet", "printed_sticker", "direct_reprint"]),
+    fallback: z.enum(["loose_stickers", "noviply_sheet", "printed_sticker", "direct_reprint"]).optional(),
     note: z.string().max(200).default(""),
-  })).max(40).default([]),
+  })).max(60).default([]),
   resupplyLeadTimeDays: z.number().int().min(1).max(120),
   resupplySafetyWeeks: z.number().int().min(0).max(12),
   printRunTimes: z.object({
@@ -71,7 +74,13 @@ type PolicyRow = {
   abc_a_threshold: number;
   abc_b_threshold: number;
   direct_print_layouts: string[];
-  layout_rules: { layout: string; method: string; note?: string }[];
+  layout_rules: {
+    layout: string;
+    band?: string;
+    method: string;
+    fallback?: string;
+    note?: string;
+  }[];
   resupply_lead_time_days: number;
   resupply_safety_weeks: number;
   morning_run_at: string;
@@ -95,7 +104,11 @@ function toPolicy(row: PolicyRow): OperationsPolicy {
     abcBThreshold: row.abc_b_threshold,
     layoutRules: (row.layout_rules ?? []).map((rule) => ({
       layout: rule.layout,
+      ...(rule.band ? { band: rule.band as "below" | "above" } : {}),
       method: rule.method as OperationsPolicy["layoutRules"][number]["method"],
+      ...(rule.fallback
+        ? { fallback: rule.fallback as OperationsPolicy["layoutRules"][number]["method"] }
+        : {}),
       note: rule.note ?? "",
     })),
     resupplyLeadTimeDays: row.resupply_lead_time_days,

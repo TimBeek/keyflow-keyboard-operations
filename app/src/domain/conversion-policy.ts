@@ -42,14 +42,23 @@ export const conversionPolicyInputSchema = z.object({
    */
   layoutRules: z.array(z.object({
     layout: z.string().min(2).max(40),
+    // Geen band betekent: geldt voor beide prijsklassen. Zo blijven regels van
+    // vóór deze splitsing gewoon doen wat ze deden.
+    band: z.enum(["below", "above"]).optional(),
     method: z.enum([
       "loose_stickers",
       "noviply_sheet",
       "printed_sticker",
       "direct_reprint",
     ]),
+    fallback: z.enum([
+      "loose_stickers",
+      "noviply_sheet",
+      "printed_sticker",
+      "direct_reprint",
+    ]).optional(),
     note: z.string().max(200).default(""),
-  })).max(40).default([]),
+  })).max(60).default([]),
 });
 
 export type ConversionPolicyInput = z.input<typeof conversionPolicyInputSchema>;
@@ -183,11 +192,20 @@ export function recommendConversion(rawInput: ConversionPolicyInput): Conversion
     };
   }
 
-  // Geldt er een uitzondering voor deze taal, dan gaat die voor op de
-  // waarderegel — mits de methode überhaupt kan.
-  const layoutRule = input.layoutRules.find(
+  const isPremium = input.saleValueEur >= input.thresholdEur;
+  const band = isPremium ? "above" : "below";
+
+  /**
+   * Geldt er een uitzondering voor deze taal, dan gaat die voor op de
+   * waarderegel. Een regel voor deze prijsklasse wint van een regel die voor
+   * beide klassen geldt: het specifieke antwoord gaat voor het algemene.
+   */
+  const layoutRules = input.layoutRules.filter(
     (rule) => normalizeLayout(rule.layout) === normalizeLayout(input.targetLayout),
   );
+  const layoutRule = layoutRules.find((rule) => rule.band === band)
+    ?? layoutRules.find((rule) => rule.band === undefined);
+
   if (layoutRule && usable.includes(layoutRule.method)) {
     return {
       primary: layoutRule.method,
@@ -198,6 +216,19 @@ export function recommendConversion(rawInput: ConversionPolicyInput): Conversion
       policy: { thresholdEur: input.thresholdEur, rule: "layout_rule" },
     };
   }
+  // Kan de eerste keuze niet, dan telt wat management daarvoor heeft opgegeven.
+  // Zonder die opgave viel het advies terug op de standaardvolgorde, en die
+  // kiest niet altijd wat er bedoeld was.
+  if (layoutRule?.fallback && usable.includes(layoutRule.fallback)) {
+    return {
+      primary: layoutRule.fallback,
+      alternatives: usable.filter((method) => method !== layoutRule.fallback),
+      reason: `${methodLabel(layoutRule.method)} kan nu niet voor ${input.targetLayout}; `
+        + `daarvoor staat ${methodLabel(layoutRule.fallback)} ingesteld.`,
+      warnings,
+      policy: { thresholdEur: input.thresholdEur, rule: "layout_rule_fallback" },
+    };
+  }
   if (layoutRule) {
     warnings.push(
       `Voor ${input.targetLayout} staat ${methodLabel(layoutRule.method)} ingesteld, `
@@ -205,7 +236,6 @@ export function recommendConversion(rawInput: ConversionPolicyInput): Conversion
     );
   }
 
-  const isPremium = input.saleValueEur >= input.thresholdEur;
   const saleValueClause = input.saleValueLabel
     ? `valt in de klasse ${input.saleValueLabel}`
     : `is €${formatAmount(input.saleValueEur)}`;
