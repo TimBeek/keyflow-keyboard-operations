@@ -10,7 +10,7 @@ export async function GET() {
   try {
     return Response.json({ printReminders: await listPrintReminders() });
   } catch (error) {
-    const response = apiErrorResponse(error);
+    const response = apiErrorResponse(error, "GET /api/print-reminders");
     return Response.json(response.body, { status: response.status });
   }
 }
@@ -21,7 +21,7 @@ export async function POST(request: Request) {
     const result = await sendPrintReminder(await resolveRequestActorId());
     return Response.json(result, { status: result.alreadySent ? 200 : 201 });
   } catch (error) {
-    const response = apiErrorResponse(error);
+    const response = apiErrorResponse(error, "POST /api/print-reminders");
     return Response.json(response.body, { status: response.status });
   }
 }

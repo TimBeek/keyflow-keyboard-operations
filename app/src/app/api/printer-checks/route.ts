@@ -10,7 +10,7 @@ export async function GET() {
   try {
     return Response.json({ printerChecks: await listPrinterChecks() });
   } catch (error) {
-    const response = apiErrorResponse(error);
+    const response = apiErrorResponse(error, "GET /api/printer-checks");
     return Response.json(response.body, { status: response.status });
   }
 }
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     });
     return Response.json(result, { status: result.alreadyOpen ? 200 : 201 });
   } catch (error) {
-    const response = apiErrorResponse(error);
+    const response = apiErrorResponse(error, "POST /api/printer-checks");
     return Response.json(response.body, { status: response.status });
   }
 }

@@ -15,7 +15,7 @@ export async function PUT(request: Request) {
     });
     return Response.json(result);
   } catch (error) {
-    const response = apiErrorResponse(error);
+    const response = apiErrorResponse(error, "PUT /api/sku-overrides");
     return Response.json(response.body, { status: response.status });
   }
 }

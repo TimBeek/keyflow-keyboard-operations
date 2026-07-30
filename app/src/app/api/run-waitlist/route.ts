@@ -15,7 +15,7 @@ export async function GET() {
   try {
     return Response.json({ runWaitlist: await listRunWaitlist() });
   } catch (error) {
-    const response = apiErrorResponse(error);
+    const response = apiErrorResponse(error, "GET /api/run-waitlist");
     return Response.json(response.body, { status: response.status });
   }
 }
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     });
     return Response.json(result, { status: result.duplicate ? 200 : 201 });
   } catch (error) {
-    const response = apiErrorResponse(error);
+    const response = apiErrorResponse(error, "POST /api/run-waitlist");
     return Response.json(response.body, { status: response.status });
   }
 }
@@ -46,7 +46,7 @@ export async function PATCH(request: Request) {
     });
     return Response.json(result);
   } catch (error) {
-    const response = apiErrorResponse(error);
+    const response = apiErrorResponse(error, "PATCH /api/run-waitlist");
     return Response.json(response.body, { status: response.status });
   }
 }

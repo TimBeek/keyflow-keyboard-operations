@@ -16,7 +16,7 @@ export async function GET() {
   try {
     return Response.json({ accounts: await listPilotAccounts() });
   } catch (error) {
-    const response = apiErrorResponse(error);
+    const response = apiErrorResponse(error, "GET /api/access/accounts");
     return Response.json(response.body, { status: response.status });
   }
 }
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
     );
     return Response.json(account, { status: 201 });
   } catch (error) {
-    const response = apiErrorResponse(error);
+    const response = apiErrorResponse(error, "POST /api/access/accounts");
     return Response.json(response.body, { status: response.status });
   }
 }
@@ -46,7 +46,7 @@ export async function PATCH(request: Request) {
     const body = await request.json();
     return Response.json(await resetAccountPin(String(body.userId ?? ""), userId));
   } catch (error) {
-    const response = apiErrorResponse(error);
+    const response = apiErrorResponse(error, "PATCH /api/access/accounts");
     return Response.json(response.body, { status: response.status });
   }
 }
@@ -59,7 +59,7 @@ export async function DELETE(request: Request) {
     await deactivateAccount(String(body.userId ?? ""), userId);
     return Response.json({ ok: true });
   } catch (error) {
-    const response = apiErrorResponse(error);
+    const response = apiErrorResponse(error, "DELETE /api/access/accounts");
     return Response.json(response.body, { status: response.status });
   }
 }

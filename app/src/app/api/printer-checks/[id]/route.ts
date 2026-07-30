@@ -20,7 +20,7 @@ export async function PATCH(
     });
     return Response.json(result);
   } catch (error) {
-    const response = apiErrorResponse(error);
+    const response = apiErrorResponse(error, "PATCH /api/printer-checks/[id]");
     return Response.json(response.body, { status: response.status });
   }
 }
@@ -37,7 +37,7 @@ export async function DELETE(
       await resolveRequestActorId(),
     ));
   } catch (error) {
-    const response = apiErrorResponse(error);
+    const response = apiErrorResponse(error, "DELETE /api/printer-checks/[id]");
     return Response.json(response.body, { status: response.status });
   }
 }

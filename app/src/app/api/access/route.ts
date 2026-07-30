@@ -19,7 +19,7 @@ export async function GET() {
     const [claim, accounts] = await Promise.all([resolvePilotClaim(), listPilotAccounts()]);
     return Response.json({ ...claim, openRole, accounts });
   } catch (error) {
-    const response = apiErrorResponse(error);
+    const response = apiErrorResponse(error, "GET /api/access");
     return Response.json(response.body, { status: response.status });
   }
 }
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
       mustChangePin: result.mustChangePin,
     });
   } catch (error) {
-    const response = apiErrorResponse(error);
+    const response = apiErrorResponse(error, "POST /api/access");
     return Response.json(response.body, { status: response.status });
   }
 }

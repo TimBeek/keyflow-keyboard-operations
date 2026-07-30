@@ -15,7 +15,7 @@ export async function DELETE(
       await resolveRequestActorId(),
     ));
   } catch (error) {
-    const response = apiErrorResponse(error);
+    const response = apiErrorResponse(error, "DELETE /api/print-reminders/[id]");
     return Response.json(response.body, { status: response.status });
   }
 }

@@ -3206,3 +3206,28 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 .attention-group.cannot_print li { border-left-color: var(--warn); }
 .attention-group.empty_folder li { border-left-color: var(--signal); }
 .attention-group.unknown_language li { border-left-color: var(--text-3); }
+
+/* Een storing is geen werkprobleem: apart paneel, rustiger dan "aandacht nodig",
+   maar wel zichtbaar. Anders staat het alleen in een console die niemand leest. */
+.faults-panel .problems-count { background: var(--crit-soft); color: var(--crit); }
+.fault-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.fault-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 11px 14px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--crit);
+  border-radius: 11px;
+  background: var(--surface);
+}
+.fault-list strong {
+  display: block;
+  color: var(--text);
+  font-size: 13.5px;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+}
+.fault-list span { display: block; color: var(--text-2); font-size: 12px; }
+.fault-list small { color: var(--text-3); font-size: 11.5px; }
+.fault-list button { flex: none; min-height: 36px; padding: 0 14px; font-size: 12.5px; }

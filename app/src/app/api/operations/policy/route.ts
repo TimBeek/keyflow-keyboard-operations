@@ -30,7 +30,7 @@ export async function PUT(request: Request) {
         { status: 409 },
       );
     }
-    const response = apiErrorResponse(error);
+    const response = apiErrorResponse(error, "PUT /api/operations/policy");
     return Response.json(response.body, { status: response.status });
   }
 }

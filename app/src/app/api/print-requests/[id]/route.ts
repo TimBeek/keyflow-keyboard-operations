@@ -19,7 +19,7 @@ export async function PATCH(
     });
     return Response.json(result);
   } catch (error) {
-    const response = apiErrorResponse(error);
+    const response = apiErrorResponse(error, "PATCH /api/print-requests/[id]");
     return Response.json(response.body, { status: response.status });
   }
 }

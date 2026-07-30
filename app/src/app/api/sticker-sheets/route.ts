@@ -10,7 +10,7 @@ export async function GET() {
   try {
     return Response.json({ nextStorageNumber: await nextStorageNumber() });
   } catch (error) {
-    const response = apiErrorResponse(error);
+    const response = apiErrorResponse(error, "GET /api/sticker-sheets");
     return Response.json(response.body, { status: response.status });
   }
 }
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     });
     return Response.json(result, { status: result.duplicate ? 200 : 201 });
   } catch (error) {
-    const response = apiErrorResponse(error);
+    const response = apiErrorResponse(error, "POST /api/sticker-sheets");
     return Response.json(response.body, { status: response.status });
   }
 }

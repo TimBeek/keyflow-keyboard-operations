@@ -10,12 +10,13 @@ import { RateLimitError } from "./rate-limit";
 import { AuthorizationError } from "./authorization-service";
 import { DatabaseConfigurationError } from "./database";
 import { RequestIdentityError } from "./request-identity";
+import { recordError } from "./error-log-service";
 
 /**
  * Eén plek die een fout vertaalt naar iets wat een scherm kan tonen. Zonder dit
  * herhaalt elke route dezelfde ladder, en dan wijkt er vroeg of laat één af.
  */
-export function apiErrorResponse(error: unknown) {
+export function apiErrorResponse(error: unknown, origin = "") {
   if (error instanceof RateLimitError) {
     return {
       status: 429,
@@ -49,8 +50,15 @@ export function apiErrorResponse(error: unknown) {
     };
   }
 
-  // Onbekende fouten mogen niet met interne details naar buiten.
+  // Onbekende fouten mogen niet met interne details naar buiten — maar ze mogen
+  // ook niet alleen in een console belanden die niemand leest.
   console.error("Onverwachte fout in een API-route:", error);
+  void recordError({
+    source: "server",
+    origin,
+    message: error instanceof Error ? error.message : String(error),
+    detail: error instanceof Error ? (error.stack ?? "") : "",
+  });
   return {
     status: 500,
     body: { error: "UNEXPECTED", message: "Er ging iets mis. Probeer het opnieuw." },

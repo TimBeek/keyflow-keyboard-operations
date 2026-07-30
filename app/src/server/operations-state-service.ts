@@ -11,6 +11,8 @@ import { listVerificationReports } from "./verification-report-service";
 import { listPrintReminders } from "./print-reminder-service";
 import { listRunWaitlist } from "./run-waitlist-service";
 import { listPrintBatches } from "./print-batch-service";
+import { sharedTransactionDays } from "@/domain/shared-history";
+import { canSeeFaults, listOpenErrors } from "./error-log-service";
 import {
   listCompatibilityEvidence,
   listModelGroupDecisions,
@@ -88,6 +90,7 @@ export async function readOperationsState(actorId: string) {
     printReminders,
     runWaitlist,
     printBatches,
+    openErrors,
     allSheets,
   ] = await Promise.all([
     sql<BalanceRow[]>`
@@ -104,9 +107,15 @@ export async function readOperationsState(actorId: string) {
       from inventory_transactions t
       join sticker_skus s on s.id = t.sku_id
       join users u on u.id = t.performed_by
-      where t.occurred_at > now() - make_interval(days => 190)
+      /**
+       * Het venster is bewust: verder terug rekent geen enkel scherm. De
+       * rijlimiet die hier stond was dat niet — die kapte binnen het venster af
+       * zodra er meer dan vijfduizend boekingen in stonden, en dan verdwenen de
+       * oudste stilletjes uit elke berekening. Bij een paar tientallen
+       * conversies per dag zit je daar binnen een half jaar aan.
+       */
+      where t.occurred_at > now() - make_interval(days => ${sharedTransactionDays})
       order by t.occurred_at desc
-      limit 5000
     `,
     listPrintRequests(actorId),
     listConversionLog(actorId),
@@ -120,6 +129,12 @@ export async function readOperationsState(actorId: string) {
     listPrintReminders(),
     listRunWaitlist(),
     listPrintBatches(),
+    /**
+     * Storingen bevatten stacktraces. Die hoeven niet naar het scherm van de
+     * werkvloer, dat ze toch niet te zien krijgt — meesturen is dan alleen maar
+     * weggeven wat niemand nodig heeft.
+     */
+    canSeeFaults(actorId).then((mag) => (mag ? listOpenErrors() : [])),
     // Vellen die na de Excel-import zijn toegevoegd. Die staan alleen in de
     // database, terwijl de werkvloer in de ingebouwde catalogus zoekt — zonder
     // dit zou een nieuw vel onvindbaar blijven tot de volgende import.
@@ -179,6 +194,7 @@ export async function readOperationsState(actorId: string) {
     printReminders,
     runWaitlist,
     printBatches,
+    openErrors,
     // Alleen wat de ingebouwde catalogus niet kent; de rest zit er al in.
     addedSheets: allSheets
       .filter((row) => !knownStorageNumbers.has(row.hanging_file_number))

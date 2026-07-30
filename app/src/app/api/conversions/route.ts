@@ -13,7 +13,7 @@ export async function GET(request: Request) {
     );
     return Response.json({ conversionLog: await listConversionLog(actorId) });
   } catch (error) {
-    const response = apiErrorResponse(error);
+    const response = apiErrorResponse(error, "GET /api/conversions");
     return Response.json(response.body, { status: response.status });
   }
 }
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     });
     return Response.json(result, { status: result.duplicate ? 200 : 201 });
   } catch (error) {
-    const response = apiErrorResponse(error);
+    const response = apiErrorResponse(error, "POST /api/conversions");
     return Response.json(response.body, { status: response.status });
   }
 }

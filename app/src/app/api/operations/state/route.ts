@@ -14,7 +14,7 @@ export async function GET(request: Request) {
     );
     return Response.json(await readOperationsState(actorId));
   } catch (error) {
-    const response = apiErrorResponse(error);
+    const response = apiErrorResponse(error, "GET /api/operations/state");
     return Response.json(response.body, { status: response.status });
   }
 }

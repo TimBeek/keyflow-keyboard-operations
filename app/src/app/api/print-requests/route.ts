@@ -16,7 +16,7 @@ export async function GET(request: Request) {
     );
     return Response.json({ printRequests: await listPrintRequests(actorId) });
   } catch (error) {
-    const response = apiErrorResponse(error);
+    const response = apiErrorResponse(error, "GET /api/print-requests");
     return Response.json(response.body, { status: response.status });
   }
 }
@@ -31,7 +31,7 @@ export async function POST(request: Request) {
     });
     return Response.json(result, { status: result.duplicate ? 200 : 201 });
   } catch (error) {
-    const response = apiErrorResponse(error);
+    const response = apiErrorResponse(error, "POST /api/print-requests");
     return Response.json(response.body, { status: response.status });
   }
 }

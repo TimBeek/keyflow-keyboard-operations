@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     });
     return Response.json({ ok: true, role: claim.role, userId: claim.userId });
   } catch (error) {
-    const response = apiErrorResponse(error);
+    const response = apiErrorResponse(error, "POST /api/access/pin");
     return Response.json(response.body, { status: response.status });
   }
 }

@@ -13,6 +13,8 @@ import { OperationsManagement } from "@/components/operations-management";
 import { PrinterCheckPrompt } from "@/components/printer-check-prompt";
 import { PrintReminderPrompt } from "@/components/print-reminder-prompt";
 import { SettingsWorkspace } from "@/components/settings-workspace";
+import { ErrorReporter } from "@/components/error-reporter";
+import type { AppErrorEvent } from "@/server/error-log-service";
 import { AddStickerSheetDialog } from "@/components/add-sticker-sheet";
 import type { AcceptanceSyncState } from "@/components/go-live-acceptance-center";
 import type { ContinuitySyncState } from "@/components/production-readiness-center";
@@ -103,6 +105,7 @@ import {
   settleWholePrintBatch,
   markPrintBatchSeen,
   removePrintBatch,
+  resolveErrorEvent,
   settleRunWaitlistEntry,
   acknowledgePrintReminder,
   postVerificationReport,
@@ -316,6 +319,9 @@ export function Dashboard({
   const [runWaitlist, setRunWaitlist] = useState<RunWaitlistEntry[]>([]);
   // De rondes uit het ordersysteem. Die lijst werd gemaild; nu staat hij hier.
   const [printBatches, setPrintBatches] = useState<PrintBatch[]>([]);
+  // Onverwachte fouten uit de server en uit de schermen. Stonden alleen in een
+  // console die niemand leest.
+  const [openErrors, setOpenErrors] = useState<AppErrorEvent[]>([]);
   const [noviplyTab, setNoviplyTab] = useState<NoviplyTab>("orders");
   // Regels waar de Excel-import geen bruikbaar artikelnummer opleverde, kunnen
   // hier worden aangevuld zonder de bron aan te passen.
@@ -558,6 +564,7 @@ export function Dashboard({
     setPrintReminders(state.printReminders);
     setRunWaitlist(state.runWaitlist ?? []);
     setPrintBatches(state.printBatches ?? []);
+    setOpenErrors(state.openErrors ?? []);
     setVerificationReports(state.verificationReports);
     if (state.operationsPolicy) {
       setOperationsPolicy({ ...defaultOperationsPolicy, ...state.operationsPolicy });
@@ -1517,6 +1524,15 @@ export function Dashboard({
     }
   }
 
+  async function resolveFault(id: string) {
+    try {
+      await resolveErrorEvent(id);
+      setOpenErrors((current) => current.filter((fault) => fault.id !== id));
+    } catch (error) {
+      setLastAction(error instanceof Error ? error.message : "Dat is niet gelukt.");
+    }
+  }
+
   async function removeBatch(batchId: string) {
     try {
       await removePrintBatch(batchId);
@@ -1803,6 +1819,9 @@ export function Dashboard({
 
   return (
     <div className="app-shell">
+      {/* Een scherm dat omvalt meldt zichzelf; anders hoor je het pas als
+          iemand belt dat het niet meer werkt. */}
+      <ErrorReporter role={role} />
       <aside className="sidebar">
         <div className="brand">
           <div className="brand-mark">K</div>
@@ -2083,6 +2102,43 @@ export function Dashboard({
               in hun lijst, een lege hangmap alleen in de voorraad, en een
               onbekende taalcode boven een printronde. Wie moest weten wat er
               vandaag misloopt had vier schermen nodig. */}
+          {/* Een kapotte route of een scherm dat omvalt hoort hier te staan en
+              niet in een console die niemand leest. Apart van de rest: dit is
+              geen werkprobleem maar een storing. */}
+          {openErrors.length > 0 && (
+            <section className="panel problems-panel faults-panel">
+              <div className="panel-heading">
+                <div>
+                  <h2>Storingen</h2>
+                  <p>Iets ging technisch mis. Meld dit als het blijft terugkomen.</p>
+                </div>
+                <span className="problems-count">{openErrors.length}</span>
+              </div>
+              <ul className="fault-list">
+                {openErrors.slice(0, 6).map((fault) => (
+                  <li key={fault.id}>
+                    <div>
+                      <strong>{fault.message}</strong>
+                      <span>
+                        {fault.source === "browser" ? "Scherm" : "Server"}
+                        {fault.origin && ` · ${fault.origin}`}
+                        {fault.occurrences > 1 && ` · ${fault.occurrences}×`}
+                      </span>
+                      <small>Laatst {formatPersistenceTime(fault.lastSeenAt)}</small>
+                    </div>
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      onClick={() => void resolveFault(fault.id)}
+                    >
+                      Afgehandeld
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
           {attention.length > 0 && (
             <section className="panel problems-panel">
               <div className="panel-heading">

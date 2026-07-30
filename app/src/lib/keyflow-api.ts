@@ -20,6 +20,7 @@ import type { PrintReminderRecord } from "@/domain/print-reminder";
 import type { StickerVerificationReport } from "@/domain/sticker-verification";
 import type { RunWaitlistEntry, RunWaitlistInput } from "@/domain/run-waitlist";
 import type { PrintBatch } from "@/domain/print-batch";
+import type { AppErrorEvent } from "@/server/error-log-service";
 
 export type SharedOperationsState = {
   savedAt: string;
@@ -43,6 +44,8 @@ export type SharedOperationsState = {
   runWaitlist: RunWaitlistEntry[];
   /** De twee dagelijkse printrondes zoals ze uit het ordersysteem komen. */
   printBatches: PrintBatch[];
+  /** Onverwachte fouten die nog niet zijn afgehandeld. */
+  openErrors: AppErrorEvent[];
   /** Vellen die na de Excel-import zijn toegevoegd. */
   addedSheets: AddedSheet[];
 };
@@ -361,6 +364,13 @@ export function removePrintBatch(batchId: string) {
   return request<{ removed: true }>("/api/print-batches", {
     method: "PATCH",
     body: JSON.stringify({ action: "remove", batchId }),
+  });
+}
+
+export function resolveErrorEvent(id: string) {
+  return request<{ resolved: true }>("/api/errors", {
+    method: "PATCH",
+    body: JSON.stringify({ id }),
   });
 }
 

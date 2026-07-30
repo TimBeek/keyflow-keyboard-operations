@@ -13,7 +13,7 @@ export async function GET() {
   try {
     return Response.json({ verificationReports: await listVerificationReports() });
   } catch (error) {
-    const response = apiErrorResponse(error);
+    const response = apiErrorResponse(error, "GET /api/verification-reports");
     return Response.json(response.body, { status: response.status });
   }
 }
@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     });
     return Response.json(result, { status: 201 });
   } catch (error) {
-    const response = apiErrorResponse(error);
+    const response = apiErrorResponse(error, "POST /api/verification-reports");
     return Response.json(response.body, { status: response.status });
   }
 }
