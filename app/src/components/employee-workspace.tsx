@@ -65,18 +65,20 @@ import {
 function todoFor(method: ConversionMethodId, storageNumber: number | null): string {
   switch (method) {
     case "noviply_sheet":
+      // Het hangmapnummer staat er al groot boven; dat hier herhalen maakt de
+      // zin langer zonder dat iemand er iets van weet wat hij nog niet wist.
       return storageNumber === null
-        ? "Pak het voorraadvel, leg het eerst los op het toetsenbord en breng het daarna in één beweging aan."
-        : `Pak het vel uit hangmap ${storageNumber}, leg het eerst los op het toetsenbord om te kijken of het past, en breng het daarna in één beweging aan.`;
+        ? "Pak het voorraadvel. Leg het los op het toetsenbord — past het? Breng het in één beweging aan."
+        : "Pak het vel. Leg het eerst los op het toetsenbord — past het? Breng het in één beweging aan.";
     case "printed_sticker":
-      return "Laat een sterke printsticker printen voor dit model en breng die in één keer goed aan — herpositioneren kan niet.";
+      return "Breng de printsticker in één keer aan. Herpositioneren kan niet.";
     case "direct_reprint":
-      return "Zet deze laptop in de wachtrij voor de keyboardprinter. Je hoeft zelf geen vel te pakken.";
+      return "Zet de laptop in de wachtrij voor de toetsenbordsprinter.";
     case "loose_stickers":
       return "Alleen met toestemming van je teamleider: plak de losse stickers toets voor toets.";
     case "none":
     default:
-      return "Geen conversie nodig. Zet de laptop door naar de volgende stap.";
+      return "Geen conversie nodig. Zet de laptop door.";
   }
 }
 
@@ -193,6 +195,9 @@ export function EmployeeWorkspace({
   const [enterShape, setEnterShape] = useState<EnterShapeId>("");
   const [shapeHelpOpen, setShapeHelpOpen] = useState(false);
   const [orderReference, setOrderReference] = useState("");
+  // Aan zodra iemand een aanvraag wil doen zonder ordernummer: dan licht het
+  // veld op in plaats van dat er een melding onderaan verschijnt.
+  const [orderMissing, setOrderMissing] = useState(false);
   // Eén order kan meerdere laptops zijn. Eén is verreweg het meest voorkomend,
   // dus dat blijft de stand waar niemand iets aan hoeft te doen.
   const [quantity, setQuantity] = useState(1);
@@ -301,6 +306,7 @@ export function EmployeeWorkspace({
     setModelQuery("");
     setChosenModel(null);
     setOrderReference("");
+    setOrderMissing(false);
     setQuantity(1);
     setConfirmed(false);
     if (!keepMessage) setAdviceMessage(null);
@@ -326,12 +332,15 @@ export function EmployeeWorkspace({
     return matched ? layoutWithCountry(matched.item.layout, matched.item.sku) : targetLayout;
   }
 
+  /**
+   * Het ordernummer is verplicht zodra Noviply erbij komt. Dat leverde eerst
+   * een foutmelding onderaan op, terwijl het veld ergens anders stond. Nu
+   * springt het veld zelf aan en krijgt het de aandacht — invullen in plaats
+   * van eerst lezen wat er mis is.
+   */
   function needsOrderNumber() {
     if (orderReference.trim()) return false;
-    setAdviceMessage({
-      tone: "warn",
-      text: "Vul eerst het ordernummer in — zonder dat weet Noviply niet welke order dit is.",
-    });
+    setOrderMissing(true);
     requestAnimationFrame(() => orderInputRef.current?.focus());
     return true;
   }
@@ -784,6 +793,10 @@ export function EmployeeWorkspace({
                     <span className="method-dot" aria-hidden="true" />
                     {methodLabel(effectiveMethod)}
                   </h2>
+                  {/* De toelichting op de methode is weggelaten: die legt uit
+                      wát het is, en dat weet de werkvloer al. Wat blijft is
+                      welke laptop en welke taal — waar je op kunt nakijken of
+                      je de juiste laptop in je handen hebt. */}
                   <p className="method-tier">
                     <span className="method-stars" aria-hidden="true">
                       {methodStars(effectiveMethod)}
@@ -791,12 +804,7 @@ export function EmployeeWorkspace({
                     <span className="sr-only">
                       Niveau {methodProfile(effectiveMethod).tier} van 4.
                     </span>
-                    {methodProfile(effectiveMethod).note}
-                  </p>
-                  <p>
                     {model} · {matched ? layoutWithCountry(matched.item.layout, matched.item.sku) : targetLayout}
-                    {methodProfile(effectiveMethod).supplier
-                      && ` · via ${methodProfile(effectiveMethod).supplier}`}
                   </p>
                 </div>
                 {usesSheet && storageNumber !== null && (
@@ -822,11 +830,7 @@ export function EmployeeWorkspace({
                       ? "Je hebt gemeld dat de toetsenbordsprint niet gaat"
                       : `De toetsenbordsprinter kan ${targetLayout} niet voor dit model`}
                   </b>
-                  <p>
-                    Deze laptop hoorde een toetsenbordsprint te krijgen, maar dat gaat
-                    niet voor {model}. Hij gaat daarom met een Noviply Premium Sticker,
-                    en die moet Noviply nog printen.
-                  </p>
+                  <p>Hij gaat met een premiumsticker; die moet Noviply printen.</p>
                   {printScope.layouts.length > 0 && (
                     <p className="fallback-detail">
                       Voor dit model kunnen zij wel: {printScope.layouts.join(", ")}.
@@ -859,8 +863,8 @@ export function EmployeeWorkspace({
                       <b>Welke datum staat op de pakbon?</b>
                       <p>
                         {nextRun
-                          ? `Staat daar vandaag (${todayLabel}), dan is de order van na de vorige ronde en komt het vel vanzelf mee om ${nextRun.label}. Dan hoef je niets aan te vragen.`
-                          : `Beide printrondes van vandaag zijn geweest, dus vandaag komt er niets meer mee. Deze moet je aanvragen.`}
+                          ? `Vandaag? Dan komt het vel om ${nextRun.label} vanzelf mee.`
+                          : "Beide rondes zijn geweest — vandaag komt er niets meer mee."}
                       </p>
                       <div className="print-ready-choice">
                         {nextRun && (
@@ -892,8 +896,8 @@ export function EmployeeWorkspace({
                     </>
                   ) : (
                     <>
-                      <b>Ligt deze sticker al klaar?</b>
-                      <p>De buitenlandse orders worden in twee vaste rondes automatisch voorgeprint.</p>
+                      <b>Ligt de sticker al klaar?</b>
+                      <p>Buitenlandse orders worden in twee vaste rondes voorgeprint.</p>
                       <div className="print-ready-choice">
                         <button
                           type="button"
@@ -903,7 +907,7 @@ export function EmployeeWorkspace({
                             text: "Pak de voorgeprinte sticker uit de klaargelegde stapel en breng hem in één keer aan.",
                           })}
                         >
-                          Ja, ligt klaar
+                          Ja — pak hem uit de stapel
                         </button>
                         <button
                           type="button"
@@ -916,7 +920,7 @@ export function EmployeeWorkspace({
                             setAskingSlipDate(true);
                           }}
                         >
-                          {quantity === 1 ? "Nee, ligt er niet" : `Nee, ${quantity} liggen er niet`}
+                          Nee — moet nog geprint
                         </button>
                       </div>
                     </>
@@ -959,26 +963,30 @@ export function EmployeeWorkspace({
                 <p className={adviceMessage.tone === "ok" ? "answer-done" : "answer-warning"}>{adviceMessage.text}</p>
               )}
 
-              <div className="answer-finish">
-                <label className="answer-confirm">
-                  <input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />
-                  <span>
-                    {usesSheet && matched
-                      ? `Het vel uit hangmap ${storageNumber} klopt met ${matched.item.sku} en ${matched.variant}.`
-                      : "Ik heb dit uitgevoerd."}
-                  </span>
+              {/* Dit zijn de twee dingen die de medewerker zelf invult, dus
+                  staan ze groot en vooraan. Ze stonden in kleine letters naast
+                  een aanvinkvakje, en juist daar ging het mis: een aanvraag
+                  zonder ordernummer liep op een foutmelding stuk. */}
+              <div className="answer-input-row">
+                <label className={`answer-order${orderMissing ? " needs" : ""}`}>
+                  <span>Ordernummer</span>
+                  <input
+                    ref={orderInputRef}
+                    value={orderReference}
+                    inputMode="numeric"
+                    onChange={(event) => { setOrderReference(event.target.value); setOrderMissing(false); }}
+                    placeholder="1859"
+                  />
+                  {orderMissing && <b>Vul dit in — Noviply weet anders niet welke order dit is</b>}
                 </label>
-                <label className="answer-order">
-                  <span>Ordernummer (mag leeg)</span>
-                  <input ref={orderInputRef} value={orderReference} onChange={(event) => setOrderReference(event.target.value)} placeholder="1859" />
-                </label>
+
                 {/* Eén order kan meerdere laptops zijn. Bijna altijd één, dus
                     daar hoeft niemand iets voor te doen — maar staan er drie
                     dezelfde op de kar, dan is dit één handeling in plaats van
                     drie, en weet Noviply dat het om drie vellen gaat. */}
                 {(usesSheet || effectiveMethod === "printed_sticker") && (
                   <div className="answer-quantity">
-                    <span>Hoeveel laptops?</span>
+                    <span>Aantal laptops</span>
                     <div className="quantity-stepper">
                       <button
                         type="button"
@@ -1012,9 +1020,26 @@ export function EmployeeWorkspace({
                 )}
               </div>
 
+              {/* Tijdens de pakbonvraag zijn die twee knoppen de handeling. Een
+                  vinkje en een "Klaar" eronder is dan niet alleen ruis: je kunt
+                  hem afmelden zonder ooit iets aan te vragen. */}
+              {!askingSlipDate && (
+              <label className={`answer-confirm${confirmed ? " on" : ""}`}>
+                <input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />
+                <span>
+                  {usesSheet && matched
+                    ? `Vel uit hangmap ${storageNumber} klopt: ${matched.item.sku} · ${matched.variant}`
+                    : "Ik heb dit gedaan"}
+                </span>
+              </label>
+              )}
+
+              {!askingSlipDate && (
               <div className="answer-actions">
                 <button className="primary-button" disabled={!confirmed} onClick={bookDone}>
-                  Gedaan{usesSheet ? (quantity === 1 ? " — boek vel af" : ` — boek ${quantity} vellen af`) : ""}
+                  {usesSheet
+                    ? (quantity === 1 ? "Vel afboeken" : `${quantity} vellen afboeken`)
+                    : "Klaar"}
                 </button>
                 {usesSheet && matched && (
                   <button className="danger-ghost-button" onClick={() => setIssueOpen((open) => !open)}>
@@ -1023,6 +1048,7 @@ export function EmployeeWorkspace({
                 )}
                 <button className="secondary-button" onClick={() => resetAdvice()}>Volgende laptop</button>
               </div>
+              )}
 
               {issueOpen && matched && (
                 <div className="answer-issue">

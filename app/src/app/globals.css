@@ -1569,18 +1569,45 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 .answer-warning { margin: 0; padding: 14px 16px; border-radius: 12px; background: var(--warn-soft); border: 1px solid color-mix(in srgb, var(--warn) 30%, transparent); color: var(--text); font-size: 15px; }
 .answer-done { margin: 0; padding: 14px 16px; border-radius: 12px; background: var(--ok-soft); border: 1px solid color-mix(in srgb, var(--ok) 30%, transparent); color: var(--text); font-size: 15px; font-weight: 560; }
 
-.answer-finish { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+/* Het ordernummer en het aantal zijn het enige wat de medewerker zelf invult.
+   Die stonden in kleine letters naast een aanvinkvakje; nu staan ze vooraan en
+   op maat om met een werkhandschoen te raken. */
+.answer-input-row { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end; }
+.answer-order { display: grid; gap: 6px; flex: 1 1 260px; }
+.answer-order > span,
+.answer-quantity > span {
+  color: var(--text-2); font-size: 12px; font-weight: 700;
+  letter-spacing: .05em; text-transform: uppercase;
+}
+.answer-order input {
+  min-height: 62px; padding: 0 18px; border: 1px solid var(--line);
+  border-radius: 12px; background: var(--surface); color: var(--text);
+  font-size: 26px; font-weight: 700; letter-spacing: .01em;
+}
+/* Aanvragen zonder ordernummer kan niet. Dat was een melding onderaan het
+   scherm terwijl het veld ergens anders stond; nu springt het veld zelf aan. */
+.answer-order.needs input { border-color: var(--warn); background: var(--warn-soft); }
+.answer-order.needs > b {
+  color: var(--warn); font-size: 12.5px; font-weight: 700;
+}
+.answer-quantity { display: grid; gap: 6px; flex: 0 0 auto; }
+.answer-quantity .quantity-stepper { gap: 8px; }
+.answer-quantity .quantity-stepper button { width: 62px; height: 62px; border-radius: 12px; font-size: 26px; }
+.answer-quantity .quantity-stepper input {
+  width: 88px; min-height: 62px; border: 1px solid var(--line); border-radius: 12px;
+  background: var(--surface); font-size: 26px; font-weight: 700;
+}
+
+/* Een vinkje van veertien pixels is met werkhandschoenen niet te raken; de
+   hele regel is de schakelaar. */
 .answer-confirm {
-  flex: 1 1 320px; display: flex; align-items: center; gap: 13px;
-  min-height: 62px; padding: 12px 17px; border-radius: 12px;
+  display: flex; align-items: center; gap: 15px;
+  min-height: 70px; padding: 12px 20px; border-radius: 12px;
   border: 1px solid var(--line); background: var(--surface); cursor: pointer;
 }
-.answer-confirm input { width: 26px; height: 26px; flex: 0 0 auto; accent-color: var(--ok); }
-.answer-confirm span { color: var(--text); font-size: 15px; font-weight: 550; }
-.answer-confirm:has(input:checked) { border-color: color-mix(in srgb, var(--ok) 45%, transparent); background: var(--ok-soft); }
-.answer-order { display: grid; gap: 6px; flex: 0 0 190px; }
-.answer-order span { color: var(--muted); font-size: 11.5px; font-weight: 640; text-transform: uppercase; letter-spacing: .04em; }
-.answer-order input { min-height: 46px; padding: 0 13px; border: 1px solid var(--line); border-radius: 11px; background: var(--surface); color: var(--text); font-size: 16px; }
+.answer-confirm input { width: 30px; height: 30px; flex: 0 0 auto; accent-color: var(--ok); }
+.answer-confirm span { color: var(--text); font-size: 16px; font-weight: 600; }
+.answer-confirm.on { border-color: color-mix(in srgb, var(--ok) 45%, transparent); background: var(--ok-soft); }
 
 .answer-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 .answer-actions .primary-button { min-height: 60px; padding: 0 30px; font-size: 17px; }
