@@ -2823,3 +2823,60 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 }
 .policy-fallback select:disabled { opacity: .55; }
 .policy-footnote { margin: 14px 0 0; font-size: 12px; color: var(--text-3); }
+
+/* Het Enter-gedeelte als silhouet op de keuzeknop: de vorm is waar het om
+   gaat, en die is beter te tekenen dan uit een foto van een heel toetsenbord
+   te halen. De volledige foto's staan achter het i-knopje. */
+.enter-glyph { display: block; margin-bottom: 4px; }
+.enter-glyph-neighbour { fill: none; stroke: var(--line); stroke-width: 1.4; }
+.enter-glyph-key { fill: var(--signal-soft); stroke: var(--text-2); stroke-width: 1.6; }
+.enter-glyph-arrow { fill: none; stroke: var(--text-2); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.worker-variants button.active .enter-glyph-key { fill: var(--signal); stroke: var(--signal); }
+.worker-variants button.active .enter-glyph-arrow { stroke: var(--signal-ink); }
+.worker-variants button.active .enter-glyph-neighbour { stroke: var(--signal-line); }
+
+/* De modelsuggesties horen tegen het veld waarin je typt, niet onderaan het
+   formulier. Zwevend, zodat de rest van de vragen niet verspringt. */
+.worker-model-field { position: relative; }
+.model-suggestions {
+  position: absolute;
+  z-index: 30;
+  top: 100%;
+  left: 0;
+  right: 0;
+  display: grid;
+  gap: 5px;
+  max-height: 320px;
+  margin-top: 6px;
+  overflow-y: auto;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--raised);
+  box-shadow: var(--shadow-pop);
+}
+.model-suggestions > strong {
+  padding: 0 2px 4px;
+  color: var(--text-2);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.model-suggestions button {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 11px;
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+}
+.model-suggestions button:hover { border-color: var(--signal); background: var(--signal-soft); }
+.model-suggestions button small { color: var(--muted); font-size: 11.5px; white-space: nowrap; }
+/* Een vel in de hangmap scheelt een gang naar Noviply; dat mag opvallen. */
+.model-suggestions button.has-sheet small { color: var(--ok); font-weight: 700; }
+.model-unknown { margin: 6px 0 0; color: var(--warn); font-size: 12px; }

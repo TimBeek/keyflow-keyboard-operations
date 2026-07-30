@@ -50,6 +50,7 @@ import {
 } from "@/domain/print-request-status";
 import type { ConversionLogInput } from "@/domain/conversion-log";
 import { directPrintScopeFor } from "@/domain/direct-print-scope";
+import { EnterShapeGlyph } from "@/components/enter-shape-glyph";
 import { nextPrintRun, type PrintRun } from "@/domain/print-runs";
 import {
   groupRunWaitlist,
@@ -92,7 +93,9 @@ type Tab = "advice" | "receive" | "requests";
 
 /**
  * De Enter-toets verraadt de entervorm, en die bepaalt uit welke hangmap het vel
- * komt. "Weet ik niet" blijft mogelijk: dan zoekt KeyFlow gewoon op model.
+ * komt. De lege waarde is de beginstand — nog niets gekozen — en niet meer een
+ * knop: "weet ik niet" leverde een advies op dat de vorm niet meewoog, en dan
+ * kan het verkeerde vel uit de kast komen.
  */
 type EnterShapeId = "" | "E1" | "E2";
 
@@ -112,7 +115,6 @@ const enterShapeChoices: { id: EnterShapeId; label: string; detail: string; imag
     detail: "Hoge, omgekeerde L",
     image: `${assetBase}/keyboard-reference-e2-dell-v3.png`,
   },
-  { id: "", label: "Weet ik niet", detail: "Zoek alleen op model" },
 ];
 
 type Props = {
@@ -210,6 +212,9 @@ export function EmployeeWorkspace({
     [modelChoices, modelQuery],
   );
   const model = chosenModel ?? (modelMatches.length === 1 ? modelMatches[0].name : "");
+  // Openstaan doet hij alleen als er echt iets te kiezen valt: bij één treffer
+  // is het model al gekozen, en zonder treffers is er niets om uit te kiezen.
+  const pickerOpen = chosenModel === null && modelMatches.length > 1;
 
   const saleBand = getSaleValueBand(saleBandId);
   const saleValue = policyValueForBand(saleBand, policy.thresholdEur);
@@ -612,16 +617,48 @@ export function EmployeeWorkspace({
       {tab === "advice" && (
         <section className="worker-panel">
           <div className="worker-fields">
-            <label>
+            {/* De suggesties horen hier, tegen het veld waarin je typt. Ze
+                stonden onder alle vier de velden, dus je typte bovenaan en het
+                antwoord verscheen onder de prijsknoppen. */}
+            <label className="worker-model-field">
               <span>1 · Welke laptop?</span>
               <input
                 ref={modelInputRef}
                 value={modelQuery}
                 autoComplete="off"
+                role="combobox"
+                aria-expanded={pickerOpen}
+                aria-controls="model-suggesties"
                 onChange={(event) => { setModelQuery(event.target.value); setChosenModel(null); setAdviceMessage(null); }}
                 placeholder="Typ modelnummer, bijvoorbeeld 5420"
                 autoFocus
               />
+              {pickerOpen && (
+                <div className="model-suggestions" id="model-suggesties" role="listbox">
+                  <strong>{modelMatches.length} modellen — welke bedoel je?</strong>
+                  {modelMatches.map((candidate) => (
+                    <button
+                      key={candidate.name}
+                      type="button"
+                      role="option"
+                      aria-selected={false}
+                      className={candidate.source === "hangmap" ? "has-sheet" : ""}
+                      onClick={() => { setChosenModel(candidate.name); setModelQuery(candidate.name); }}
+                    >
+                      <span>{candidate.name}</span>
+                      {/* Ligt er een vel klaar, of komt dit op een andere
+                          oplossing uit? Dat scheelt de medewerker een gang. */}
+                      <small>{candidate.source === "hangmap" ? "vel in de hangmap" : "geen vel"}</small>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {modelMatches.length === 0 && modelQuery.trim().length > 1 && (
+                <p className="model-unknown">
+                  Dit model kennen we niet. Controleer het nummer op de onderkant
+                  van de laptop, of vraag je teamleider.
+                </p>
+              )}
             </label>
 
             <label>
@@ -653,6 +690,7 @@ export function EmployeeWorkspace({
                     className={choice.id === enterShape ? "active" : ""}
                     onClick={() => { setEnterShape(choice.id); setConfirmed(false); }}
                   >
+                    {choice.id !== "" && <EnterShapeGlyph shape={choice.id} />}
                     <strong>{choice.label}</strong>
                     <small>{choice.detail}</small>
                   </button>
@@ -729,32 +767,11 @@ export function EmployeeWorkspace({
 
           {!hasAnswer && (
             <div className="worker-waiting">
-              {modelMatches.length > 1 ? (
-                <>
-                  <strong>Welke bedoel je?</strong>
-                  <div className="worker-choices">
-                    {modelMatches.map((candidate) => (
-                      <button
-                        key={candidate.name}
-                        className={candidate.source === "hangmap" ? "has-sheet" : ""}
-                        onClick={() => { setChosenModel(candidate.name); setModelQuery(candidate.name); }}
-                      >
-                        <span>{candidate.name}</span>
-                        {/* Ligt er een vel klaar, of komt dit op een andere
-                            oplossing uit? Dat scheelt de medewerker een gang. */}
-                        <small>{candidate.source === "hangmap" ? "vel in de hangmap" : "geen vel"}</small>
-                      </button>
-                    ))}
-                  </div>
-                </>
-              ) : modelMatches.length === 0 && modelQuery.trim().length > 1 ? (
-                <>
-                  <strong>Dit model kennen we niet.</strong>
-                  <span>Controleer het nummer op de onderkant van de laptop, of vraag je teamleider.</span>
-                </>
-              ) : (
-                <span>Typ hierboven het modelnummer. Het antwoord verschijnt vanzelf.</span>
-              )}
+              <span>
+                {pickerOpen
+                  ? "Kies hierboven welk model je bedoelt."
+                  : "Typ hierboven het modelnummer. Het antwoord verschijnt vanzelf."}
+              </span>
             </div>
           )}
 
