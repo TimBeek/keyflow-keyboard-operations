@@ -42,6 +42,11 @@ export type PrintBatch = {
   uploadedBy: string;
   /** Wanneer Noviply hem heeft geopend; leeg = nog niet gezien. */
   seenAt: string | null;
+  /**
+   * Uit de rondelijst gehaald. De regels blijven bestaan en blijven de
+   * geschiedenis vullen: een ronde mag uit de lijst, niet uit de administratie.
+   */
+  deletedAt: string | null;
   rows: PrintBatchRow[];
 };
 
@@ -183,17 +188,22 @@ export function batchIsDone(batch: PrintBatch) {
   return batch.rows.length > 0 && batch.rows.every((row) => row.status !== "open");
 }
 
+/** Wat er in de rondelijst hoort te staan; verwijderde rondes niet. */
+export function listedBatches(batches: PrintBatch[]) {
+  return batches.filter((batch) => batch.deletedAt === null);
+}
+
 export function activeBatches(batches: PrintBatch[]) {
-  return batches.filter((batch) => !batchIsDone(batch));
+  return listedBatches(batches).filter((batch) => !batchIsDone(batch));
 }
 
 export function completedBatches(batches: PrintBatch[]) {
-  return batches.filter(batchIsDone);
+  return listedBatches(batches).filter(batchIsDone);
 }
 
 /** Rondes die Noviply nog niet heeft geopend; daar hoort een melding bij. */
 export function unseenBatches(batches: PrintBatch[]) {
-  return batches.filter((batch) => batch.seenAt === null);
+  return listedBatches(batches).filter((batch) => batch.seenAt === null);
 }
 
 /**

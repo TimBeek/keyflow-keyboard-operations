@@ -55,6 +55,7 @@ type Props = {
   onSettleBatchRow: (rowId: string, status: "printed" | "not_printable", note: string) => Promise<void>;
   onSettleBatch: (batchId: string) => Promise<void>;
   onBatchSeen: (batchId: string) => void;
+  onRemoveBatch: (batchId: string) => Promise<void>;
   printRequests: PrintRequestRecord[];
   quantities: Record<string, number>;
   transactions: InventoryTransactionEntry[];
@@ -92,6 +93,9 @@ function formatMoment(value: string) {
   });
 }
 
+/** Bestanden uit /public krijgen het basispad van een projectsite niet vanzelf. */
+const handbookUrl = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/docs/keyflow-handbook-noviply.pdf`;
+
 export function NoviplyWorkspace({
   tab,
   printBatches,
@@ -99,6 +103,7 @@ export function NoviplyWorkspace({
   onSettleBatchRow,
   onSettleBatch,
   onBatchSeen,
+  onRemoveBatch,
   printRequests,
   quantities,
   transactions,
@@ -264,6 +269,23 @@ export function NoviplyWorkspace({
         </div>
       )}
 
+      {/* Het handboek altijd binnen bereik: wie iets maar één keer per week doet,
+          weet het niet uit zijn hoofd. Opent in een nieuw tabblad zodat het werk
+          op dit scherm blijft staan. */}
+      <a className="handbook-link" href={handbookUrl} target="_blank" rel="noreferrer">
+        <span className="handbook-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 5h7a2 2 0 0 1 2 2v13a2 2 0 0 0-2-2H4Z" />
+            <path d="M20 5h-7a2 2 0 0 0-2 2v13a2 2 0 0 1 2-2h7Z" />
+          </svg>
+        </span>
+        <span>
+          <b>Handbook</b>
+          <small>How this screen works, in five pages</small>
+        </span>
+        <span className="handbook-go" aria-hidden="true">PDF</span>
+      </a>
+
       {tab === "runs" && (
         <PrintBatchPanel
           batches={printBatches}
@@ -271,6 +293,7 @@ export function NoviplyWorkspace({
           onSettleRow={onSettleBatchRow}
           onSettleBatch={onSettleBatch}
           onSeen={onBatchSeen}
+          onRemove={onRemoveBatch}
           onDownload={(batch) => {
             downloadCsv(
               createPrintBatchCsv(batch.rows),

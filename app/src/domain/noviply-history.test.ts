@@ -41,6 +41,7 @@ function batch(): PrintBatch {
     fileName: "batch-2-30-07-2026.xlsx",
     uploadedAt: "2026-07-30T10:28:00.000Z",
     uploadedBy: "Tim Beek",
+    deletedAt: null,
     seenAt: "2026-07-30T10:30:00.000Z",
     rows: [
       {
@@ -98,6 +99,19 @@ describe("noviplyHistory", () => {
     const geblokkeerd = noviplyHistory([], [batch()]).find((e) => e.outcome === "not_printable");
 
     expect(geblokkeerd?.note).toBe("Model niet in onze lijst");
+  });
+
+  it("houdt de regels van een ronde die uit de lijst is gehaald", () => {
+    // Dit was de fout: de geschiedenis werd afgeleid uit de rondelijst, dus
+    // verdween een ronde uit de lijst, dan verdwenen de ordernummers en
+    // specificaties van werk dat wél was gedaan mee.
+    const uitLijst = { ...batch(), deletedAt: "2026-08-01T09:00:00.000Z" };
+    const geschiedenis = noviplyHistory([], [uitLijst]);
+
+    expect(geschiedenis).toHaveLength(2);
+    expect(geschiedenis.map((entry) => entry.orderReference))
+      .toEqual(["000099288", "000099263"]);
+    expect(geschiedenis[1].sourceLabel).toBe("Batch 2 · 30-07");
   });
 
   it("valt terug op de landcode als de taal onbekend is", () => {

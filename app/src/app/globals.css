@@ -3146,3 +3146,51 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 .history-count { margin: 0 0 12px; color: var(--text-3); font-size: 12.5px; }
 .from-run { color: var(--signal); font-weight: 700; font-size: 12.5px; }
 .from-request { color: var(--text-3); font-size: 12.5px; }
+
+/* Een ronde uit de lijst halen vraagt een bevestiging, met erbij dat de regels
+   in de geschiedenis blijven staan. Anders lijkt het op weggooien. */
+.batch-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px;
+  border: 1px solid color-mix(in srgb, var(--crit) 40%, transparent);
+  border-radius: 11px;
+  background: var(--crit-soft);
+  flex-wrap: wrap;
+}
+.batch-confirm b { color: var(--text); font-size: 13px; }
+.batch-confirm small { color: var(--text-2); font-size: 12px; }
+
+/* Het handboek staat in elk Noviply-scherm binnen bereik: wie iets één keer per
+   week doet, weet het niet uit zijn hoofd. Rustig van vorm — het is naslag, geen
+   handeling, en mag de knoppen niet beconcurreren. */
+.handbook-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 15px;
+  margin-bottom: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  text-decoration: none;
+}
+.handbook-link:hover { border-color: var(--signal); background: var(--signal-soft); }
+.handbook-link b { display: block; font-size: 13.5px; }
+.handbook-link small { color: var(--text-2); font-size: 12px; }
+.handbook-icon { flex: none; color: var(--text-2); display: grid; place-items: center; }
+.handbook-link:hover .handbook-icon { color: var(--signal); }
+.handbook-go {
+  margin-left: auto;
+  flex: none;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--text-3);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: .06em;
+}

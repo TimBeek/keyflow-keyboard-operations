@@ -97,6 +97,7 @@ import {
   settleBatchRow,
   settleWholePrintBatch,
   markPrintBatchSeen,
+  removePrintBatch,
   settleRunWaitlistEntry,
   acknowledgePrintReminder,
   postVerificationReport,
@@ -1505,6 +1506,16 @@ export function Dashboard({
     }
   }
 
+  async function removeBatch(batchId: string) {
+    try {
+      await removePrintBatch(batchId);
+      await refreshSharedState();
+      setLastAction("Ronde uit de lijst gehaald; de regels blijven in de geschiedenis staan.");
+    } catch (error) {
+      setLastAction(error instanceof Error ? error.message : "Dat is niet gelukt.");
+    }
+  }
+
   function batchSeen(batchId: string) {
     // Openen is gezien; de melding mag weg zonder dat het scherm wacht.
     void markPrintBatchSeen(batchId)
@@ -1962,6 +1973,7 @@ export function Dashboard({
             onSettleBatchRow={settleBatchRowRecord}
             onSettleBatch={settleBatch}
             onBatchSeen={batchSeen}
+            onRemoveBatch={removeBatch}
           />
         )}
 

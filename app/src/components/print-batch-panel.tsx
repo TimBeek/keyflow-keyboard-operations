@@ -29,6 +29,7 @@ type Props = {
   onSettleRow: (rowId: string, status: "printed" | "not_printable", note: string) => Promise<void>;
   onSettleBatch: (batchId: string) => Promise<void>;
   onSeen: (batchId: string) => void;
+  onRemove: (batchId: string) => Promise<void>;
   onDownload: (batch: PrintBatch) => void;
 };
 
@@ -46,6 +47,7 @@ export function PrintBatchPanel({
   onSettleRow,
   onSettleBatch,
   onSeen,
+  onRemove,
   onDownload,
 }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -56,6 +58,9 @@ export function PrintBatchPanel({
   // Welke ronde openstaat. De nieuwste die nog loopt, tenzij iemand kiest.
   const [openId, setOpenId] = useState<string | null>(null);
   const [archiveOpen, setArchiveOpen] = useState(false);
+  // Uit de lijst halen vraagt een bevestiging: het is zelden wat je bedoelt, en
+  // de knop staat naast knoppen die je wel vaak gebruikt.
+  const [confirmRemove, setConfirmRemove] = useState("");
 
   /**
    * Een voltooide ronde hoort niet meer tussen het werk te staan. Weggooien
@@ -203,6 +208,42 @@ export function PrintBatchPanel({
                     >
                       All {openBatchRows(shown)} printed
                     </button>
+                  )}
+                  {/* Alleen als er niets meer openstaat: een ronde waar nog werk
+                      in zit hoort niet uit de lijst te kunnen verdwijnen. */}
+                  {batchIsDone(shown) && (
+                    confirmRemove === shown.id ? (
+                      <span className="batch-confirm">
+                        <b>Remove this run from the list?</b>
+                        <small>The lines stay in the history.</small>
+                        <button
+                          type="button"
+                          className="danger-ghost-button"
+                          onClick={() => {
+                            setConfirmRemove("");
+                            setOpenId(null);
+                            void onRemove(shown.id);
+                          }}
+                        >
+                          Remove
+                        </button>
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          onClick={() => setConfirmRemove("")}
+                        >
+                          Keep
+                        </button>
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="secondary-button"
+                        onClick={() => setConfirmRemove(shown.id)}
+                      >
+                        Remove from list
+                      </button>
+                    )
                   )}
                 </div>
               </div>

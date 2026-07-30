@@ -353,6 +353,17 @@ export function settleWholePrintBatch(batchId: string) {
   });
 }
 
+/**
+ * Uit de lijst halen, niet wissen: de afgehandelde regels blijven de
+ * geschiedenis vullen. Het werk ís gedaan, dus dat hoort te blijven staan.
+ */
+export function removePrintBatch(batchId: string) {
+  return request<{ removed: true }>("/api/print-batches", {
+    method: "PATCH",
+    body: JSON.stringify({ action: "remove", batchId }),
+  });
+}
+
 export function markPrintBatchSeen(batchId: string) {
   return request<{ seen: true }>("/api/print-batches", {
     method: "PATCH",

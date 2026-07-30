@@ -5,6 +5,7 @@ import {
   importPrintBatch,
   listPrintBatches,
   markBatchSeen,
+  removePrintBatch,
   settleBatchRow,
   settleWholeBatch,
 } from "@/server/print-batch-service";
@@ -65,6 +66,9 @@ export async function PATCH(request: Request) {
 
     if (body.action === "seen") {
       return Response.json(await markBatchSeen(String(body.batchId ?? ""), actorId));
+    }
+    if (body.action === "remove") {
+      return Response.json(await removePrintBatch(String(body.batchId ?? ""), actorId));
     }
     if (body.action === "settleBatch") {
       return Response.json(await settleWholeBatch(String(body.batchId ?? ""), actorId));

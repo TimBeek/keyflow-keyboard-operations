@@ -4,6 +4,7 @@ import {
   activeBatches,
   batchIsDone,
   completedBatches,
+  listedBatches,
   batchNumberFromFileName,
   batchRowForOrder,
   batchRunDate,
@@ -135,6 +136,7 @@ function batch(overrides: Partial<PrintBatch> = {}): PrintBatch {
     fileName: "batch-2-30-07-2026.xlsx",
     uploadedAt: "2026-07-30T10:28:00.000Z",
     uploadedBy: "Tim Beek",
+    deletedAt: null,
     seenAt: null,
     rows: [
       {
@@ -195,6 +197,23 @@ describe("voltooid of niet", () => {
   it("noemt een ronde zonder regels niet voltooid", () => {
     // Anders zou een leeg geval stilletjes als afgehandeld gelden.
     expect(batchIsDone(batch({ rows: [] }))).toBe(false);
+  });
+});
+
+describe("uit de lijst gehaald", () => {
+  it("verdwijnt uit de rondelijst", () => {
+    const uitLijst = batch({ id: "weg", deletedAt: "2026-08-01T09:00:00.000Z" });
+
+    expect(listedBatches([batch(), uitLijst]).map((b) => b.id)).toEqual(["b1"]);
+    expect(activeBatches([uitLijst])).toHaveLength(0);
+    expect(completedBatches([uitLijst])).toHaveLength(0);
+  });
+
+  it("levert ook geen melding meer op", () => {
+    // Een ronde die niet meer in de lijst staat hoort niet om aandacht te vragen.
+    const uitLijst = batch({ deletedAt: "2026-08-01T09:00:00.000Z", seenAt: null });
+
+    expect(unseenBatches([uitLijst])).toHaveLength(0);
   });
 });
 

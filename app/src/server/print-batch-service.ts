@@ -91,6 +91,7 @@ type BatchRow = {
   uploaded_at: Date;
   uploaded_by_name: string;
   seen_at: Date | null;
+  deleted_at: Date | null;
 };
 
 type LineRow = {
@@ -132,11 +133,16 @@ function dayKey(date: Date) {
   return `${date.getUTCFullYear()}-${maand}-${dag}`;
 }
 
-export async function listPrintBatches(limit = 20): Promise<PrintBatch[]> {
+/**
+ * Ook de verwijderde rondes komen mee: die staan niet meer in de rondelijst,
+ * maar hun afgehandelde regels vullen nog wel de geschiedenis. Ruim genoeg om
+ * maanden terug te kunnen kijken.
+ */
+export async function listPrintBatches(limit = 400): Promise<PrintBatch[]> {
   const sql = database();
   const batches = await sql<BatchRow[]>`
     select b.id, b.run_date, b.batch_number, b.file_name, b.uploaded_at, b.seen_at,
-           u.display_name as uploaded_by_name
+           b.deleted_at, u.display_name as uploaded_by_name
     from print_batches b
     join users u on u.id = b.uploaded_by
     order by b.run_date desc, b.batch_number desc
@@ -162,6 +168,7 @@ export async function listPrintBatches(limit = 20): Promise<PrintBatch[]> {
     uploadedAt: batch.uploaded_at.toISOString(),
     uploadedBy: batch.uploaded_by_name,
     seenAt: batch.seen_at ? batch.seen_at.toISOString() : null,
+    deletedAt: batch.deleted_at ? batch.deleted_at.toISOString() : null,
     rows: lines.filter((line) => line.batch_id === batch.id).map(toRow),
   }));
 }
@@ -191,9 +198,12 @@ export async function importPrintBatch(input: {
     await transaction`
       select pg_advisory_xact_lock(hashtextextended(${`batch:${parsed.runDate}:${number}`}, 0))
     `;
+    // Een ronde die uit de lijst is gehaald mag opnieuw ingelezen worden;
+    // anders kun je een per ongeluk verwijderde ronde nooit terugzetten.
     const [existing] = await transaction<{ id: string; source_sha256: string }[]>`
       select id, source_sha256 from print_batches
       where run_date = ${parsed.runDate} and batch_number = ${number}
+        and deleted_at is null
     `;
     if (existing) {
       return {
@@ -265,6 +275,24 @@ export async function settleWholeBatch(batchId: string, actorId: string) {
     returning id
   `;
   return { settled: rows.length };
+}
+
+/**
+ * Een ronde uit de lijst halen. Geen delete: de regels blijven bestaan en
+ * blijven de geschiedenis vullen, want het werk ís gedaan. Wat verdwijnt is
+ * alleen de plek in "Print runs".
+ */
+export async function removePrintBatch(batchId: string, actorId: string) {
+  await requirePermission(actorId, "print.fulfil");
+  const sql = database();
+  const [row] = await sql<{ id: string }[]>`
+    update print_batches
+    set deleted_at = now(), deleted_by = ${actorId}
+    where id = ${batchId} and deleted_at is null
+    returning id
+  `;
+  if (!row) throw new PrintBatchError("Deze ronde staat al niet meer in de lijst.");
+  return { removed: true };
 }
 
 /** Noviply heeft de ronde geopend; de melding mag weg. */
