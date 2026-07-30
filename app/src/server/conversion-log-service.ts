@@ -2,6 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { ConversionLogError } from "@/domain/conversion-log";
 import { requirePermission } from "./authorization-service";
+import type { TransactionSql } from "postgres";
 import { database } from "./database";
 import { databaseUuidSchema } from "./validation";
 
@@ -86,6 +87,30 @@ export async function listConversionLog(actorId: string, days = 190, limit = 500
     limit ${limit}
   `;
   return rows.map(toEntry);
+}
+
+/**
+ * De conversie stond op "wacht op print" zodra de werkvloer een vel aanvroeg.
+ * Zolang niemand die stand terugzette bleef hij daar staan, ook nadat Noviply
+ * het vel had geprint — en dan meldt de rapportage werk als onafgerond dat
+ * allang klaar is.
+ *
+ * Wordt gedraaid binnen de transactie die de aanvraag of de rondegregel
+ * afhandelt, zodat de twee nooit uiteen kunnen lopen.
+ */
+export async function markConversionsPrinted(
+  transaction: TransactionSql,
+  orderReference: string,
+) {
+  const reference = orderReference.trim();
+  if (!reference) return 0;
+  const rows = await transaction<{ id: string }[]>`
+    update conversion_log
+    set status = 'completed'
+    where order_reference = ${reference} and status = 'awaiting_print'
+    returning id
+  `;
+  return rows.length;
 }
 
 export async function logConversion(rawInput: LogConversionInput) {

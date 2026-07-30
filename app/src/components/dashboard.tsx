@@ -42,6 +42,11 @@ import {
 } from "@/domain/cycle-count";
 import { calculateInventoryMutation } from "@/domain/inventory";
 import { resupplyReady } from "@/domain/resupply";
+import {
+  attentionByKind,
+  attentionItems,
+  attentionKindLabel,
+} from "@/domain/attention";
 import type { RunWaitlistEntry, RunWaitlistInput } from "@/domain/run-waitlist";
 import { unseenBatches, type PrintBatch } from "@/domain/print-batch";
 import { dayKey } from "@/domain/reporting";
@@ -171,7 +176,8 @@ type IconName =
   | "lock"
   | "user"
   | "sun"
-  | "moon";
+  | "moon"
+  | "book";
 
 type ViewName =
   | "overview" | "movers" | "layoutgroups" | "reports" | "settings"
@@ -196,6 +202,7 @@ function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
     user: <><circle cx="12" cy="8" r="3.6"/><path d="M5 20a7 7 0 0 1 14 0"/></>,
     sun: <><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.5 1.5M17.6 17.6l1.5 1.5M19.1 4.9l-1.5 1.5M6.4 17.6l-1.5 1.5"/></>,
     moon: <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/>,
+    book: <><path d="M4 5h6a2 2 0 0 1 2 2v13a2 2 0 0 0-2-2H4Z"/><path d="M20 5h-6a2 2 0 0 0-2 2v13a2 2 0 0 1 2-2h6Z"/></>,
   };
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -477,11 +484,15 @@ export function Dashboard({
    * hoeft management niet te zien; een mislukte wel, want dan is er iets mis met
    * de hangmap, de koppeling of de bron.
    */
-  const reportedProblems = useMemo(
-    () => verificationReports
-      .filter((report) => report.outcome !== "passed")
-      .sort((left, right) => right.occurredAt.localeCompare(left.occurredAt)),
-    [verificationReports],
+  const attention = useMemo(
+    () => attentionItems({
+      verificationReports,
+      printRequests,
+      printBatches,
+      catalog: inventoryCatalog,
+      quantities: catalogQuantities,
+    }),
+    [verificationReports, printRequests, printBatches, catalogQuantities],
   );
   const awaitingPrintCount = printRequests.filter(
     (request) => request.status === "requested",
@@ -1808,6 +1819,7 @@ export function Dashboard({
               icon: "upload" as const,
             },
             { id: "orders" as const, label: "Print requests", icon: "orders" as const },
+            { id: "history" as const, label: "History", icon: "reports" as const },
             {
               id: "stock" as const,
               label: resupplyStarted ? "Stock running low" : "Stock",
@@ -1854,6 +1866,18 @@ export function Dashboard({
           )}
         </nav>
         <div className="sidebar-footer">
+          {/* Naslag hoort bij de navigatie, niet boven het werk: het is niets
+              wat je elke dag opent, en het nam een hele band in beslag. */}
+          {role === "noviply" && (
+            <a
+              className="nav-item"
+              href={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/docs/keyflow-handbook-noviply.pdf`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <Icon name="book" /><span>Handbook</span>
+            </a>
+          )}
           <button className="nav-item" onClick={() => role === "management" && setAccessOpen(true)}><Icon name="settings" /><span>{role === "management" ? "Toegangsbeheer" : "Hulp"}</span></button>
           <div className="profile">
             <div className="avatar">{actorInitials}</div>
@@ -1878,7 +1902,9 @@ export function Dashboard({
                     ? "Print request list"
                     : noviplyTab === "runs"
                       ? "Print runs"
-                      : resupplyStarted ? "Stock running low" : "Stock")
+                      : noviplyTab === "history"
+                        ? "History"
+                        : resupplyStarted ? "Stock running low" : "Stock")
                 : viewHeadings[activeView].title}</h1>
             <p>{role === "employee"
               ? "Eén duidelijke taak tegelijk, met automatisch methodeadvies."
@@ -1887,9 +1913,11 @@ export function Dashboard({
                     ? "Extra sticker sheets to print for today."
                     : noviplyTab === "runs"
                       ? "The two daily lists from the order system."
-                      : resupplyStarted
-                        ? "Folders that need resupplying."
-                        : "Everything in the cabinet, emptiest first.")
+                      : noviplyTab === "history"
+                        ? "Everything ticked off, with the time and who handled it."
+                        : resupplyStarted
+                          ? "Folders that need resupplying."
+                          : "Everything in the cabinet, emptiest first.")
                 : viewHeadings[activeView].subtitle}</p>
           </div>
           <div className="top-actions">
@@ -2050,49 +2078,47 @@ export function Dashboard({
         </section>
 
         <div className="content-grid">
-          {reportedProblems.length > 0 && (
+          {/* Problemen ontstonden op vier plekken en werden op vier plekken
+              bewaard: een vel dat niet paste hier, wat Noviply niet kon printen
+              in hun lijst, een lege hangmap alleen in de voorraad, en een
+              onbekende taalcode boven een printronde. Wie moest weten wat er
+              vandaag misloopt had vier schermen nodig. */}
+          {attention.length > 0 && (
             <section className="panel problems-panel">
               <div className="panel-heading">
                 <div>
-                  <h2>Gemeld door de werkvloer</h2>
-                  <p>Vellen die niet pasten. Hier moet iemand iets mee.</p>
+                  <h2>Aandacht nodig</h2>
+                  <p>Alles waar iemand iets mee moet, bij elkaar.</p>
                 </div>
-                <span className="problems-count">{reportedProblems.length}</span>
+                <span className="problems-count">{attention.length}</span>
               </div>
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr><th>Wanneer</th><th>Hangmap / model</th><th>Wat klopte niet</th><th>Gevolg</th></tr>
-                  </thead>
-                  <tbody>
-                    {reportedProblems.slice(0, 8).map((report) => (
-                      <tr key={report.id}>
-                        <td>
-                          <strong>{formatPersistenceTime(report.occurredAt)}</strong>
-                          <span>{report.actor}</span>
-                        </td>
-                        <td>
-                          <strong className="storage-number">Nr. {report.storageNumber}</strong>
-                          <span>{report.model} · {report.sku}</span>
-                        </td>
-                        <td>
-                          <strong>{stickerVerificationFailureLabel(report.failureReason)}</strong>
-                          <span>{report.targetLayout}{report.variant && ` · ${report.variant}`}</span>
-                        </td>
-                        <td>
-                          <span className={`status ${report.outcome === "scrapped" ? "critical" : "low"}`}>
-                            {report.outcome === "scrapped" ? "Vel afgeboekt" : "Niet gebruikt"}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {reportedProblems.length > 8 && (
-                  <p className="report-note">
-                    De acht meest recente staan hier; er zijn er {reportedProblems.length} in totaal.
-                  </p>
-                )}
+              <div className="attention-groups">
+                {[...attentionByKind(attention).entries()].map(([kind, items]) => (
+                  <div key={kind} className={`attention-group ${kind}`}>
+                    <h3>
+                      {attentionKindLabel[kind]}
+                      <b>{items.length}</b>
+                    </h3>
+                    <ul>
+                      {items.slice(0, 6).map((item) => (
+                        <li key={item.id}>
+                          <strong>{item.title}</strong>
+                          <span>{item.detail}</span>
+                          <small>
+                            {item.orderReference && `Order ${item.orderReference}`}
+                            {item.orderReference && item.occurredAt && " · "}
+                            {item.occurredAt && formatPersistenceTime(item.occurredAt)}
+                          </small>
+                        </li>
+                      ))}
+                    </ul>
+                    {items.length > 6 && (
+                      <p className="report-note">
+                        De zes meest recente staan hier; er zijn er {items.length}.
+                      </p>
+                    )}
+                  </div>
+                ))}
               </div>
             </section>
           )}

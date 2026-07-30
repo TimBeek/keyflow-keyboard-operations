@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { brandFromModel, PrintRequestError } from "@/domain/print-requests";
+import { markConversionsPrinted } from "./conversion-log-service";
 import { requirePermission } from "./authorization-service";
 import { database } from "./database";
 import { databaseUuidSchema } from "./validation";
@@ -178,6 +179,16 @@ export async function settlePrintRequestRecord(rawInput: SettlePrintRequestInput
           handled_by = ${input.actorId}
       where id = ${input.id}
     `;
+
+    // De conversie stond op "wacht op print" zodra de werkvloer hem aanvroeg.
+    // Nu het vel er is, is de laptop af. Bij "kan niet geprint" blijft hij
+    // wachten — want dan is hij dat ook.
+    if (input.status === "printed") {
+      const [aanvraag] = await transaction<{ order_reference: string }[]>`
+        select order_reference from print_requests where id = ${input.id}
+      `;
+      if (aanvraag) await markConversionsPrinted(transaction, aanvraag.order_reference);
+    }
 
     const [row] = await transaction<PrintRequestRow[]>`
       select ${transaction.unsafe(selectColumns)}

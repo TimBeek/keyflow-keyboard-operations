@@ -45,7 +45,7 @@ import {
   type PrinterCheckRecord,
 } from "@/domain/printer-check";
 
-export type NoviplyTab = "orders" | "stock" | "runs";
+export type NoviplyTab = "orders" | "stock" | "runs" | "history";
 
 type Props = {
   tab: NoviplyTab;
@@ -92,9 +92,6 @@ function formatMoment(value: string) {
     minute: "2-digit",
   });
 }
-
-/** Bestanden uit /public krijgen het basispad van een projectsite niet vanzelf. */
-const handbookUrl = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/docs/keyflow-handbook-noviply.pdf`;
 
 export function NoviplyWorkspace({
   tab,
@@ -223,7 +220,13 @@ export function NoviplyWorkspace({
 
   return (
     <div className="noviply-workspace">
+      {/* Vier kengetallen op elk scherm maakt van elk scherm een stapel. Ze
+          horen bij het werk dat nog moet gebeuren, niet bij de kast of bij
+          wat al is afgehandeld. */}
+      {tab !== "history" && (
       <div className="noviply-totals">
+        {(tab === "runs" || tab === "orders") && (
+        <>
         <article>
           <span>TO DO</span>
           <strong className={totals.open > 0 ? "attention" : ""}>{totals.open}</strong>
@@ -239,6 +242,10 @@ export function NoviplyWorkspace({
           <strong>{totals.notPrintable}</strong>
           <small>with a stated reason</small>
         </article>
+        </>
+        )}
+        {/* De kast hoort bij Stock, niet naast "wacht op printen". */}
+        {tab === "stock" && (
         <article>
           <span>{withKnownMinimum === 0 ? "EMPTY FOLDERS" : "RESUPPLY"}</span>
           <strong className={(withKnownMinimum === 0 ? empty : running.length) > 0 ? "attention" : ""}>
@@ -248,7 +255,9 @@ export function NoviplyWorkspace({
             ? "nothing left in these"
             : "folders below their minimum"}</small>
         </article>
+        )}
       </div>
+      )}
 
       {/* Een nieuwe ronde hoort op te vallen zonder het werk te onderbreken:
           geen pop-up, wel een regel bovenaan tot ze hem hebben geopend. */}
@@ -268,23 +277,6 @@ export function NoviplyWorkspace({
           </span>
         </div>
       )}
-
-      {/* Het handboek altijd binnen bereik: wie iets maar één keer per week doet,
-          weet het niet uit zijn hoofd. Opent in een nieuw tabblad zodat het werk
-          op dit scherm blijft staan. */}
-      <a className="handbook-link" href={handbookUrl} target="_blank" rel="noreferrer">
-        <span className="handbook-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M4 5h7a2 2 0 0 1 2 2v13a2 2 0 0 0-2-2H4Z" />
-            <path d="M20 5h-7a2 2 0 0 0-2 2v13a2 2 0 0 1 2-2h7Z" />
-          </svg>
-        </span>
-        <span>
-          <b>Handbook</b>
-          <small>How this screen works, in five pages</small>
-        </span>
-        <span className="handbook-go" aria-hidden="true">PDF</span>
-      </a>
 
       {tab === "runs" && (
         <PrintBatchPanel
@@ -567,7 +559,7 @@ export function NoviplyWorkspace({
       </section>
       )}
 
-      {tab === "orders" && (
+      {tab === "history" && (
         <section className="noviply-panel">
           <div className="noviply-panel-head">
             <div>

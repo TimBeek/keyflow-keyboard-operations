@@ -9,6 +9,7 @@ import {
   type PrintBatch,
   type PrintBatchRow,
 } from "@/domain/print-batch";
+import { markConversionsPrinted } from "./conversion-log-service";
 import { requirePermission } from "./authorization-service";
 import { database } from "./database";
 import { databaseUuidSchema } from "./validation";
@@ -253,28 +254,41 @@ export async function settleBatchRow(rawInput: z.input<typeof settleSchema>) {
     throw new PrintBatchError("Vermeld waarom deze regel niet geprint kan worden.");
   }
   const sql = database();
-  const [row] = await sql<{ id: string }[]>`
-    update print_batch_rows
-    set status = ${input.status}, note = ${note},
-        handled_at = now(), handled_by = ${input.actorId}
-    where id = ${input.rowId} and status = 'open'
-    returning id
-  `;
-  if (!row) throw new PrintBatchError("Deze regel is al afgehandeld.");
-  return { settled: true };
+
+  return sql.begin(async (transaction) => {
+    const [row] = await transaction<{ id: string; order_reference: string }[]>`
+      update print_batch_rows
+      set status = ${input.status}, note = ${note},
+          handled_at = now(), handled_by = ${input.actorId}
+      where id = ${input.rowId} and status = 'open'
+      returning id, order_reference
+    `;
+    if (!row) throw new PrintBatchError("Deze regel is al afgehandeld.");
+    // Stond er een laptop op deze order te wachten, dan is die nu af.
+    if (input.status === "printed") {
+      await markConversionsPrinted(transaction, row.order_reference);
+    }
+    return { settled: true };
+  });
 }
 
 /** Alles wat nog openstaat in één keer op geprint; dat is het normale geval. */
 export async function settleWholeBatch(batchId: string, actorId: string) {
   await requirePermission(actorId, "print.fulfil");
   const sql = database();
-  const rows = await sql<{ id: string }[]>`
-    update print_batch_rows
-    set status = 'printed', handled_at = now(), handled_by = ${actorId}
-    where batch_id = ${batchId} and status = 'open'
-    returning id
-  `;
-  return { settled: rows.length };
+
+  return sql.begin(async (transaction) => {
+    const rows = await transaction<{ id: string; order_reference: string }[]>`
+      update print_batch_rows
+      set status = 'printed', handled_at = now(), handled_by = ${actorId}
+      where batch_id = ${batchId} and status = 'open'
+      returning id, order_reference
+    `;
+    for (const row of rows) {
+      await markConversionsPrinted(transaction, row.order_reference);
+    }
+    return { settled: rows.length };
+  });
 }
 
 /**
