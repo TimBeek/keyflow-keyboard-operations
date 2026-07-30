@@ -806,6 +806,12 @@ export function EmployeeWorkspace({
                     </span>
                     {model} · {matched ? layoutWithCountry(matched.item.layout, matched.item.sku) : targetLayout}
                   </p>
+                  {methodProfile(effectiveMethod).supplier && (
+                    <p className="method-supplier">
+                      <span>Leverancier</span>
+                      <b>{methodProfile(effectiveMethod).supplier}</b>
+                    </p>
+                  )}
                 </div>
                 {usesSheet && storageNumber !== null && (
                   <div className="answer-slot">
@@ -969,7 +975,13 @@ export function EmployeeWorkspace({
                   zonder ordernummer liep op een foutmelding stuk. */}
               <div className="answer-input-row">
                 <label className={`answer-order${orderMissing ? " needs" : ""}`}>
-                  <span>Ordernummer</span>
+                  {/* Alleen bij een aanvraag moet Noviply weten om welke order
+                      het gaat. Bij een vel uit de kast hoeft het niet, en dan
+                      hoort er ook niet te staan dat het moet. */}
+                  <span>
+                    Ordernummer
+                    <em>{effectiveMethod === "printed_sticker" ? "nodig voor de aanvraag" : "mag leeg"}</em>
+                  </span>
                   <input
                     ref={orderInputRef}
                     value={orderReference}

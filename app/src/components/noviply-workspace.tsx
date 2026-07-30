@@ -88,6 +88,9 @@ export function NoviplyWorkspace({
   const [blockedId, setBlockedId] = useState("");
   const [blockedNote, setBlockedNote] = useState("");
   const [message, setMessage] = useState("");
+  // Kort na het indrukken laat de knop zien dat het seintje weg is. Zonder dat
+  // moment gebeurt er in beeld niets tot de server antwoordt.
+  const [sending, setSending] = useState(false);
 
   const totals = printRequestTotals(printRequests);
   const open = printRequests
@@ -265,12 +268,34 @@ export function NoviplyWorkspace({
                     </div>
                   </div>
                 )}
-                <button type="button" className="printer-ask" onClick={onAskPrinterCheck}>
-                  <span className="printer-ask-icon" aria-hidden="true">?</span>
-                  <span>
-                    <b>Ask the floor if the printer is ready</b>
-                    <small>They get a message straight away</small>
+                {/* Dit is geen formulier maar een seintje naar een andere
+                    ruimte. Een vlakke knop laat niets zien van wat er gebeurt;
+                    deze zendt zichtbaar uit en blijft bij het indrukken even
+                    staan op "Sending…" zodat je weet dat het weg is. */}
+                <button
+                  type="button"
+                  className={`printer-ask${sending ? " sending" : ""}`}
+                  disabled={sending}
+                  onClick={() => {
+                    setSending(true);
+                    onAskPrinterCheck();
+                    window.setTimeout(() => setSending(false), 1400);
+                  }}
+                >
+                  <span className="printer-ask-icon" aria-hidden="true">
+                    <svg viewBox="0 0 32 32" width="30" height="30" fill="none" stroke="currentColor">
+                      <circle cx="16" cy="16" r="3" fill="currentColor" stroke="none" />
+                      <path d="M22 10a8.5 8.5 0 0 1 0 12" strokeWidth="2.2" strokeLinecap="round" className="wave wave-1" />
+                      <path d="M10 22a8.5 8.5 0 0 1 0-12" strokeWidth="2.2" strokeLinecap="round" className="wave wave-1" />
+                      <path d="M26 6a13 13 0 0 1 0 20" strokeWidth="2.2" strokeLinecap="round" className="wave wave-2" />
+                      <path d="M6 26a13 13 0 0 1 0-20" strokeWidth="2.2" strokeLinecap="round" className="wave wave-2" />
+                    </svg>
                   </span>
+                  <span>
+                    <b>{sending ? "Sending to the floor…" : "Ask the floor if the printer is ready"}</b>
+                    <small>{sending ? "They are getting the message now" : "They get a message straight away"}</small>
+                  </span>
+                  <span className="printer-ask-go" aria-hidden="true">{sending ? "" : "Send"}</span>
                 </button>
               </>
             );

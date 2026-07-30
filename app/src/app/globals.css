@@ -2416,17 +2416,89 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 .printer-ask b { display: block; font-size: 14.5px; font-weight: 700; }
 .printer-ask small { color: var(--text-2); font-size: 12px; }
 
+/* ---- de zendknop ----
+   Dit is geen formulierknop maar een seintje naar een andere ruimte. Een vlak
+   blok laat daar niets van zien. De ringen om het icoon staan stil tot je er
+   met de muis bij komt, en gaan uit zodra je hem indrukt: dan is het weg.
+   Bij prefers-reduced-motion staat alles stil — dat is hierboven al geregeld. */
+.printer-ask { min-height: 78px; padding: 16px 20px; position: relative; overflow: hidden; }
+.printer-ask:active { transform: translateY(1px); }
+.printer-ask .wave { opacity: .45; transform-origin: 16px 16px; }
+.printer-ask:hover .wave-1 { animation: printer-wave 1.5s ease-out infinite; }
+.printer-ask:hover .wave-2 { animation: printer-wave 1.5s ease-out .35s infinite; }
+
+/* De actie staat rechts als woord: de knop is breed, en dan hoort er aan het
+   einde te staan wat er gebeurt. */
+.printer-ask-go {
+  margin-left: auto;
+  flex: 0 0 auto;
+  padding: 9px 18px;
+  border-radius: 999px;
+  background: var(--teal);
+  color: #FFFFFF;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: .03em;
+}
+
+/* Ingedrukt: de ringen lopen door naar buiten en het woord maakt plaats voor
+   een lopende puls, zodat het moment tussen indrukken en antwoord niet leeg is. */
+.printer-ask.sending { border-color: var(--ok); background: var(--ok-soft); cursor: default; }
+.printer-ask.sending .wave-1 { animation: printer-wave .9s ease-out infinite; }
+.printer-ask.sending .wave-2 { animation: printer-wave .9s ease-out .3s infinite; }
+.printer-ask.sending .printer-ask-go { background: var(--ok); min-width: 62px; }
+.printer-ask.sending .printer-ask-go::after {
+  content: "";
+  display: block;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.55);
+  animation: printer-send 1.4s linear;
+}
+
+@keyframes printer-wave {
+  0%   { opacity: .5;  transform: scale(.72); }
+  70%  { opacity: .08; transform: scale(1.14); }
+  100% { opacity: 0;   transform: scale(1.2); }
+}
+@keyframes printer-send {
+  from { width: 0; }
+  to   { width: 100%; }
+}
+
+/* Wachten op de werkvloer is een toestand, niet een mededeling: een puls laat
+   zien dat er nog iets loopt. */
+.printer-state.waiting b::before {
+  content: "";
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 9px;
+  border-radius: 50%;
+  background: var(--warn);
+  animation: printer-pulse 1.4s ease-in-out infinite;
+}
+@keyframes printer-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 0 color-mix(in srgb, var(--warn) 55%, transparent); }
+  50%      { opacity: .55; box-shadow: 0 0 0 6px transparent; }
+}
+
+/* Stond hier als gevulde schijf met een vraagteken erin. Daar verdwijnen de
+   signaalbogen in; de schijf is nu een zachte achtergrond en het teken zelf
+   heeft de kleur. */
 .printer-ask-icon {
   flex: none;
-  width: 36px;
-  height: 36px;
+  width: 46px;
+  height: 46px;
   display: grid;
   place-items: center;
   border-radius: 50%;
-  background: var(--teal);
-  color: #fff;
-  font-size: 19px;
-  font-weight: 800;
+  background: color-mix(in srgb, var(--teal) 15%, transparent);
+  color: var(--teal);
+}
+.printer-ask.sending .printer-ask-icon {
+  background: color-mix(in srgb, var(--ok) 18%, transparent);
+  color: var(--ok);
 }
 
 .printer-state {
@@ -2907,3 +2979,24 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 /* Een vel in de hangmap scheelt een gang naar Noviply; dat mag opvallen. */
 .model-suggestions button.has-sheet small { color: var(--ok); font-weight: 700; }
 .model-unknown { margin: 6px 0 0; color: var(--warn); font-size: 12px; }
+
+/* Of het ordernummer moet, hangt af van de methode. Dat hoort bij het label te
+   staan en niet pas te blijken als je op een knop drukt. */
+.answer-order > span em {
+  margin-left: 8px;
+  color: var(--muted);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
+}
+.answer-order.needs > span em { color: var(--warn); }
+
+/* Wie het vel levert: klein, maar het scheelt een vraag aan de teamleider. */
+.method-supplier { display: flex; align-items: baseline; gap: 8px; margin: 5px 0 0; }
+.method-supplier span {
+  color: var(--muted); font-size: 10.5px; font-weight: 700;
+  letter-spacing: .08em; text-transform: uppercase;
+}
+.method-supplier b { color: var(--text-2); font-size: 13px; font-weight: 700; }
