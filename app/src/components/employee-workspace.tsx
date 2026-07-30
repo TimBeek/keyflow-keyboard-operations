@@ -50,6 +50,12 @@ import {
 } from "@/domain/print-request-status";
 import type { ConversionLogInput } from "@/domain/conversion-log";
 import { directPrintScopeFor } from "@/domain/direct-print-scope";
+import { nextPrintRun, type PrintRun } from "@/domain/print-runs";
+import {
+  groupRunWaitlist,
+  type RunWaitlistEntry,
+  type RunWaitlistInput,
+} from "@/domain/run-waitlist";
 
 /**
  * Eén concrete handeling per methode. Bewust geen lijst met werkinstructies:
@@ -125,6 +131,10 @@ type Props = {
   onStickerVerification: (input: StickerVerificationReportInput) => unknown;
   onRequestPrintSticker: (input: PrintRequestInput) => unknown;
   onRecordConversion: (input: ConversionLogInput) => unknown;
+  /** Laptops die apart staan tot de volgende automatische printronde. */
+  runWaitlist: RunWaitlistEntry[];
+  onWaitForPrintRun: (input: RunWaitlistInput) => Promise<unknown>;
+  onSettleRunWait: (id: string, outcome: "collected" | "escalated") => void;
 };
 
 export function EmployeeWorkspace({
@@ -141,8 +151,14 @@ export function EmployeeWorkspace({
   onStickerVerification,
   onRequestPrintSticker,
   onRecordConversion,
+  runWaitlist,
+  onWaitForPrintRun,
+  onSettleRunWait,
 }: Props) {
   const [tab, setTab] = useState<Tab>("advice");
+  // Tussenstap voor de premiumsticker: pas na de pakbondatum weten we of dit
+  // een aanvraag is of gewoon afwachten.
+  const [askingSlipDate, setAskingSlipDate] = useState(false);
 
   /* ---------- tabblad 3: wat deed Noviply met mijn aanvraag? ---------- */
   // Wie een sticker aanvraagt zet de laptop apart en gaat door. Zonder
@@ -151,6 +167,12 @@ export function EmployeeWorkspace({
   // klok, niet blijven staan op het moment dat het scherm openging.
   const now = new Date();
   const requestGroups = useMemo(() => groupPrintRequests(printRequests), [printRequests]);
+  // De eerstvolgende automatische ronde van vandaag; niets = beide geweest.
+  const nextRun = nextPrintRun(now, policy.printRunTimes);
+  const todayLabel = now.toLocaleDateString("nl-NL", { day: "numeric", month: "long" });
+  const waitGroups = useMemo(() => groupRunWaitlist(runWaitlist, now),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [runWaitlist, now.getTime()]);
   // Wat er nog bij Noviply staat: "ik heb er zoveel uitstaan". Zodra er geprint
   // is valt het getal vanzelf weg.
   const openAtNoviply = openCount(printRequests);
@@ -258,13 +280,18 @@ export function EmployeeWorkspace({
   const usesSheet = effectiveMethod === "noviply_sheet";
   const storageNumber = matched?.item.storageNumber ?? null;
 
-  function resetAdvice() {
+  /**
+   * Leegmaken voor de volgende laptop. `keepMessage` blijft staan waar de
+   * melding zelf de opdracht is — "zet deze laptop apart en wacht" mag niet
+   * verdwijnen op het moment dat het scherm vrijmaakt voor de volgende.
+   */
+  function resetAdvice({ keepMessage = false } = {}) {
     setPrintBlocked(false);
     setModelQuery("");
     setChosenModel(null);
     setOrderReference("");
     setConfirmed(false);
-    setAdviceMessage(null);
+    if (!keepMessage) setAdviceMessage(null);
     setIssueOpen(false);
     requestAnimationFrame(() => modelInputRef.current?.focus());
   }
@@ -279,6 +306,97 @@ export function EmployeeWorkspace({
       onRecordConversion(input);
     } catch {
       // Bewust stil: de laptop is klaar, dat telt op de werkvloer.
+    }
+  }
+
+  /** De taal zoals hij op het vel komt te staan; die moet Noviply zien. */
+  function stickerLayout() {
+    return matched ? layoutWithCountry(matched.item.layout, matched.item.sku) : targetLayout;
+  }
+
+  function needsOrderNumber() {
+    if (orderReference.trim()) return false;
+    setAdviceMessage({
+      tone: "warn",
+      text: "Vul eerst het ordernummer in — zonder dat weet Noviply niet welke order dit is.",
+    });
+    requestAnimationFrame(() => orderInputRef.current?.focus());
+    return true;
+  }
+
+  /** Een echte aanvraag: Noviply moet dit vel apart printen. */
+  function requestFromNoviply(reason: string) {
+    if (needsOrderNumber()) return;
+    try {
+      onRequestPrintSticker({
+        model,
+        layout: stickerLayout(),
+        variant: enterShape,
+        orderReference,
+        reason,
+      });
+      // De laptop is voor de medewerker klaar, maar pas af als Noviply hem
+      // geprint heeft. Dat verschil blijft zichtbaar in de rapportage.
+      logConversion({
+        method: "printed_sticker",
+        status: "awaiting_print",
+        model,
+        targetLayout,
+        variant: enterShape,
+        orderReference,
+        ...(fallbackToPremium ? { fellBackFrom: "direct_reprint" as const } : {}),
+      });
+      setAdviceMessage({
+        tone: "ok",
+        text: `Aangevraagd bij Noviply voor order ${orderReference.trim()}. `
+          + "ZET DEZE LAPTOP APART en wacht tot Noviply hem geprint heeft — ga zelf verder met de volgende.",
+      });
+      setAskingSlipDate(false);
+      resetAdvice({ keepMessage: true });
+    } catch (error) {
+      setAdviceMessage({
+        tone: "warn",
+        text: error instanceof Error ? error.message : "Aanvragen is niet gelukt.",
+      });
+    }
+  }
+
+  /**
+   * Geen aanvraag maar afwachten: dit vel rolt vanzelf uit de eerstvolgende
+   * ronde. Wel apart leggen, en de laptop komt op de gedeelde wachtlijst zodat
+   * hij na de ronde bij iemand terugkomt.
+   */
+  async function waitForRun(run: PrintRun) {
+    if (needsOrderNumber()) return;
+    try {
+      await onWaitForPrintRun({
+        model,
+        layout: stickerLayout(),
+        variant: enterShape,
+        orderReference,
+        expectedRunAt: run.at.toISOString(),
+        expectedRunLabel: run.label,
+      });
+      logConversion({
+        method: "printed_sticker",
+        status: "awaiting_print",
+        model,
+        targetLayout,
+        variant: enterShape,
+        orderReference,
+      });
+      setAdviceMessage({
+        tone: "ok",
+        text: `Order ${orderReference.trim()} komt mee met de printronde van ${run.label}. `
+          + "ZET DEZE LAPTOP APART en wacht tot Noviply hem geprint heeft — na de ronde vraagt dit scherm of het vel er lag.",
+      });
+      setAskingSlipDate(false);
+      resetAdvice({ keepMessage: true });
+    } catch (error) {
+      setAdviceMessage({
+        tone: "warn",
+        text: error instanceof Error ? error.message : "Apart leggen is niet gelukt.",
+      });
     }
   }
 
@@ -460,7 +578,12 @@ export function EmployeeWorkspace({
         </button>
         <button role="tab" aria-selected={tab === "requests"} className={tab === "requests" ? "active" : ""} onClick={() => setTab("requests")}>
           Bij Noviply
-          {openAtNoviply > 0 && <span className="tab-badge">{openAtNoviply}</span>}
+          {/* Wat je hebt aangevraagd, plus wat na de ronde nog antwoord nodig
+              heeft. Laptops die nog rustig op hun ronde wachten tellen niet
+              mee: daar hoeft niemand iets voor te doen. */}
+          {openAtNoviply + waitGroups.due.length > 0 && (
+            <span className="tab-badge">{openAtNoviply + waitGroups.due.length}</span>
+          )}
         </button>
       </div>
 
@@ -685,83 +808,90 @@ export function EmployeeWorkspace({
 
               {effectiveMethod === "printed_sticker" ? (
                 <div className="answer-todo">
-                  <b>{fallbackToPremium ? "Vraag de sticker aan bij Noviply" : "Ligt deze sticker al klaar?"}</b>
-                  <p>
-                    {fallbackToPremium
-                      ? "Er ligt niets voorgeprint voor dit geval — de ochtendronde kende hem niet."
-                      : "De buitenlandse orders worden 's ochtends automatisch voorgeprint."}
-                  </p>
-                  <div className="print-ready-choice">
-                    {!fallbackToPremium && (
-                    <button
-                      type="button"
-                      className="primary-button"
-                      onClick={() => setAdviceMessage({
-                        tone: "ok",
-                        text: "Pak de voorgeprinte sticker uit de klaargelegde stapel en breng hem in één keer aan.",
-                      })}
-                    >
-                      Ja, ligt klaar
-                    </button>
-                    )}
-                    <button
-                      type="button"
-                      className="secondary-button"
-                      onClick={() => {
-                        // Noviply kan zonder ordernummer niet zien om welke
-                        // order het gaat, dus hier is het wél verplicht.
-                        if (!orderReference.trim()) {
-                          setAdviceMessage({
-                            tone: "warn",
-                            text: "Vul eerst het ordernummer in — zonder dat weet Noviply niet welke order dit is.",
-                          });
-                          requestAnimationFrame(() => orderInputRef.current?.focus());
-                          return;
-                        }
-                        try {
-                          onRequestPrintSticker({
-                            model,
-                            layout: matched
-                              ? layoutWithCountry(matched.item.layout, matched.item.sku)
-                              : targetLayout,
-                            variant: enterShape,
-                            orderReference,
-                            reason: fallbackToPremium
-                              ? "Keyboard printer cannot handle this model."
-                              : "Not ready during the morning run.",
-                          });
-                          // De laptop is voor de medewerker klaar, maar pas af
-                          // als Noviply hem geprint heeft. Dat verschil blijft
-                          // zichtbaar in de rapportage.
-                          logConversion({
-                            method: "printed_sticker",
-                            status: "awaiting_print",
-                            model,
-                            targetLayout,
-                            variant: enterShape,
-                            orderReference,
-                            ...(fallbackToPremium ? { fellBackFrom: "direct_reprint" as const } : {}),
-                          });
-                          setAdviceMessage({
+                  {/* De toetsenbordsprinter kan dit model niet; de rondes van
+                      Noviply kennen hem dus ook niet. Dan is de pakbondatum
+                      niet interessant en moet er gewoon aangevraagd worden. */}
+                  {fallbackToPremium ? (
+                    <>
+                      <b>Vraag de sticker aan bij Noviply</b>
+                      <p>Er ligt niets voorgeprint voor dit geval — de rondes kennen hem niet.</p>
+                      <div className="print-ready-choice">
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          onClick={() => requestFromNoviply("Keyboard printer cannot handle this model.")}
+                        >
+                          Aanvragen bij Noviply
+                        </button>
+                      </div>
+                    </>
+                  ) : askingSlipDate ? (
+                    <>
+                      <b>Welke datum staat op de pakbon?</b>
+                      <p>
+                        {nextRun
+                          ? `Staat daar vandaag (${todayLabel}), dan is de order van na de vorige ronde en komt het vel vanzelf mee om ${nextRun.label}. Dan hoef je niets aan te vragen.`
+                          : `Beide printrondes van vandaag zijn geweest, dus vandaag komt er niets meer mee. Deze moet je aanvragen.`}
+                      </p>
+                      <div className="print-ready-choice">
+                        {nextRun && (
+                          <button
+                            type="button"
+                            className="primary-button"
+                            onClick={() => void waitForRun(nextRun)}
+                          >
+                            Vandaag — {todayLabel}
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          onClick={() => requestFromNoviply(nextRun
+                            ? "Packing slip from an earlier day; was not in the run."
+                            : "Both runs for today had already gone.")}
+                        >
+                          {nextRun ? "Een eerdere datum — aanvragen" : "Aanvragen bij Noviply"}
+                        </button>
+                        <button
+                          type="button"
+                          className="answer-escape"
+                          onClick={() => setAskingSlipDate(false)}
+                        >
+                          Terug
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <b>Ligt deze sticker al klaar?</b>
+                      <p>De buitenlandse orders worden in twee vaste rondes automatisch voorgeprint.</p>
+                      <div className="print-ready-choice">
+                        <button
+                          type="button"
+                          className="primary-button"
+                          onClick={() => setAdviceMessage({
                             tone: "ok",
-                            text: `Aangevraagd bij Noviply voor order ${orderReference.trim()}. Zet deze laptop apart en wacht tot Noviply hem geprint heeft — voor jou is deze sticker klaar.`,
-                          });
-                          setConfirmed(false);
-                          setModelQuery("");
-                          setChosenModel(null);
-                          setOrderReference("");
-                          requestAnimationFrame(() => modelInputRef.current?.focus());
-                        } catch (error) {
-                          setAdviceMessage({
-                            tone: "warn",
-                            text: error instanceof Error ? error.message : "Aanvragen is niet gelukt.",
-                          });
-                        }
-                      }}
-                    >
-                      {fallbackToPremium ? "Aanvragen bij Noviply" : "Nee, aanvragen"}
-                    </button>
-                  </div>
+                            text: "Pak de voorgeprinte sticker uit de klaargelegde stapel en breng hem in één keer aan.",
+                          })}
+                        >
+                          Ja, ligt klaar
+                        </button>
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          onClick={() => {
+                            if (needsOrderNumber()) return;
+                            // De melding over het ontbrekende ordernummer heeft
+                            // zijn werk gedaan; die moet niet blijven hangen.
+                            setAdviceMessage(null);
+                            setAskingSlipDate(true);
+                          }}
+                        >
+                          Nee, ligt er niet
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               ) : (
                 <div className="answer-todo">
@@ -824,7 +954,7 @@ export function EmployeeWorkspace({
                     Past niet
                   </button>
                 )}
-                <button className="secondary-button" onClick={resetAdvice}>Volgende laptop</button>
+                <button className="secondary-button" onClick={() => resetAdvice()}>Volgende laptop</button>
               </div>
 
               {issueOpen && matched && (
@@ -851,6 +981,60 @@ export function EmployeeWorkspace({
       {tab === "requests" && (
         <section className="worker-panel">
           <p className="requests-headline">{printRequestHeadline(requestGroups)}</p>
+
+          {/* De ronde is geweest; nu moet iemand zeggen of het vel er lag.
+              Bovenaan, want hier staat een laptop op te wachten. */}
+          {waitGroups.due.length > 0 && (
+            <div className="request-group due">
+              <h3>De printronde is geweest — ligt het vel erbij?</h3>
+              {waitGroups.due.map((entry) => (
+                <article key={entry.id}>
+                  <div>
+                    <strong>{entry.model}</strong>
+                    <span>{entry.layout}{entry.variant && ` · ${entry.variant}`}</span>
+                  </div>
+                  <div className="request-order">
+                    <b>{entry.orderReference}</b>
+                    <small>ronde van {entry.expectedRunLabel}</small>
+                  </div>
+                  <div className="request-settle">
+                    <button
+                      type="button"
+                      className="primary-button"
+                      onClick={() => onSettleRunWait(entry.id, "collected")}
+                    >
+                      Ja, opgehaald
+                    </button>
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      onClick={() => onSettleRunWait(entry.id, "escalated")}
+                    >
+                      Nee, toch aanvragen
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+
+          {waitGroups.pending.length > 0 && (
+            <div className="request-group waiting">
+              <h3>Staat apart voor de volgende printronde</h3>
+              {waitGroups.pending.map((entry) => (
+                <article key={entry.id}>
+                  <div>
+                    <strong>{entry.model}</strong>
+                    <span>{entry.layout}{entry.variant && ` · ${entry.variant}`}</span>
+                  </div>
+                  <div className="request-order">
+                    <b>{entry.orderReference}</b>
+                    <small>komt mee om {entry.expectedRunLabel}</small>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
 
           {requestGroups.ready.length > 0 && (
             <div className="request-group ready">

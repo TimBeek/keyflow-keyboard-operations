@@ -18,6 +18,7 @@ import type { PrintRequestRecord, PrintRequestStatus } from "@/domain/print-requ
 import type { PrinterCheckRecord } from "@/domain/printer-check";
 import type { PrintReminderRecord } from "@/domain/print-reminder";
 import type { StickerVerificationReport } from "@/domain/sticker-verification";
+import type { RunWaitlistEntry, RunWaitlistInput } from "@/domain/run-waitlist";
 
 export type SharedOperationsState = {
   savedAt: string;
@@ -37,6 +38,8 @@ export type SharedOperationsState = {
   printerChecks: PrinterCheckRecord[];
   verificationReports: StickerVerificationReport[];
   printReminders: PrintReminderRecord[];
+  /** Laptops die apart staan tot de volgende automatische printronde. */
+  runWaitlist: RunWaitlistEntry[];
   /** Vellen die na de Excel-import zijn toegevoegd. */
   addedSheets: AddedSheet[];
 };
@@ -315,6 +318,22 @@ export function addStickerSheet(payload: {
   return request<{ duplicate: boolean; storageNumber: number; sku: string }>(
     "/api/sticker-sheets",
     { method: "POST", body: JSON.stringify(payload) },
+  );
+}
+
+/* ---------- laptops die op de volgende printronde wachten ---------- */
+
+export function addToRunWaitlist(payload: RunWaitlistInput & { idempotencyKey: string }) {
+  return request<{ record: RunWaitlistEntry; duplicate: boolean }>(
+    "/api/run-waitlist",
+    { method: "POST", body: JSON.stringify(payload) },
+  );
+}
+
+export function settleRunWaitlistEntry(id: string, outcome: "collected" | "escalated") {
+  return request<{ settled: true; printRequestId: string | null }>(
+    "/api/run-waitlist",
+    { method: "PATCH", body: JSON.stringify({ id, outcome }) },
   );
 }
 

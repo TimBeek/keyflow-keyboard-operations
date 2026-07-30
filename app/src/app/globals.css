@@ -2505,6 +2505,12 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 .request-group.blocked article { border-left-color: var(--crit); }
 .request-group.waiting article { border-left-color: var(--text-3); }
 
+/* De ronde is geweest en er staat een laptop op antwoord te wachten. Die moet
+   opvallen tussen de regels waar niets voor hoeft te gebeuren. */
+.request-group.due article { border-left-color: var(--warn); background: var(--warn-soft); }
+.request-settle { display: flex; gap: 8px; flex-wrap: wrap; }
+.request-settle button { white-space: nowrap; }
+
 /* Sinds kort afgehandeld: daar loopt de medewerker anders zo langs. */
 .request-group article.fresh { background: var(--ok-soft); }
 .request-group.blocked article.fresh { background: var(--crit-soft); }

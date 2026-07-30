@@ -240,6 +240,46 @@ export function SettingsWorkspace({ policy, directPrintLayouts, onSave }: Props)
       <section className="panel settings-panel">
         <div className="order-heading">
           <div>
+            <span className="workspace-kicker">PRINTRONDES</span>
+            <h2>Wanneer Noviply automatisch print</h2>
+            <p>
+              Twee vaste rondes per dag. De werkvloer gebruikt deze tijden om te
+              bepalen of een vel nog vanzelf meekomt: staat de pakbon op vandaag
+              en moet er nog een ronde komen, dan wordt er niets aangevraagd maar
+              apart gelegd. Zet ze niet te vroeg — dan vraagt het scherm of het
+              vel er ligt terwijl de ronde nog moet lopen.
+            </p>
+          </div>
+        </div>
+        <div className="settings-grid">
+          <label>
+            <span>Ochtendronde</span>
+            <input
+              type="time"
+              value={draft.printRunTimes.morning}
+              onChange={(event) => setDraft({
+                ...draft,
+                printRunTimes: { ...draft.printRunTimes, morning: event.target.value },
+              })}
+            />
+          </label>
+          <label>
+            <span>Middagronde</span>
+            <input
+              type="time"
+              value={draft.printRunTimes.afternoon}
+              onChange={(event) => setDraft({
+                ...draft,
+                printRunTimes: { ...draft.printRunTimes, afternoon: event.target.value },
+              })}
+            />
+          </label>
+        </div>
+      </section>
+
+      <section className="panel settings-panel">
+        <div className="order-heading">
+          <div>
             <span className="workspace-kicker">TOETSENBORDSPRINTER</span>
             <h2>Wat Notebook Service kan</h2>
             <p>

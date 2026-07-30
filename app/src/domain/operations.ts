@@ -3,9 +3,11 @@ import { normalizeLayoutName } from "./keyboard-layouts";
 import type { OperationalMethodId } from "@/domain/conversion-policy";
 import { inventoryQuantity } from "./inventory-quantities";
 import { modelMatchesCatalogItem } from "./model-catalog";
+import { defaultPrintRunTimes, type PrintRunTimes } from "./print-runs";
 
 // Hoort bij het beleid, niet bij de voorraad; hier alleen doorgegeven.
 export type { OperationalMethodId };
+export type { PrintRunTimes };
 
 export type LayoutRule = {
   layout: string;
@@ -26,6 +28,8 @@ export type OperationsPolicy = {
   /** Hoe lang Noviply erover doet, en hoeveel reserve we willen. */
   resupplyLeadTimeDays: number;
   resupplySafetyWeeks: number;
+  /** Wanneer Noviply de twee automatische printrondes draait, als "HH:MM". */
+  printRunTimes: PrintRunTimes;
 };
 
 export const defaultOperationsPolicy: OperationsPolicy = {
@@ -44,6 +48,7 @@ export const defaultOperationsPolicy: OperationsPolicy = {
   layoutRules: [],
   resupplyLeadTimeDays: 14,
   resupplySafetyWeeks: 1,
+  printRunTimes: defaultPrintRunTimes,
 };
 
 export type InventoryTransactionEntry = {

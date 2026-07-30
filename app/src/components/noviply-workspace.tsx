@@ -284,7 +284,7 @@ export function NoviplyWorkspace({
           <div>
             <h3>Print request list</h3>
             <p>
-              The morning run for foreign orders is automatic. This list only holds
+              The two daily runs for foreign orders are automatic. This list only holds
               the extras — a layout that does not match, or an older order coming
               past again.
             </p>
@@ -368,7 +368,7 @@ export function NoviplyWorkspace({
             </tbody>
           </table>
           {open.length === 0 && (
-            <div className="empty">Nothing extra requested. The morning run covers everything.</div>
+            <div className="empty">Nothing extra requested. The two daily runs cover everything.</div>
           )}
         </div>
         {message && <div className="policy-saved" role="status">{message}</div>}

@@ -42,6 +42,7 @@ import {
 } from "@/domain/cycle-count";
 import { calculateInventoryMutation } from "@/domain/inventory";
 import { resupplyReady } from "@/domain/resupply";
+import type { RunWaitlistEntry, RunWaitlistInput } from "@/domain/run-waitlist";
 import { dayKey } from "@/domain/reporting";
 import {
   calculateCatalogThreshold,
@@ -90,6 +91,8 @@ import {
   answerPrinterCheck,
   closePrinterCheck,
   sendPrintReminder,
+  addToRunWaitlist,
+  settleRunWaitlistEntry,
   acknowledgePrintReminder,
   postVerificationReport,
   lockAccess,
@@ -291,6 +294,9 @@ export function Dashboard({
   // alleen de werkvloer zien.
   const [printerChecks, setPrinterChecks] = useState<PrinterCheckRecord[]>([]);
   const [printReminders, setPrintReminders] = useState<PrintReminderRecord[]>([]);
+  // Laptops die apart staan tot hun vel met de volgende ronde meekomt. Dit is
+  // geen aanvraag bij Noviply; zij zien deze lijst niet.
+  const [runWaitlist, setRunWaitlist] = useState<RunWaitlistEntry[]>([]);
   const [noviplyTab, setNoviplyTab] = useState<NoviplyTab>("orders");
   // Regels waar de Excel-import geen bruikbaar artikelnummer opleverde, kunnen
   // hier worden aangevuld zonder de bron aan te passen.
@@ -457,7 +463,9 @@ export function Dashboard({
         );
         setCatalogQuantities(migratedQuantities);
         setTransactions(restored.state.transactions);
-        setOperationsPolicy(restored.state.operationsPolicy);
+        // Een snapshot van vóór een nieuwe beleidsinstelling mist die sleutel;
+        // zonder de standaardwaarden erbij valt het scherm erover.
+        setOperationsPolicy({ ...defaultOperationsPolicy, ...restored.state.operationsPolicy });
         setVerificationReports(restored.state.verificationReports);
         setStockCounts(restored.state.stockCounts);
         setPrintRequests(restored.state.printRequests);
@@ -503,8 +511,11 @@ export function Dashboard({
     setCompatibilityEvidenceRecords(state.compatibilityEvidenceRecords);
     setPrinterChecks(state.printerChecks);
     setPrintReminders(state.printReminders);
+    setRunWaitlist(state.runWaitlist ?? []);
     setVerificationReports(state.verificationReports);
-    if (state.operationsPolicy) setOperationsPolicy(state.operationsPolicy);
+    if (state.operationsPolicy) {
+      setOperationsPolicy({ ...defaultOperationsPolicy, ...state.operationsPolicy });
+    }
     setPolicyVersion(state.operationsPolicyVersion);
     setDirectPrintLayouts(state.directPrintLayouts);
     setAddedSheets(state.addedSheets);
@@ -1393,6 +1404,31 @@ export function Dashboard({
     }
   }
 
+  /**
+   * De laptop gaat apart en wacht op de eerstvolgende ronde. Dit gaat níét
+   * naar Noviply: zij printen hem sowieso, en een aanvraag erbij zou hetzelfde
+   * vel twee keer laten uitrollen.
+   */
+  async function waitForPrintRun(input: RunWaitlistInput) {
+    const idempotencyKey = `wachtronde-${input.orderReference.trim()}-${input.expectedRunAt}`;
+    const { record } = await addToRunWaitlist({ ...input, idempotencyKey });
+    setRunWaitlist((current) => [record, ...current.filter((entry) => entry.id !== record.id)]);
+    return record;
+  }
+
+  /** Na de ronde: het vel lag er, of het lag er niet en dan gaat het alsnog. */
+  async function settleRunWaitlist(id: string, outcome: "collected" | "escalated") {
+    try {
+      await settleRunWaitlistEntry(id, outcome);
+      await refreshSharedState();
+      setLastAction(outcome === "collected"
+        ? "Opgehaald bij de printronde."
+        : "Alsnog aangevraagd bij Noviply.");
+    } catch (error) {
+      setLastAction(error instanceof Error ? error.message : "Dat is niet gelukt.");
+    }
+  }
+
   async function requestPrinterCheck() {
     try {
       const { check, alreadyOpen } = await askPrinterCheck("");
@@ -1827,6 +1863,9 @@ export function Dashboard({
             printerChecks={printerChecks}
             onRemindNoviply={() => void remindNoviply()}
             onRequestPrintSticker={requestPrintSticker}
+            runWaitlist={runWaitlist}
+            onWaitForPrintRun={waitForPrintRun}
+            onSettleRunWait={(id, outcome) => void settleRunWaitlist(id, outcome)}
             onRecordConversion={recordConversion}
             catalog={workingCatalog}
             actorName={actorName}

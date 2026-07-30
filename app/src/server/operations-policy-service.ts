@@ -12,6 +12,8 @@ import { databaseUuidSchema } from "./validation";
  * verzetten zonder dat de werkvloer er iets van merkte.
  */
 
+const runTimePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
+
 const policySchema = z.object({
   thresholdEur: z.number().positive().max(100_000),
   workload: z.enum(["normal", "busy", "critical"]),
@@ -32,6 +34,10 @@ const policySchema = z.object({
   })).max(40).default([]),
   resupplyLeadTimeDays: z.number().int().min(1).max(120),
   resupplySafetyWeeks: z.number().int().min(0).max(12),
+  printRunTimes: z.object({
+    morning: z.string().regex(runTimePattern, "Vul een tijd in als 09:00."),
+    afternoon: z.string().regex(runTimePattern, "Vul een tijd in als 12:30."),
+  }),
 }).refine((policy) => policy.abcAThreshold < policy.abcBThreshold, {
   message: "De ABC A-grens moet lager liggen dan de B-grens.",
 });
@@ -68,6 +74,8 @@ type PolicyRow = {
   layout_rules: { layout: string; method: string; note?: string }[];
   resupply_lead_time_days: number;
   resupply_safety_weeks: number;
+  morning_run_at: string;
+  afternoon_run_at: string;
   version: number;
 };
 
@@ -92,6 +100,11 @@ function toPolicy(row: PolicyRow): OperationsPolicy {
     })),
     resupplyLeadTimeDays: row.resupply_lead_time_days,
     resupplySafetyWeeks: row.resupply_safety_weeks,
+    // Postgres geeft een tijd terug als "09:00:00"; de seconden zeggen niets.
+    printRunTimes: {
+      morning: String(row.morning_run_at).slice(0, 5),
+      afternoon: String(row.afternoon_run_at).slice(0, 5),
+    },
   };
 }
 
@@ -100,7 +113,8 @@ export async function readOperationsPolicy() {
   const [row] = await sql<PolicyRow[]>`
     select threshold_eur, workload, method_enabled, employee_permissions,
            abc_a_threshold, abc_b_threshold, direct_print_layouts,
-           layout_rules, resupply_lead_time_days, resupply_safety_weeks, version
+           layout_rules, resupply_lead_time_days, resupply_safety_weeks,
+           morning_run_at, afternoon_run_at, version
     from operations_settings
     where setting_key = 'active'
   `;
@@ -121,7 +135,8 @@ export async function updateOperationsPolicy(rawInput: UpdateOperationsPolicyInp
     const [current] = await transaction<PolicyRow[]>`
       select threshold_eur, workload, method_enabled, employee_permissions,
              abc_a_threshold, abc_b_threshold, direct_print_layouts,
-           layout_rules, resupply_lead_time_days, resupply_safety_weeks, version
+           layout_rules, resupply_lead_time_days, resupply_safety_weeks,
+           morning_run_at, afternoon_run_at, version
       from operations_settings
       where setting_key = 'active'
       for update
@@ -150,13 +165,16 @@ export async function updateOperationsPolicy(rawInput: UpdateOperationsPolicyInp
           layout_rules = ${transaction.json(input.policy.layoutRules)},
           resupply_lead_time_days = ${input.policy.resupplyLeadTimeDays},
           resupply_safety_weeks = ${input.policy.resupplySafetyWeeks},
+          morning_run_at = ${input.policy.printRunTimes.morning},
+          afternoon_run_at = ${input.policy.printRunTimes.afternoon},
           version = version + 1,
           updated_by = ${input.actorId},
           updated_at = now()
       where setting_key = 'active'
       returning threshold_eur, workload, method_enabled, employee_permissions,
                 abc_a_threshold, abc_b_threshold, direct_print_layouts,
-           layout_rules, resupply_lead_time_days, resupply_safety_weeks, version
+           layout_rules, resupply_lead_time_days, resupply_safety_weeks,
+           morning_run_at, afternoon_run_at, version
     `;
     return {
       policy: toPolicy(updated),
