@@ -19,6 +19,7 @@ const logSchema = z.object({
   sku: z.string().max(64).default(""),
   storageNumber: z.number().int().positive().max(1_000_000).nullable().default(null),
   orderReference: z.string().max(80).default(""),
+  quantity: z.number().int().min(1).max(200).default(1),
   fellBackFrom: z.string().max(40).nullable().default(null),
   idempotencyKey: z.string().min(8).max(200),
   actorId: databaseUuidSchema,
@@ -37,6 +38,7 @@ type ConversionRow = {
   source_sku_text: string;
   hanging_file_number: number | null;
   order_reference: string;
+  quantity: number;
   fell_back_from: string | null;
   performed_by_name: string;
 };
@@ -53,6 +55,7 @@ function toEntry(row: ConversionRow) {
     sku: row.source_sku_text,
     storageNumber: row.hanging_file_number,
     orderReference: row.order_reference,
+    quantity: row.quantity,
     actor: row.performed_by_name,
     ...(row.fell_back_from ? { fellBackFrom: row.fell_back_from } : {}),
   };
@@ -60,7 +63,7 @@ function toEntry(row: ConversionRow) {
 
 const selectColumns = `
   c.id, c.occurred_at, c.method, c.status, c.model, c.target_layout, c.variant,
-  c.source_sku_text, c.hanging_file_number, c.order_reference, c.fell_back_from,
+  c.source_sku_text, c.hanging_file_number, c.order_reference, c.quantity, c.fell_back_from,
   u.display_name as performed_by_name
 `;
 
@@ -74,7 +77,7 @@ export async function listConversionLog(actorId: string, days = 190, limit = 500
   const rows = await sql<ConversionRow[]>`
     select
       c.id, c.occurred_at, c.method, c.status, c.model, c.target_layout, c.variant,
-      c.source_sku_text, c.hanging_file_number, c.order_reference, c.fell_back_from,
+      c.source_sku_text, c.hanging_file_number, c.order_reference, c.quantity, c.fell_back_from,
       u.display_name as performed_by_name
     from conversion_log c
     join users u on u.id = c.performed_by
@@ -123,14 +126,14 @@ export async function logConversion(rawInput: LogConversionInput) {
     const [inserted] = await transaction<{ id: string }[]>`
       insert into conversion_log (
         idempotency_key, method, status, model, target_layout, variant,
-        sku_id, source_sku_text, hanging_file_number, order_reference,
+        sku_id, source_sku_text, hanging_file_number, order_reference, quantity,
         fell_back_from, performed_by
       )
       values (
         ${input.idempotencyKey}, ${input.method}, ${input.status}, ${model},
         ${input.targetLayout.trim()}, ${input.variant.trim()},
         ${known?.id ?? null}, ${sku}, ${input.storageNumber},
-        ${input.orderReference.trim()}, ${input.fellBackFrom}, ${input.actorId}
+        ${input.orderReference.trim()}, ${input.quantity}, ${input.fellBackFrom}, ${input.actorId}
       )
       returning id
     `;

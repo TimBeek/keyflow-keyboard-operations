@@ -17,6 +17,7 @@ function entry(overrides: Partial<RunWaitlistEntry> = {}): RunWaitlistEntry {
     layout: "QWERTY IT",
     variant: "E1",
     orderReference: "000097612",
+    quantity: 1,
     expectedRunAt: middagronde.toISOString(),
     expectedRunLabel: "12:30",
     createdAt: now.toISOString(),
@@ -35,6 +36,7 @@ describe("createRunWaitlistEntry", () => {
       layout: "QWERTY IT",
       variant: "E1",
       orderReference: " 000097612 ",
+      quantity: 1,
       expectedRunAt: middagronde.toISOString(),
       expectedRunLabel: "12:30",
     }, "Medewerker", now);
@@ -54,6 +56,7 @@ describe("createRunWaitlistEntry", () => {
       layout: "QWERTY IT",
       variant: "E1",
       orderReference: "   ",
+      quantity: 1,
       expectedRunAt: middagronde.toISOString(),
       expectedRunLabel: "12:30",
     }, "Medewerker", now)).toThrow(RunWaitlistError);
@@ -65,6 +68,7 @@ describe("createRunWaitlistEntry", () => {
       layout: "QWERTY IT",
       variant: "E1",
       orderReference: "000097612",
+      quantity: 1,
       expectedRunAt: "straks",
       expectedRunLabel: "12:30",
     }, "Medewerker", now)).toThrow(RunWaitlistError);

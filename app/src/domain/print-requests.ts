@@ -14,6 +14,8 @@ export type PrintRequestInput = {
   variant: string;
   orderReference: string;
   reason: string;
+  /** Aantal vellen; één order kan meerdere laptops bevatten. */
+  quantity?: number;
 };
 
 export type PrintRequestRecord = {
@@ -30,6 +32,7 @@ export type PrintRequestRecord = {
   handledAt: string | null;
   handledBy: string | null;
   note: string;
+  quantity: number;
 };
 
 type RequestMetadata = {
@@ -79,6 +82,7 @@ export function createPrintRequest(
     requestedAt: metadata.requestedAt,
     requestedBy,
     status: "requested",
+    quantity: Math.max(1, Math.round(input.quantity || 1)),
     handledAt: null,
     handledBy: null,
     note: "",

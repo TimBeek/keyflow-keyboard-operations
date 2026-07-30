@@ -18,6 +18,8 @@ export type RunWaitlistEntry = {
   layout: string;
   variant: string;
   orderReference: string;
+  /** Aantal laptops onder dit ordernummer. */
+  quantity: number;
   /** Wanneer de ronde loopt waar dit vel mee mee zou komen. */
   expectedRunAt: string;
   /** Hoe die ronde heet tegen de werkvloer: "12:30". */
@@ -34,6 +36,7 @@ export type RunWaitlistInput = {
   layout: string;
   variant: string;
   orderReference: string;
+  quantity: number;
   expectedRunAt: string;
   expectedRunLabel: string;
 };
@@ -90,6 +93,7 @@ export function createRunWaitlistEntry(
     layout: input.layout.trim(),
     variant: input.variant.trim(),
     orderReference,
+    quantity: Math.max(1, Math.round(input.quantity || 1)),
     expectedRunAt: expected.toISOString(),
     expectedRunLabel: input.expectedRunLabel.trim(),
     createdAt: now.toISOString(),

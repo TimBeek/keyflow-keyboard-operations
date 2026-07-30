@@ -30,6 +30,7 @@ const request: PrintRequestRecord = {
   status: "printed",
   handledAt: "2026-07-29T14:20:00.000Z",
   handledBy: "Noviply",
+  quantity: 1,
   note: "",
 };
 

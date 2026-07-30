@@ -27,6 +27,8 @@ export type ConversionLogEntry = {
   sku: string;
   storageNumber: number | null;
   orderReference: string;
+  /** Aantal laptops dat met deze handeling is omgezet. */
+  quantity?: number;
   actor: string;
   /**
    * Gezet wanneer deze laptop een toetsenbordsprint hoorde te krijgen en daar
@@ -44,6 +46,8 @@ export type ConversionLogInput = {
   sku?: string;
   storageNumber?: number | null;
   orderReference?: string;
+  /** Aantal laptops onder dit ordernummer; standaard één. */
+  quantity?: number;
   fellBackFrom?: OperationalMethodId;
 };
 
@@ -84,6 +88,7 @@ export function createConversionLogEntry(
     sku: input.sku?.trim().toUpperCase() ?? "",
     storageNumber: input.storageNumber ?? null,
     orderReference: input.orderReference?.trim() ?? "",
+    quantity: Math.max(1, Math.round(input.quantity || 1)),
     actor,
     ...(input.fellBackFrom ? { fellBackFrom: input.fellBackFrom } : {}),
   };

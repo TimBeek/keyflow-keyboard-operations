@@ -21,6 +21,7 @@ const addSchema = z.object({
   layout: z.string().max(80).default(""),
   variant: z.string().max(20).default(""),
   orderReference: z.string().min(1).max(80),
+  quantity: z.number().int().min(1).max(200).default(1),
   expectedRunAt: z.string().min(1),
   expectedRunLabel: z.string().max(20).default(""),
   idempotencyKey: z.string().min(8).max(200),
@@ -42,6 +43,7 @@ type Row = {
   layout: string;
   variant: string;
   order_reference: string;
+  quantity: number;
   expected_run_at: Date;
   expected_run_label: string;
   created_at: Date;
@@ -52,7 +54,7 @@ type Row = {
 };
 
 const selectColumns = `
-  w.id, w.model, w.layout, w.variant, w.order_reference,
+  w.id, w.model, w.layout, w.variant, w.order_reference, w.quantity,
   w.expected_run_at, w.expected_run_label, w.created_at, w.status, w.settled_at,
   creator.display_name as created_by_name,
   settler.display_name as settled_by_name
@@ -65,6 +67,7 @@ function toRecord(row: Row): RunWaitlistEntry {
     layout: row.layout,
     variant: row.variant,
     orderReference: row.order_reference,
+    quantity: row.quantity,
     expectedRunAt: row.expected_run_at.toISOString(),
     expectedRunLabel: row.expected_run_label,
     createdAt: row.created_at.toISOString(),
@@ -120,12 +123,12 @@ export async function addToRunWaitlist(rawInput: AddToRunWaitlistInput) {
 
     const [inserted] = await transaction<{ id: string }[]>`
       insert into print_run_waitlist (
-        idempotency_key, model, layout, variant, order_reference,
+        idempotency_key, model, layout, variant, order_reference, quantity,
         expected_run_at, expected_run_label, created_by
       )
       values (
         ${input.idempotencyKey}, ${input.model.trim()}, ${input.layout.trim()},
-        ${input.variant.trim()}, ${input.orderReference.trim()},
+        ${input.variant.trim()}, ${input.orderReference.trim()}, ${input.quantity},
         ${expected}, ${input.expectedRunLabel.trim()}, ${input.actorId}
       )
       returning id
@@ -157,9 +160,10 @@ export async function settleRunWaitlistEntry(rawInput: SettleRunWaitlistInput) {
       layout: string;
       variant: string;
       order_reference: string;
+      quantity: number;
       expected_run_label: string;
     }[]>`
-      select id, model, layout, variant, order_reference, expected_run_label
+      select id, model, layout, variant, order_reference, quantity, expected_run_label
       from print_run_waitlist
       where id = ${input.id} and status = 'waiting'
       for update
@@ -174,11 +178,11 @@ export async function settleRunWaitlistEntry(rawInput: SettleRunWaitlistInput) {
       const [request] = await transaction<{ id: string }[]>`
         insert into print_requests (
           idempotency_key, brand, model, layout, variant,
-          order_reference, reason, requested_by
+          order_reference, quantity, reason, requested_by
         )
         values (
           ${`waitlist-${entry.id}`}, ${brandFromModel(model)}, ${model},
-          ${entry.layout}, ${entry.variant}, ${entry.order_reference},
+          ${entry.layout}, ${entry.variant}, ${entry.order_reference}, ${entry.quantity},
           ${`Lag er na de ronde van ${entry.expected_run_label || "vandaag"} nog steeds niet bij.`},
           ${input.actorId}
         )

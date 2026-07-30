@@ -10,6 +10,7 @@ const createSchema = z.object({
   layout: z.string().max(80).default(""),
   variant: z.string().max(20).default(""),
   orderReference: z.string().max(80).default(""),
+  quantity: z.number().int().min(1).max(200).default(1),
   reason: z.string().max(500).default(""),
   idempotencyKey: z.string().min(8).max(200),
   actorId: databaseUuidSchema,
@@ -32,6 +33,7 @@ type PrintRequestRow = {
   layout: string;
   variant: string;
   order_reference: string;
+  quantity: number;
   reason: string;
   requested_at: Date;
   requested_by_name: string;
@@ -50,6 +52,7 @@ function toRecord(row: PrintRequestRow) {
     layout: row.layout,
     variant: row.variant,
     orderReference: row.order_reference,
+    quantity: row.quantity,
     reason: row.reason,
     requestedAt: row.requested_at.toISOString(),
     requestedBy: row.requested_by_name,
@@ -61,7 +64,7 @@ function toRecord(row: PrintRequestRow) {
 }
 
 const selectColumns = `
-  r.id, r.brand, r.model, r.layout, r.variant, r.order_reference, r.reason,
+  r.id, r.brand, r.model, r.layout, r.variant, r.order_reference, r.quantity, r.reason,
   r.requested_at, r.status, r.handled_at, r.note,
   requester.display_name as requested_by_name,
   handler.display_name as handled_by_name
@@ -72,7 +75,7 @@ export async function listPrintRequests(actorId: string, limit = 500) {
   const sql = database();
   const rows = await sql<PrintRequestRow[]>`
     select
-      r.id, r.brand, r.model, r.layout, r.variant, r.order_reference, r.reason,
+      r.id, r.brand, r.model, r.layout, r.variant, r.order_reference, r.quantity, r.reason,
       r.requested_at, r.status, r.handled_at, r.note,
       requester.display_name as requested_by_name,
       handler.display_name as handled_by_name
@@ -115,12 +118,12 @@ export async function createPrintRequestRecord(rawInput: CreatePrintRequestInput
     const [inserted] = await transaction<{ id: string }[]>`
       insert into print_requests (
         idempotency_key, brand, model, layout, variant,
-        order_reference, reason, requested_by
+        order_reference, quantity, reason, requested_by
       )
       values (
         ${input.idempotencyKey}, ${brandFromModel(model)}, ${model},
         ${input.layout.trim()}, ${input.variant.trim()},
-        ${input.orderReference.trim()}, ${input.reason.trim()}, ${input.actorId}
+        ${input.orderReference.trim()}, ${input.quantity}, ${input.reason.trim()}, ${input.actorId}
       )
       returning id
     `;

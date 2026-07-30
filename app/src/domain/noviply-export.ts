@@ -58,6 +58,7 @@ const printRequestHeaders = [
   "Model",
   "Language",
   "Enter",
+  "Sheets",
   "Order number",
   "Reason",
   "Status",
@@ -73,6 +74,8 @@ export function createNoviplyPrintRequestCsv(records: PrintRequestRecord[]) {
     record.model,
     record.layout,
     record.variant,
+    // Eén order kan meerdere laptops zijn; zonder dit getal print Noviply er één.
+    record.quantity,
     record.orderReference,
     record.reason,
     printRequestStatusLabel(record.status),

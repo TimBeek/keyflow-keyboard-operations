@@ -106,6 +106,19 @@ const emptyMethodTally = (): Record<OperationalMethodId, number> => ({
   direct_reprint: 0,
 });
 
+/**
+ * Eén regel kan meerdere laptops zijn. De vraag is altijd "hoeveel laptops",
+ * niet "hoeveel keer heeft iemand op een knop gedrukt" — dus tellen we het
+ * aantal en niet de regels. Regels van vóór dit veld tellen als één.
+ */
+function units(entry: ConversionLogEntry) {
+  return Math.max(1, Math.round(entry.quantity || 1));
+}
+
+function totalUnits(entries: ConversionLogEntry[]) {
+  return entries.reduce((sum, entry) => sum + units(entry), 0);
+}
+
 export function conversionsPerDay(
   entries: ConversionLogEntry[],
   days: number,
@@ -120,8 +133,8 @@ export function conversionsPerDay(
   for (const entry of entries) {
     const bucket = buckets.get(dayKey(entry.occurredAt));
     if (!bucket) continue;
-    bucket.total += 1;
-    bucket.byMethod[entry.method] += 1;
+    bucket.total += units(entry);
+    bucket.byMethod[entry.method] += units(entry);
   }
 
   return [...buckets.values()];
@@ -188,15 +201,18 @@ export function conversionTotals(
   // weekenden en vrije dagen. De vraag is hoeveel er op een werkdag gebeurt.
   const activeDays = new Set(current.map((entry) => dayKey(entry.occurredAt))).size;
 
+  const currentUnits = totalUnits(current);
+  const previousUnits = totalUnits(previous);
+
   return {
-    current: current.length,
-    previous: previous.length,
-    delta: current.length - previous.length,
-    deltaPercentage: changePercentage(current.length, previous.length),
-    completed: current.filter((entry) => entry.status === "completed").length,
-    awaitingPrint: current.filter((entry) => entry.status === "awaiting_print").length,
+    current: currentUnits,
+    previous: previousUnits,
+    delta: currentUnits - previousUnits,
+    deltaPercentage: changePercentage(currentUnits, previousUnits),
+    completed: totalUnits(current.filter((entry) => entry.status === "completed")),
+    awaitingPrint: totalUnits(current.filter((entry) => entry.status === "awaiting_print")),
     activeDays,
-    perActiveDay: activeDays === 0 ? 0 : current.length / activeDays,
+    perActiveDay: activeDays === 0 ? 0 : currentUnits / activeDays,
   };
 }
 
@@ -218,13 +234,14 @@ export function methodShares(
   const previous = entries.filter((entry) => inWindow(entry.occurredAt, window.previous));
 
   return methodOrder.map((method) => {
-    const currentCount = current.filter((entry) => entry.method === method).length;
-    const previousCount = previous.filter((entry) => entry.method === method).length;
+    const currentCount = totalUnits(current.filter((entry) => entry.method === method));
+    const previousCount = totalUnits(previous.filter((entry) => entry.method === method));
+    const currentTotal = totalUnits(current);
     return {
       method,
       current: currentCount,
       previous: previousCount,
-      share: current.length === 0 ? 0 : (currentCount / current.length) * 100,
+      share: currentTotal === 0 ? 0 : (currentCount / currentTotal) * 100,
       delta: currentCount - previousCount,
     };
   });

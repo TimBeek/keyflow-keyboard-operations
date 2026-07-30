@@ -32,6 +32,7 @@ function request(
       ? null
       : new Date(now.getTime() - handledHoursAgo * 3_600_000).toISOString(),
     handledBy: handledHoursAgo === null ? null : "Noviply",
+    quantity: 1,
     note: "",
   };
 }

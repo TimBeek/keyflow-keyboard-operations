@@ -188,6 +188,9 @@ export function EmployeeWorkspace({
   const [enterShape, setEnterShape] = useState<EnterShapeId>("");
   const [shapeHelpOpen, setShapeHelpOpen] = useState(false);
   const [orderReference, setOrderReference] = useState("");
+  // Eén order kan meerdere laptops zijn. Eén is verreweg het meest voorkomend,
+  // dus dat blijft de stand waar niemand iets aan hoeft te doen.
+  const [quantity, setQuantity] = useState(1);
   const [confirmed, setConfirmed] = useState(false);
   const [adviceMessage, setAdviceMessage] = useState<{ tone: "ok" | "warn"; text: string } | null>(null);
   const [issueOpen, setIssueOpen] = useState(false);
@@ -290,6 +293,7 @@ export function EmployeeWorkspace({
     setModelQuery("");
     setChosenModel(null);
     setOrderReference("");
+    setQuantity(1);
     setConfirmed(false);
     if (!keepMessage) setAdviceMessage(null);
     setIssueOpen(false);
@@ -333,6 +337,7 @@ export function EmployeeWorkspace({
         layout: stickerLayout(),
         variant: enterShape,
         orderReference,
+        quantity,
         reason,
       });
       // De laptop is voor de medewerker klaar, maar pas af als Noviply hem
@@ -344,6 +349,7 @@ export function EmployeeWorkspace({
         targetLayout,
         variant: enterShape,
         orderReference,
+        quantity,
         ...(fallbackToPremium ? { fellBackFrom: "direct_reprint" as const } : {}),
       });
       setAdviceMessage({
@@ -374,6 +380,7 @@ export function EmployeeWorkspace({
         layout: stickerLayout(),
         variant: enterShape,
         orderReference,
+        quantity,
         expectedRunAt: run.at.toISOString(),
         expectedRunLabel: run.label,
       });
@@ -384,6 +391,7 @@ export function EmployeeWorkspace({
         targetLayout,
         variant: enterShape,
         orderReference,
+        quantity,
       });
       setAdviceMessage({
         tone: "ok",
@@ -433,7 +441,7 @@ export function EmployeeWorkspace({
       const result = await onInventoryMutation({
         sku: matched.item.sku,
         type: "issue",
-        quantity: 1,
+        quantity,
         reasonCode: "conversion_usage",
         notes: `Hangmap ${matched.item.storageNumber} · ${matched.variant} · ${targetLayout}`,
         reference: orderReference.trim() || undefined,
@@ -457,6 +465,7 @@ export function EmployeeWorkspace({
         sku: matched.item.sku,
         storageNumber: matched.item.storageNumber,
         orderReference,
+        quantity,
       });
       setAdviceMessage({
         tone: "ok",
@@ -887,7 +896,7 @@ export function EmployeeWorkspace({
                             setAskingSlipDate(true);
                           }}
                         >
-                          Nee, ligt er niet
+                          {quantity === 1 ? "Nee, ligt er niet" : `Nee, ${quantity} liggen er niet`}
                         </button>
                       </div>
                     </>
@@ -943,11 +952,49 @@ export function EmployeeWorkspace({
                   <span>Ordernummer (mag leeg)</span>
                   <input ref={orderInputRef} value={orderReference} onChange={(event) => setOrderReference(event.target.value)} placeholder="1859" />
                 </label>
+                {/* Eén order kan meerdere laptops zijn. Bijna altijd één, dus
+                    daar hoeft niemand iets voor te doen — maar staan er drie
+                    dezelfde op de kar, dan is dit één handeling in plaats van
+                    drie, en weet Noviply dat het om drie vellen gaat. */}
+                {(usesSheet || effectiveMethod === "printed_sticker") && (
+                  <div className="answer-quantity">
+                    <span>Hoeveel laptops?</span>
+                    <div className="quantity-stepper">
+                      <button
+                        type="button"
+                        aria-label="Eén minder"
+                        disabled={quantity <= 1}
+                        onClick={() => setQuantity((value) => Math.max(1, value - 1))}
+                      >
+                        −
+                      </button>
+                      <input
+                        type="number"
+                        min={1}
+                        max={200}
+                        value={quantity}
+                        aria-label="Aantal laptops"
+                        onChange={(event) => {
+                          const value = Number(event.target.value);
+                          setQuantity(Number.isFinite(value) ? Math.min(200, Math.max(1, Math.round(value))) : 1);
+                        }}
+                      />
+                      <button
+                        type="button"
+                        aria-label="Eén meer"
+                        disabled={quantity >= 200}
+                        onClick={() => setQuantity((value) => Math.min(200, value + 1))}
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="answer-actions">
                 <button className="primary-button" disabled={!confirmed} onClick={bookDone}>
-                  Gedaan{usesSheet ? " — boek vel af" : ""}
+                  Gedaan{usesSheet ? (quantity === 1 ? " — boek vel af" : ` — boek ${quantity} vellen af`) : ""}
                 </button>
                 {usesSheet && matched && (
                   <button className="danger-ghost-button" onClick={() => setIssueOpen((open) => !open)}>

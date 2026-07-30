@@ -2744,3 +2744,36 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 
 /* Bewaartest: een onschuldige wijziging om te bewijzen dat een deploy geen gegevens raakt. */
 .request-order b { font-variant-numeric: tabular-nums; }
+
+/* Eén order kan meerdere laptops zijn. Bijna altijd één, dus de teller staat
+   naast het ordernummer en niet in de weg. */
+.answer-quantity { display: flex; flex-direction: column; gap: 6px; }
+.answer-quantity > span {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+.quantity-stepper { display: flex; align-items: stretch; gap: 6px; }
+.quantity-stepper button {
+  width: 38px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.quantity-stepper button:disabled { opacity: .4; cursor: default; }
+.quantity-stepper input {
+  width: 64px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+/* Meer dan één vel voor dezelfde order: dat is het geval waar te weinig
+   geprint wordt, dus dat mag niet wegvallen tussen de enen. */
+.quantity-many { color: var(--warn); font-weight: 800; }

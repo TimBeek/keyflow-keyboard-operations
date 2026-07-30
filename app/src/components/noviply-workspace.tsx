@@ -305,6 +305,7 @@ export function NoviplyWorkspace({
                 <th>Brand / model</th>
                 <th>Language</th>
                 <th>Enter</th>
+                <th>Sheets</th>
                 <th>Order number</th>
                 <th>Requested</th>
                 <th>Action</th>
@@ -316,6 +317,9 @@ export function NoviplyWorkspace({
                   <td><strong>{request.brand}</strong><span>{request.model}</span></td>
                   <td>{request.layout}</td>
                   <td>{request.variant || "—"}</td>
+                  {/* Eén order kan meerdere laptops zijn; meer dan één valt op,
+                      want dat is het geval waar misgeprint wordt. */}
+                  <td><b className={request.quantity > 1 ? "quantity-many" : ""}>{request.quantity}×</b></td>
                   <td>{request.orderReference || "—"}</td>
                   <td>
                     <strong>{formatMoment(request.requestedAt)}</strong>
@@ -453,13 +457,14 @@ export function NoviplyWorkspace({
           <div className="table-wrap">
             <table className="operations-table">
               <thead>
-                <tr><th>Brand / model</th><th>Language</th><th>Outcome</th><th>Handled</th></tr>
+                <tr><th>Brand / model</th><th>Language</th><th>Sheets</th><th>Outcome</th><th>Handled</th></tr>
               </thead>
               <tbody>
                 {handled.map((request) => (
                   <tr key={request.id}>
                     <td><strong>{request.brand}</strong><span>{request.model}</span></td>
                     <td>{request.layout}</td>
+                    <td><b className={request.quantity > 1 ? "quantity-many" : ""}>{request.quantity}×</b></td>
                     <td>
                       <span className={`print-status ${request.status}`}>
                         {request.status === "printed" ? "✓" : "✕"} {printRequestStatusLabel(request.status)}
