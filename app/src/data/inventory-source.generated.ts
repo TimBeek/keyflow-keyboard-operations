@@ -11,11 +11,11 @@ export type InventorySourceRow = {
 };
 
 export const inventorySourceMetadata = {
-  "fileName": "Toetsenbordstickers voorraad - Productie (2).csv",
+  "fileName": "Toetsenbordstickers voorraad - Productie (3).csv",
   "sheet": "Productie",
-  "sha256": "26766f379d524f543bfe9cc6081e9ca5b1421e039fbf12325427ecb71323a8c1",
+  "sha256": "44e83f930fe2e564cfc7cf7e3739e4db571570f67e499f5b8546ef1c5caaf01d",
   "rowCount": 148,
-  "totalQuantity": 3133
+  "totalQuantity": 3115
 } as const;
 
 export const inventorySourceRows: readonly InventorySourceRow[] = [
@@ -393,7 +393,7 @@ export const inventorySourceRows: readonly InventorySourceRow[] = [
     "sourceRow": 40,
     "storageNumber": 38,
     "model": "Dell Latitude 3310",
-    "stock": 15,
+    "stock": 0,
     "layout": "QWERTY US",
     "sku": "NB10088E1NL",
     "linkedModels": "Dell Latitude 3310 2-in-1",
@@ -823,7 +823,7 @@ export const inventorySourceRows: readonly InventorySourceRow[] = [
     "sourceRow": 83,
     "storageNumber": 81,
     "model": "HP EliteBook 745 G5",
-    "stock": 16,
+    "stock": 15,
     "layout": "QWERTY US",
     "sku": "NB10142E1NL",
     "linkedModels": "HP EliteBook 745 G5, HP EliteBook 745 G6, HP EliteBook 840 G5, HP EliteBook 840 G6, HP EliteBook 846 G5, HP EliteBook 846 G6, HP ZBook 14u G5, HP ZBook 14u G6",
@@ -1013,7 +1013,7 @@ export const inventorySourceRows: readonly InventorySourceRow[] = [
     "sourceRow": 102,
     "storageNumber": 100,
     "model": "Lenovo ThinkPad L380",
-    "stock": 27,
+    "stock": 26,
     "layout": "QWERTY US",
     "sku": "NB10151E1NL",
     "linkedModels": "Lenovo ThinkPad L380, Lenovo ThinkPad L390, Lenovo ThinkPad L390 Yoga, Lenovo ThinkPad L480, Lenovo ThinkPad L490, Lenovo ThinkPad L580, Lenovo ThinkPad E480, Lenovo ThinkPad E490, Lenovo ThinkPad E495, Lenovo ThinkPad T480, Lenovo ThinkPad T480s, Lenovo ThinkPad T490, Lenovo ThinkPad T495",
@@ -1273,7 +1273,7 @@ export const inventorySourceRows: readonly InventorySourceRow[] = [
     "sourceRow": 128,
     "storageNumber": 126,
     "model": "Lenovo Thinkpad E14",
-    "stock": 21,
+    "stock": 20,
     "layout": "QWERTY US",
     "sku": "NB10211E1NL",
     "linkedModels": "",
