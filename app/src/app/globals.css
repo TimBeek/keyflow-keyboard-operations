@@ -1750,16 +1750,22 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 /* Vier oplossingen in oplopende kwaliteit. Kleur ondersteunt, sterren dragen
    de rangorde — die blijft leesbaar zonder kleur. */
 :root {
+  /* Nagerekend met de kleurcontrole, niet op gevoel gekozen. Het paars van de
+     premiumsticker lag zo dicht bij het blauw van het voorraadvel dat iemand
+     met kleurenblindheid ze niet uit elkaar hield (ΔE 1,4) — en dat zijn net de
+     twee methodes die het meest voorkomen. Magenta zit ver genoeg weg, en het
+     goud is een stap donkerder zodat het op de donkere achtergrond binnen de
+     leesbare band valt. */
   --tier-basic: #2FA36B;
-  --tier-stock: #2E9BF0;
-  --tier-premium: #9A7BE8;
-  --tier-professional: #D9A62B;
+  --tier-stock: #3D8BE8;
+  --tier-premium: #D1519B;
+  --tier-professional: #BE8A24;
 }
 :root[data-theme="light"] {
   --tier-basic: #17794C;
   --tier-stock: #1B6FB8;
-  --tier-premium: #6B4CC4;
-  --tier-professional: #97701A;
+  --tier-premium: #A83377;
+  --tier-professional: #8A6413;
 }
 .method-name { display: flex; align-items: center; gap: 10px; }
 .method-dot { width: 12px; height: 12px; border-radius: 50%; flex: none; background: var(--muted); }
@@ -3174,6 +3180,32 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 /* Het handboek hoort bij de navigatie: naslag, geen handeling. Als link in de
    zijbalkvoet neemt het geen ruimte weg van het werk. */
 .sidebar-footer a.nav-item { text-decoration: none; }
+
+/* De dagbalk: wat er vandaag is afgehandeld, en waarmee.
+   Twee pixels tussenruimte tussen de stukken, zodat aangrenzende kleuren nooit
+   in elkaar overlopen — dat scheelt precies bij de paren die voor kleurenblinden
+   het dichtst bij elkaar liggen. De naam en het aantal staan eronder, dus de
+   kleur draagt de betekenis niet alleen. */
+.today-panel { margin-bottom: 18px; padding: 18px 20px 16px; }
+.today-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+.today-head h2 { margin: 0 0 3px; font-size: 16px; }
+.today-head p { margin: 0; color: var(--text-2); font-size: 12.5px; }
+.today-bar { display: flex; gap: 2px; height: 16px; }
+.today-slice { min-width: 6px; border-radius: 4px; background: var(--tier-stock); }
+.today-slice.tone-basic { background: var(--tier-basic); }
+.today-slice.tone-stock { background: var(--tier-stock); }
+.today-slice.tone-premium { background: var(--tier-premium); }
+.today-slice.tone-professional { background: var(--tier-professional); }
+.today-slice.tone-none, .today-slice.tone-plain { background: var(--text-3); }
+.today-legend { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 12px 0 0; padding: 0; list-style: none; }
+.today-legend li { display: flex; align-items: center; gap: 7px; }
+.today-legend i { width: 10px; height: 10px; border-radius: 3px; background: var(--text-3); }
+.today-legend i.tone-basic { background: var(--tier-basic); }
+.today-legend i.tone-stock { background: var(--tier-stock); }
+.today-legend i.tone-premium { background: var(--tier-premium); }
+.today-legend i.tone-professional { background: var(--tier-professional); }
+.today-legend strong { color: var(--text); font-size: 15px; font-weight: 800; }
+.today-legend span { color: var(--text-2); font-size: 12.5px; }
 
 /* Alles waar iemand iets mee moet, gegroepeerd per soort. Vier losse plekken
    maakten dat niemand overzicht had; één lijst met kopjes leest in één blik. */

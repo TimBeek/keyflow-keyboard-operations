@@ -44,6 +44,8 @@ import {
 } from "@/domain/cycle-count";
 import { calculateInventoryMutation } from "@/domain/inventory";
 import { resupplyReady } from "@/domain/resupply";
+import { conversionMethods, type ConversionMethodId } from "@/domain/conversion-policy";
+import { realUsageUnits } from "@/domain/real-usage";
 import {
   attentionByKind,
   attentionItems,
@@ -485,9 +487,40 @@ export function Dashboard({
   );
   const defaultItem = stockItems.find((item) => item.stock > 0) ?? stockItems[0];
   const today = new Date().toISOString().slice(0, 10);
-  const todayIssued = transactions
-    .filter((entry) => entry.occurredAt.startsWith(today) && entry.quantityDelta < 0)
-    .reduce((sum, entry) => sum + Math.abs(entry.quantityDelta), 0);
+  // Alleen vellen die op een laptop zijn gegaan. Tellingcorrecties zijn geen
+  // verbruik, en die stonden hier wel in het cijfer.
+  const todayIssued = realUsageUnits(
+    transactions.filter((entry) => entry.occurredAt.startsWith(today)),
+  );
+
+  /**
+   * Wat er vandaag is afgehandeld, per methode.
+   *
+   * Het getal "vandaag verbruikt" zegt hoevéél, niet waarmee. Voor management is
+   * dat tweede net zo interessant: gaan de laptops door de kast (gratis) of naar
+   * de printer (kosten)? Eén balk laat die verhouding in één blik zien.
+   */
+  const vandaagPerMethode = useMemo(() => {
+    const vandaag = conversionLog.filter((entry) => entry.occurredAt.startsWith(today));
+    const volgorde: ConversionMethodId[] = [
+      "none",
+      "loose_stickers",
+      "noviply_sheet",
+      "printed_sticker",
+      "direct_reprint",
+    ];
+    const per = volgorde
+      .map((method) => ({
+        method,
+        naam: conversionMethods[method].name,
+        toon: conversionMethods[method].tone,
+        aantal: vandaag
+          .filter((entry) => entry.method === method)
+          .reduce((som, entry) => som + (entry.quantity ?? 1), 0),
+      }))
+      .filter((regel) => regel.aantal > 0);
+    return { regels: per, totaal: per.reduce((som, regel) => som + regel.aantal, 0) };
+  }, [conversionLog, today]);
   const currentCatalogStock = inventoryCatalog.reduce(
     (sum, item) => sum + inventoryQuantity(catalogQuantities, item),
     0,
@@ -2129,6 +2162,39 @@ export function Dashboard({
             <div className="stat-glyph convert"><Icon name="convert" size={27} /></div>
           </article>
         </section>
+
+        {/* Wat er vandaag is gedaan, en waarmee. Eén balk in plaats van vier
+            getallen: de verhouding is de vraag, niet het losse aantal. De naam
+            staat bij elk stukje, dus de kleur hoeft het niet alleen te doen. */}
+        {vandaagPerMethode.totaal > 0 && (
+          <section className="panel today-panel">
+            <div className="today-head">
+              <div>
+                <h2>Vandaag afgehandeld</h2>
+                <p>{vandaagPerMethode.totaal} {vandaagPerMethode.totaal === 1 ? "laptop" : "laptops"}, verdeeld over de methodes</p>
+              </div>
+            </div>
+            <div className="today-bar" role="img" aria-label={vandaagPerMethode.regels.map((r) => `${r.naam}: ${r.aantal}`).join(", ")}>
+              {vandaagPerMethode.regels.map((regel) => (
+                <span
+                  key={regel.method}
+                  className={`today-slice tone-${regel.toon}`}
+                  style={{ flexGrow: regel.aantal }}
+                  title={`${regel.naam}: ${regel.aantal}`}
+                />
+              ))}
+            </div>
+            <ul className="today-legend">
+              {vandaagPerMethode.regels.map((regel) => (
+                <li key={regel.method}>
+                  <i className={`tone-${regel.toon}`} />
+                  <strong>{regel.aantal}</strong>
+                  <span>{regel.naam}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
 
         <div className="content-grid">
           {/* Problemen ontstonden op vier plekken en werden op vier plekken
