@@ -3196,7 +3196,17 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
    een herkenningspunt, geen reclame. De hoogte staat vast zodat de rest van het
    scherm niet verspringt als hun bestand later een andere verhouding heeft. */
 .noviply-logo { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
-.noviply-logo img { height: 30px; width: auto; max-width: 200px; object-fit: contain; display: block; }
+/* Hun logo is gemaakt voor een witte ondergrond en heeft die ook in het
+   bestand. Zonder eigen vlak staat er dus een wit rechthoekje midden in een
+   grijs scherm, alsof er iets is uitgeknipt. Op een eigen kaartje ziet het
+   eruit alsof het er hoort — en het werkt meteen ook in donkere modus, waar
+   het paars anders wegvalt tegen de achtergrond. */
+.noviply-logo-kaart {
+  display: flex; align-items: center;
+  padding: 9px 14px; border-radius: 12px;
+  background: #FFFFFF; border: 1px solid var(--line);
+}
+.noviply-logo img { height: 26px; width: auto; max-width: 190px; object-fit: contain; display: block; }
 .noviply-logo-naam { color: var(--text); font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
 .noviply-logo-rol {
   padding: 4px 10px; border-radius: 999px;

@@ -22,12 +22,14 @@ export function NoviplyLogo() {
   return (
     <div className="noviply-logo">
       {gevonden ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={`${basis}/noviply-logo.png`}
-          alt="Noviply"
-          onError={() => setGevonden(false)}
-        />
+        <span className="noviply-logo-kaart">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={`${basis}/noviply-logo.png`}
+            alt="Noviply"
+            onError={() => setGevonden(false)}
+          />
+        </span>
       ) : (
         <span className="noviply-logo-naam">Noviply</span>
       )}
