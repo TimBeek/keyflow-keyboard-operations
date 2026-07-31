@@ -402,6 +402,10 @@ export function Dashboard({
       model: sheet.model,
       modelAliases: [sheet.model],
       sku: sheet.sku,
+      // Een vel dat hier is toegevoegd heeft altijd zijn eigen nummer gekregen.
+      stockKey: sheet.sku,
+      ownNumber: false,
+      sharedNumber: false,
       layout: sheet.layout as InventoryCatalogItem["layout"],
       stock: sheet.stock,
       reserved: 0,
@@ -942,13 +946,15 @@ export function Dashboard({
   }
 
   async function recordEmployeeInventoryMutation(request: InventoryMutationRequest) {
-    const matchingItems = inventoryCatalog.filter(
+    // Op de voorraadsleutel, niet op het artikelnummer: dat laatste kan bij twee
+    // hangmappen staan en dan weet je niet uit welke map je afboekt.
+    const matchingItems = workingCatalog.filter(
       (candidate) =>
         candidate.dataQuality === "ready"
-        && candidate.sku === request.sku,
+        && candidate.stockKey === request.sku,
     );
     if (matchingItems.length !== 1) {
-      throw new Error(`Sticker-SKU ${request.sku} is onbekend, dubbel of geblokkeerd voor boeken.`);
+      throw new Error(`Sticker-SKU ${request.sku} is onbekend of geblokkeerd voor boeken.`);
     }
     const item = matchingItems[0];
     const currentQuantity = inventoryQuantity(catalogQuantities, item);
@@ -966,7 +972,7 @@ export function Dashboard({
     });
 
     const payload = {
-      sku: item.sku,
+      sku: item.stockKey,
       locationCode: inventoryLocationCode,
       type: request.type,
       quantity: request.quantity,

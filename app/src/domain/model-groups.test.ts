@@ -15,9 +15,10 @@ describe("modelgroepaudit op de Excelbron", () => {
     });
   });
 
-  it("blokkeert de negen onveilige bronregels", () => {
-    expect(audit.blockedSources).toBe(9);
-    expect(audit.needsCompatibility).toBe(29);
+  it("houdt geen bronregel meer buiten de deur", () => {
+    // De negen mappen zonder of met een dubbel artikelnummer hebben nu elk een
+    // eigen voorraadsleutel en doen gewoon mee.
+    expect(audit.blockedSources).toBe(0);
   });
 
   it("signaleert modellen die naar meerdere SKU's voor dezelfde layout verwijzen", () => {

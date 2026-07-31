@@ -352,14 +352,19 @@ const scenarioDefinitions: ScenarioDefinition[] = [
   scenario(
     "INV-02",
     "inventory",
-    "Onveilige bronregels",
+    "Elke hangmap telt apart",
     "blocking",
-    "9 regels geblokkeerd; 139 operationeel",
-    () => outcome(
-      inventoryCatalogSummary.blockedRows === 9
-        && operationalInventoryCatalog.length === 139,
-      `${inventoryCatalogSummary.blockedRows} geblokkeerd · ${operationalInventoryCatalog.length} operationeel`,
-    ),
+    "Geen twee hangmappen op dezelfde voorraadsleutel",
+    () => {
+      const sleutels = operationalInventoryCatalog.map((item) => item.stockKey);
+      const dubbel = sleutels.filter((sleutel, index) => sleutels.indexOf(sleutel) !== index);
+      return outcome(
+        dubbel.length === 0 && operationalInventoryCatalog.length > 0,
+        dubbel.length === 0
+          ? `${operationalInventoryCatalog.length} hangmappen, elk met een eigen sleutel · ${inventoryCatalogSummary.blockedRows} zonder laptopmodel`
+          : `dubbele sleutels: ${[...new Set(dubbel)].join(", ")}`,
+      );
+    },
   ),
   scenario(
     "INV-03",

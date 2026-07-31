@@ -26,16 +26,44 @@ describe("volledige Excelvoorraadcatalogus", () => {
     expect(inventoryCatalogSummary).toMatchObject({ sheet: "Productie", rowCount: 148 });
   });
 
-  it("blokkeert ontbrekende en dubbele artikelnummers voor operationeel gebruik", () => {
-    expect(inventoryCatalogSummary.blockedRows).toBe(9);
-    expect(operationalInventoryCatalog).toHaveLength(139);
+  it("laat geen hangmap ongebruikt om een ontbrekend of dubbel artikelnummer", () => {
+    // Deze negen mappen bleven vroeger buiten beeld. Samen 177 vellen die de
+    // werkvloer niet kreeg, terwijl de laptop dan naar de printer ging.
+    expect(operationalInventoryCatalog).toHaveLength(148);
+    expect(inventoryCatalogSummary.blockedRows).toBe(0);
+  });
+
+  it("kent zelf een nummer toe als de bronlijst er geen heeft", () => {
     expect(inventoryCatalog.find(({ storageNumber }) => storageNumber === 63)).toMatchObject({
-      sku: "",
-      dataQuality: "blocked",
+      sku: "RM00063E1NL",
+      stockKey: "RM00063E1NL",
+      ownNumber: true,
+      dataQuality: "ready",
     });
-    expect(inventoryCatalog.find(({ storageNumber }) => storageNumber === 147)).toMatchObject({
-      sku: "NB10100E1NL",
-      dataQuality: "blocked",
+  });
+
+  it("houdt het echte nummer op het scherm als twee mappen het delen", () => {
+    // Wie bij hangmap 147 staat leest NB10100E1NL, want dat staat op het vel.
+    // De voorraad telt wel per map, anders weet je niet welke map leeg raakt.
+    const map36 = inventoryCatalog.find(({ storageNumber }) => storageNumber === 36);
+    const map147 = inventoryCatalog.find(({ storageNumber }) => storageNumber === 147);
+
+    expect(map36).toMatchObject({ sku: "NB10100E1NL", stockKey: "NB10100E1NL-M36", sharedNumber: true });
+    expect(map147).toMatchObject({ sku: "NB10100E1NL", stockKey: "NB10100E1NL-M147", sharedNumber: true });
+  });
+
+  it("geeft elke hangmap een eigen voorraadsleutel", () => {
+    const sleutels = inventoryCatalog.map(({ stockKey }) => stockKey);
+
+    expect(new Set(sleutels).size).toBe(inventoryCatalog.length);
+  });
+
+  it("laat een gewone hangmap ongemoeid", () => {
+    expect(inventoryCatalog.find(({ storageNumber }) => storageNumber === 75)).toMatchObject({
+      sku: "NB10172E1NL",
+      stockKey: "NB10172E1NL",
+      ownNumber: false,
+      sharedNumber: false,
     });
   });
 

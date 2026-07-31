@@ -461,7 +461,7 @@ export function EmployeeWorkspace({
     }
     try {
       const result = await onInventoryMutation({
-        sku: matched.item.sku,
+        sku: matched.item.stockKey,
         type: "issue",
         quantity,
         reasonCode: "conversion_usage",
@@ -512,7 +512,7 @@ export function EmployeeWorkspace({
       let tail = "Er is niets afgeboekt.";
       if (bookAsScrap) {
         const result = await onInventoryMutation({
-          sku: matched.item.sku,
+          sku: matched.item.stockKey,
           type: "issue",
           quantity: 1,
           reasonCode: "verification_scrap",
@@ -577,7 +577,7 @@ export function EmployeeWorkspace({
     }
     try {
       const result = await onInventoryMutation({
-        sku: receiveItem.sku,
+        sku: receiveItem.stockKey,
         type: "receipt",
         quantity: receiveQuantity,
         reasonCode: "supplier_delivery",

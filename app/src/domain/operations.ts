@@ -88,6 +88,11 @@ export type InventoryTransactionEntry = {
 };
 
 export type InventoryMutationRequest = {
+  /**
+   * De sleutel van de hangmap waaruit geboekt wordt. Meestal het artikelnummer,
+   * maar twee mappen kunnen hetzelfde nummer dragen — dan is dit de sleutel die
+   * alleen bij die ene map hoort. Zie `stockKey` in de catalogus.
+   */
   sku: string;
   type: "issue" | "receipt";
   quantity: number;

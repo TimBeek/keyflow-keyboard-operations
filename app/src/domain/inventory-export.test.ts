@@ -12,10 +12,14 @@ describe("voorraad-CSV-export", () => {
     expect(lines.find((line) => line.startsWith("75;"))).toContain('"NB10172E1NL";"QWERTY US";24');
   });
 
-  it("markeert geblokkeerde bronregels in de export", () => {
+  it("vertelt in de export welk nummer we zelf hebben toegekend", () => {
+    // Hangmap 63 heeft geen nummer van Noviply. De map is gewoon bruikbaar,
+    // maar wie de export leest moet zien dat het nummer van ons komt.
     const csv = createInventoryCsv(inventoryCatalog, {});
+    const regel = csv.split("\r\n").find((line) => line.startsWith("63;"));
 
-    expect(csv.split("\r\n").find((line) => line.startsWith("63;"))).toContain('"Geblokkeerd"');
+    expect(regel).toContain('"RM00063E1NL"');
+    expect(regel).toContain("zelf toegekend");
   });
 
   it("neutraliseert spreadsheetformules in tekstvelden", () => {

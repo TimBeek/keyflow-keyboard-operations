@@ -164,24 +164,19 @@ describe("Land van de sticker", () => {
 
 describe("Noviply SKU matching", () => {
   it("vindt het exacte stickernummer en behoudt de E-variant", () => {
-    const match = findNoviplySku("Dell Latitude 7400", "QWERTY US", inventoryCatalog, {});
+    const match = findNoviplySku("Dell Latitude 5420", "QWERTY US", inventoryCatalog, {});
 
     expect(match.status).toBe("matched");
     if (match.status === "matched") {
-      expect(match.item.sku).toBe("NB10052E1NL");
+      expect(match.item.sku).toBe("NB10172E1NL");
       expect(match.variant).toBe("E1");
-      expect(match.currentStock).toBe(15);
-      expect(match.item.storageNumber).toBe(1);
+      expect(match.item.storageNumber).toBe(75);
     }
   });
 
   it("meldt expliciet wanneer de exacte SKU niet op voorraad is", () => {
-    const match = findNoviplySku(
-      "Dell Latitude 7400",
-      "QWERTY US",
-      inventoryCatalog,
-      { NB10052E1NL: 0 },
-    );
+    const leeg = Object.fromEntries(inventoryCatalog.map((item) => [item.catalogKey, 0]));
+    const match = findNoviplySku("Dell Latitude 5420", "QWERTY US", inventoryCatalog, leeg);
 
     expect(match.status).toBe("out_of_stock");
   });

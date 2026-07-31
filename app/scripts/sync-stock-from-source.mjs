@@ -43,18 +43,23 @@ try {
     throw new Error("De importgebruiker bestaat niet of mag geen import doen.");
   }
 
+  /**
+   * Koppelen op hangmapnummer, niet op artikelnummer. Twee hangmappen kunnen
+   * hetzelfde nummer dragen, en een enkele map heeft er helemaal geen — dan valt
+   * er op nummer niets te koppelen terwijl de map wel bestaat en geteld wordt.
+   */
   const balances = await sql`
-    select s.sku, b.location_id, b.on_hand
+    select s.sku, s.hanging_file_number, b.location_id, b.on_hand
     from inventory_balances b
     inner join sticker_skus s on s.id = b.sku_id
+    where s.hanging_file_number is not null
   `;
-  const bySku = new Map(balances.map((row) => [row.sku, row]));
+  const byFolder = new Map(balances.map((row) => [row.hanging_file_number, row]));
 
   const differences = [];
   const missing = [];
   for (const row of source.rows) {
-    const balance = bySku.get(row.sku);
-    if (!row.sku) continue;
+    const balance = byFolder.get(row.storageNumber);
     if (!balance) {
       missing.push(row);
       continue;
@@ -63,7 +68,7 @@ try {
       differences.push({
         storageNumber: row.storageNumber,
         model: row.model,
-        sku: row.sku,
+        sku: balance.sku,
         locationId: balance.location_id,
         from: balance.on_hand,
         to: row.stock,
@@ -72,11 +77,11 @@ try {
     }
   }
 
-  const counted = source.rows.filter((row) => row.sku).length;
-  console.log(`Bronlijst: ${source.rows.length} hangmappen, ${counted} met artikelnummer.`);
-  console.log(`Gelijk: ${counted - differences.length - missing.length}.`);
+  const geteld = source.rows.length;
+  console.log(`Bronlijst: ${geteld} hangmappen.`);
+  console.log(`Gelijk: ${geteld - differences.length - missing.length}.`);
   if (missing.length > 0) {
-    console.log(`Niet in de database (overgeslagen): ${missing.map((r) => `${r.storageNumber} ${r.sku}`).join(", ")}.`);
+    console.log(`Nog niet in de database: hangmap ${missing.map((r) => r.storageNumber).join(", ")}.`);
   }
   if (differences.length === 0) {
     console.log("Geen verschillen. Er valt niets bij te stellen.");

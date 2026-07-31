@@ -3,7 +3,16 @@
  * bijvoorbeeld NB10052E1NL. De Excel-import levert soms lege regels of resten
  * als ",,,,,,,,,," op; die mogen nooit als nummer worden getoond.
  */
-export const stickerSkuPattern = /^NB\d+E\d+(NL|FR|DE|BE|UK|SE|NO|DK|ES|IT|PT|PL)$/;
+/**
+ * NB is van Noviply en staat op het vel. RM is van onszelf: dat kennen we toe
+ * aan een hangmap waar geen nummer bij stond, zodat de map toch bruikbaar is.
+ * Aan de letters zie je meteen of je het bij Noviply kunt bestellen.
+ */
+export const stickerSkuPattern = /^(NB|RM)\d+E\d+(NL|FR|DE|BE|UK|SE|NO|DK|ES|IT|PT|PL)$/;
+
+export function isOwnStickerSku(sku: string) {
+  return sku.trim().toUpperCase().startsWith("RM");
+}
 
 export function isValidStickerSku(sku: string) {
   return stickerSkuPattern.test(sku.trim().toUpperCase());

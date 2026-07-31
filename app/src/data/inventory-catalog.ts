@@ -12,7 +12,18 @@ export type InventoryCatalogItem = {
   sourceRow: number;
   model: string;
   modelAliases: string[];
+  /** Wat er op het vel staat, en wat de werkvloer op het scherm leest. */
   sku: string;
+  /**
+   * Waarop de voorraad wordt geteld. Normaal hetzelfde als het artikelnummer,
+   * maar twee hangmappen kunnen hetzelfde nummer dragen en die willen we apart
+   * kunnen tellen — dan krijgt elke map hier zijn eigen sleutel.
+   */
+  stockKey: string;
+  /** Het nummer komt niet van Noviply maar hebben we zelf toegekend. */
+  ownNumber: boolean;
+  /** Ditzelfde artikelnummer ligt ook in een andere hangmap. */
+  sharedNumber: boolean;
   layout: InventoryLayout;
   stock: number;
   reserved: number;
@@ -37,17 +48,60 @@ const skuCounts = inventorySourceRows.reduce<Map<string, number>>((counts, row) 
   return counts;
 }, new Map());
 
+/**
+ * De vellen in de kast zijn van Noviply en dragen hun artikelnummer. Bij een
+ * handvol hangmappen staat er geen nummer in de bronlijst, en bij een paar
+ * andere staat hetzelfde nummer bij twee mappen. Zulke mappen bleven vroeger
+ * ongebruikt: de werkvloer kreeg dan geen vel aangewezen en de laptop ging naar
+ * de printer, terwijl er tientallen vellen lagen.
+ *
+ * Daarom krijgt elke hangmap hier een eigen sleutel om op te tellen. Ontbreekt
+ * het nummer, dan kennen we er zelf een toe met RM ervoor — meteen te zien dat
+ * het van ons is en niet bij Noviply te bestellen. Staat hetzelfde nummer bij
+ * twee mappen, dan houdt allebei het echte nummer op het scherm en telt elke
+ * map los verder.
+ */
+const eigenNummerLanden: Record<InventoryLayout, string> = {
+  "QWERTY US": "NL",
+  "AZERTY FR": "FR",
+  "QWERTZ DE": "DE",
+};
+
+function eigenArtikelnummer(storageNumber: number, layout: InventoryLayout) {
+  // E1 omdat elke hangmap zonder nummer naast mappen met dezelfde modellen ligt
+  // die allemaal E1 zijn. Klopt dat voor een map niet, dan corrigeert
+  // management het nummer in de catalogus.
+  return `RM${String(storageNumber).padStart(5, "0")}E1${eigenNummerLanden[layout] ?? "NL"}`;
+}
+
 export const inventoryCatalog: InventoryCatalogItem[] = inventorySourceRows.map((row) => {
-  const sku = row.sku.trim().toUpperCase();
+  const bronSku = row.sku.trim().toUpperCase();
+  const layout = row.layout as InventoryLayout;
+  const bruikbaarNummer = /^NB\d+E\d+(NL|FR|DE)$/.test(bronSku);
+  const gedeeld = bruikbaarNummer && (skuCounts.get(bronSku) ?? 0) > 1;
+
+  const sku = bruikbaarNummer ? bronSku : eigenArtikelnummer(row.storageNumber, layout);
+  const stockKey = gedeeld ? `${sku}-M${row.storageNumber}` : sku;
+
   const dataQualityIssues: string[] = [];
-  if (!/^NB\d+E\d+(NL|FR|DE)$/.test(sku)) {
-    dataQualityIssues.push("Artikelnummer ontbreekt of heeft een ongeldig formaat.");
+  if (!bruikbaarNummer) {
+    dataQualityIssues.push(
+      `Geen artikelnummer in de bronlijst; ${sku} is zelf toegekend. Vul het echte nummer in zodra het bekend is.`,
+    );
   }
-  if ((skuCounts.get(sku) ?? 0) > 1) {
-    dataQualityIssues.push("Artikelnummer staat op meerdere hangmaplocaties en vereist managementcontrole.");
+  if (gedeeld) {
+    dataQualityIssues.push(
+      `Artikelnummer ${sku} ligt ook in een andere hangmap; deze map telt apart verder.`,
+    );
   }
 
   const modelAliases = collectModelAliases(row.model, row.linkedModels);
+  // Wat een hangmap écht onbruikbaar maakt is dat er geen laptop bij staat: dan
+  // valt er niets op te zoeken. Een ontbrekend of dubbel artikelnummer is
+  // hierboven opgelost en hoeft de map niet meer buiten te sluiten.
+  if (modelAliases.length === 0) {
+    dataQualityIssues.push("Er staat geen laptopmodel bij deze hangmap.");
+  }
 
   return {
     catalogKey: `hangmap-${String(row.storageNumber).padStart(3, "0")}`,
@@ -55,6 +109,9 @@ export const inventoryCatalog: InventoryCatalogItem[] = inventorySourceRows.map(
     model: row.model,
     modelAliases,
     sku,
+    stockKey,
+    ownNumber: !bruikbaarNummer,
+    sharedNumber: gedeeld,
     layout: row.layout as InventoryLayout,
     stock: row.stock,
     reserved: 0,
@@ -70,7 +127,7 @@ export const inventoryCatalog: InventoryCatalogItem[] = inventorySourceRows.map(
     sourceNote: row.notes || undefined,
     supplier: "Noviply",
     compatibleModels: modelAliases.length,
-    dataQuality: dataQualityIssues.length === 0 ? "ready" : "blocked",
+    dataQuality: modelAliases.length === 0 ? "blocked" : "ready",
     dataQualityIssues,
     planningDataStatus: "unconfigured",
   };

@@ -20,9 +20,11 @@ describe("modelcatalogus uit Excel-compatibiliteit", () => {
     expect(modelMatchesCatalogItem("Dell Latitude 7420", item!)).toBe(true);
   });
 
-  it("sluit geblokkeerde Excelregels uit van werknemerskeuzes", () => {
+  it("biedt ook de modellen aan uit hangmappen zonder Noviply-nummer", () => {
+    // De Precision 7530 hangt in map 63. Die map had geen artikelnummer en viel
+    // daardoor buiten de keuzelijst, terwijl er elf vellen lagen.
     const options = catalogModelOptions(inventoryCatalog);
 
-    expect(options).not.toContain("Dell Precision 7530");
+    expect(options).toContain("Dell Precision 7530");
   });
 });
