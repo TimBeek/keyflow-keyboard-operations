@@ -16,7 +16,14 @@ export type PrintRequestInput = {
   reason: string;
   /** Aantal vellen; één order kan meerdere laptops bevatten. */
   quantity?: number;
+  /**
+   * Zit er een trackpoint op (het knopje tussen G, H en B)? Dat verandert de
+   * indeling van het toetsenbord, en Noviply ziet de laptop niet.
+   */
+  trackpoint?: TrackpointAnswer;
 };
+
+export type TrackpointAnswer = "yes" | "no" | "unknown";
 
 export type PrintRequestRecord = {
   id: string;
@@ -26,6 +33,7 @@ export type PrintRequestRecord = {
   variant: string;
   orderReference: string;
   reason: string;
+  trackpoint: TrackpointAnswer;
   requestedAt: string;
   requestedBy: string;
   status: PrintRequestStatus;
@@ -79,6 +87,7 @@ export function createPrintRequest(
     variant: input.variant.trim(),
     orderReference: input.orderReference.trim(),
     reason: input.reason.trim(),
+    trackpoint: input.trackpoint ?? "unknown",
     requestedAt: metadata.requestedAt,
     requestedBy,
     status: "requested",

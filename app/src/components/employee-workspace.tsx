@@ -50,6 +50,11 @@ import {
 } from "@/domain/print-request-status";
 import type { ConversionLogInput } from "@/domain/conversion-log";
 import { directPrintScopeFor } from "@/domain/direct-print-scope";
+import {
+  noviplyBlockedFor,
+  unavailableReasonLabel,
+  type NoviplyUnavailableRecord,
+} from "@/domain/noviply-availability";
 import { EnterShapeGlyph } from "@/components/enter-shape-glyph";
 import { nextPrintRun, type PrintRun } from "@/domain/print-runs";
 import { batchLabel, batchRowForOrder, type PrintBatch } from "@/domain/print-batch";
@@ -140,6 +145,8 @@ type Props = {
   runWaitlist: RunWaitlistEntry[];
   /** De ingelezen rondes; daarin is te zien of het vel er echt aan komt. */
   printBatches: PrintBatch[];
+  /** Wat Noviply naar eigen zeggen niet kan printen. */
+  noviplyUnavailable: NoviplyUnavailableRecord[];
   onWaitForPrintRun: (input: RunWaitlistInput) => Promise<unknown>;
   onSettleRunWait: (id: string, outcome: "collected" | "escalated") => void;
 };
@@ -160,6 +167,7 @@ export function EmployeeWorkspace({
   onRecordConversion,
   runWaitlist,
   printBatches,
+  noviplyUnavailable,
   onWaitForPrintRun,
   onSettleRunWait,
 }: Props) {
@@ -261,6 +269,16 @@ export function EmployeeWorkspace({
     [model, targetLayout],
   );
 
+  /**
+   * Heeft Noviply eerder gemeld dat ze dit model of deze taal niet hebben, dan
+   * is de premiumsticker geen optie. Zonder dit adviseerde de app hem opnieuw,
+   * deed de werkvloer opnieuw een aanvraag, en kwam dezelfde afwijzing terug.
+   */
+  const noviplyBlock = useMemo(
+    () => noviplyBlockedFor(noviplyUnavailable, model, targetLayout),
+    [model, noviplyUnavailable, targetLayout],
+  );
+
   const recommendation = useMemo(() => recommendConversion({
     saleValueEur: saleValue,
     saleValueLabel: saleBand.label,
@@ -274,10 +292,10 @@ export function EmployeeWorkspace({
     compatible: {
       loose_stickers: true,
       noviply_sheet: noviplyMatch.status === "matched" && evidence?.status !== "rejected",
-      printed_sticker: true,
+      printed_sticker: noviplyBlock === null,
       direct_reprint: true,
     },
-  }), [assumedCurrentLayout, directPrintLayouts, evidence?.status, noviplyMatch.status, policy, printScope, saleBand.label, saleValue, targetLayout]);
+  }), [assumedCurrentLayout, directPrintLayouts, evidence?.status, noviplyBlock, noviplyMatch.status, policy, printScope, saleBand.label, saleValue, targetLayout]);
 
   /**
    * De toetsenbordsprinter kan deze taal niet. De laptop krijgt dan de
@@ -293,6 +311,13 @@ export function EmployeeWorkspace({
    * laptop die daar niet doorheen kan.
    */
   const [printBlocked, setPrintBlocked] = useState(false);
+  /**
+   * Zit er een trackpoint op? Dat knopje tussen G, H en B verandert de indeling
+   * van het toetsenbord. Noviply print het vel zonder de laptop te zien, dus
+   * gaat een aanvraag niet weg voordat dit beantwoord is.
+   */
+  const [trackpoint, setTrackpoint] = useState<"" | "yes" | "no">("");
+  const [trackpointMissing, setTrackpointMissing] = useState(false);
   const effectiveMethod: ConversionMethodId = printBlocked && recommendation.primary === "direct_reprint"
     ? "printed_sticker"
     : recommendation.primary;
@@ -354,6 +379,10 @@ export function EmployeeWorkspace({
   /** Een echte aanvraag: Noviply moet dit vel apart printen. */
   function requestFromNoviply(reason: string) {
     if (needsOrderNumber()) return;
+    if (!trackpoint) {
+      setTrackpointMissing(true);
+      return;
+    }
     try {
       onRequestPrintSticker({
         model,
@@ -361,6 +390,7 @@ export function EmployeeWorkspace({
         variant: enterShape,
         orderReference,
         quantity,
+        trackpoint,
         reason,
       });
       // De laptop is voor de medewerker klaar, maar pas af als Noviply hem
@@ -375,6 +405,8 @@ export function EmployeeWorkspace({
         quantity,
         ...(fallbackToPremium ? { fellBackFrom: "direct_reprint" as const } : {}),
       });
+      setTrackpoint("");
+      setTrackpointMissing(false);
       setAdviceMessage({
         tone: "ok",
         text: `Aangevraagd bij Noviply voor order ${orderReference.trim()}. `
@@ -862,6 +894,17 @@ export function EmployeeWorkspace({
                 </>
               )}
 
+              {noviplyBlock && (
+                <div className="answer-fallback">
+                  <b>{unavailableReasonLabel(noviplyBlock.reason)}</b>
+                  <p>
+                    Dat hebben ze gemeld op {new Date(noviplyBlock.recordedAt).toLocaleDateString("nl-NL", { day: "numeric", month: "long" })}
+                    {noviplyBlock.note ? `: “${noviplyBlock.note}”` : ""}. Aanvragen heeft dus geen zin;
+                    hierboven staat wat er wél kan.
+                  </p>
+                </div>
+              )}
+
               {fallbackToPremium && (
                 <div className="answer-fallback">
                   <b>
@@ -876,6 +919,30 @@ export function EmployeeWorkspace({
                     </p>
                   )}
                 </div>
+              )}
+
+              {/* Noviply krijgt de laptop niet te zien. Het trackpoint verandert
+                  de indeling van het toetsenbord, dus zonder dit antwoord kunnen
+                  ze het verkeerde vel maken. */}
+              {effectiveMethod === "printed_sticker" && (fallbackToPremium || askingSlipDate) && (
+                <fieldset className={`trackpoint-ask${trackpointMissing ? " missing" : ""}`}>
+                  <legend>Zit er een trackpoint op?</legend>
+                  <p>Het knopje midden tussen de G, H en B.</p>
+                  <div className="trackpoint-choice">
+                    {([["yes", "Ja"], ["no", "Nee"]] as const).map(([waarde, label]) => (
+                      <button
+                        key={waarde}
+                        type="button"
+                        className={trackpoint === waarde ? "chosen" : ""}
+                        aria-pressed={trackpoint === waarde}
+                        onClick={() => { setTrackpoint(waarde); setTrackpointMissing(false); }}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  {trackpointMissing && <small>Noviply heeft dit nodig voordat ze printen.</small>}
+                </fieldset>
               )}
 
               {effectiveMethod === "printed_sticker" ? (

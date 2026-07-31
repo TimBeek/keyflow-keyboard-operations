@@ -150,6 +150,8 @@ const printRequestRecordSchema = z.object({
   variant: z.string(),
   orderReference: z.string(),
   reason: z.string(),
+  // Oude opslag kent dit veld nog niet; dan weten we het simpelweg niet.
+  trackpoint: z.enum(["yes", "no", "unknown"]).catch("unknown").default("unknown"),
   requestedAt: z.string().min(10),
   requestedBy: z.string(),
   status: z.enum(["requested", "printed", "not_printable"]),

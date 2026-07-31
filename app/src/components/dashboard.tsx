@@ -51,6 +51,11 @@ import {
 } from "@/domain/attention";
 import type { RunWaitlistEntry, RunWaitlistInput } from "@/domain/run-waitlist";
 import { unseenBatches, type PrintBatch } from "@/domain/print-batch";
+import {
+  reasonBlocksFuture,
+  type NoviplyUnavailableRecord,
+  type UnavailableReason,
+} from "@/domain/noviply-availability";
 import { dayKey } from "@/domain/reporting";
 import {
   calculateCatalogThreshold,
@@ -89,6 +94,8 @@ import {
 import {
   fetchSharedState,
   patchPrintRequest,
+  fetchNoviplyUnavailable,
+  removeNoviplyUnavailable,
   postConversion,
   postInventoryMutation,
   postPrintRequest,
@@ -319,6 +326,7 @@ export function Dashboard({
   const [runWaitlist, setRunWaitlist] = useState<RunWaitlistEntry[]>([]);
   // De rondes uit het ordersysteem. Die lijst werd gemaild; nu staat hij hier.
   const [printBatches, setPrintBatches] = useState<PrintBatch[]>([]);
+  const [noviplyUnavailable, setNoviplyUnavailable] = useState<NoviplyUnavailableRecord[]>([]);
   // Onverwachte fouten uit de server en uit de schermen. Stonden alleen in een
   // console die niemand leest.
   const [openErrors, setOpenErrors] = useState<AppErrorEvent[]>([]);
@@ -568,6 +576,7 @@ export function Dashboard({
     setPrintReminders(state.printReminders);
     setRunWaitlist(state.runWaitlist ?? []);
     setPrintBatches(state.printBatches ?? []);
+    setNoviplyUnavailable(state.noviplyUnavailable ?? []);
     setOpenErrors(state.openErrors ?? []);
     setVerificationReports(state.verificationReports);
     if (state.operationsPolicy) {
@@ -1640,10 +1649,21 @@ export function Dashboard({
     return entry;
   }
 
+  /** Noviply heeft het model alsnog: de blokkade eraf en het advies mag weer. */
+  function allowNoviplyAgain(id: string) {
+    const vorige = noviplyUnavailable;
+    setNoviplyUnavailable((current) => current.filter((regel) => regel.id !== id));
+    void removeNoviplyUnavailable({ id, actorId }).catch((error) => {
+      setNoviplyUnavailable(vorige);
+      setLastAction(error instanceof Error ? error.message : "De blokkade is niet weggehaald.");
+    });
+  }
+
   async function settlePrintRequestRecord(
     record: PrintRequestRecord,
     status: Exclude<PrintRequestStatus, "requested">,
     note: string,
+    unavailableReason: UnavailableReason = "temporary",
   ) {
     // Dezelfde controle als op de server, maar met een melding die Noviply
     // begrijpt voordat het verzoek de deur uit gaat.
@@ -1651,12 +1671,19 @@ export function Dashboard({
       handledAt: new Date().toISOString(),
       handledBy: actorName,
     });
-    const payload = { status, note, actorId };
+    const payload = { status, note, unavailableReason, actorId };
 
     try {
       const result = await patchPrintRequest(record.id, payload);
       setPrintRequests((current) =>
         current.map((item) => (item.id === result.record.id ? result.record : item)));
+      // Meldt Noviply dat ze het model niet hebben, dan telt dat meteen mee in
+      // het advies — niet pas na de volgende ronde van twintig seconden.
+      if (status === "not_printable" && reasonBlocksFuture(unavailableReason)) {
+        void fetchNoviplyUnavailable()
+          .then((lijst) => setNoviplyUnavailable(lijst))
+          .catch(() => undefined);
+      }
       setSharedStatus("online");
       if (result.alreadySettled) {
         setLastAction(`${record.model} was al afgehandeld door ${result.record.handledBy ?? "iemand anders"}.`);
@@ -2039,6 +2066,7 @@ export function Dashboard({
             onRequestPrintSticker={requestPrintSticker}
             runWaitlist={runWaitlist}
             printBatches={printBatches}
+            noviplyUnavailable={noviplyUnavailable}
             onWaitForPrintRun={waitForPrintRun}
             onSettleRunWait={(id, outcome) => void settleRunWaitlist(id, outcome)}
             onRecordConversion={recordConversion}
@@ -2315,6 +2343,8 @@ export function Dashboard({
           <SettingsWorkspace
             policy={operationsPolicy}
             directPrintLayouts={directPrintLayouts}
+            noviplyUnavailable={noviplyUnavailable}
+            onAllowNoviplyAgain={allowNoviplyAgain}
             onSave={savePolicy}
           />
         )}

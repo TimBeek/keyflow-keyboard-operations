@@ -21,6 +21,7 @@ import type { StickerVerificationReport } from "@/domain/sticker-verification";
 import type { RunWaitlistEntry, RunWaitlistInput } from "@/domain/run-waitlist";
 import type { PrintBatch } from "@/domain/print-batch";
 import type { AppErrorEvent } from "@/server/error-log-service";
+import type { NoviplyUnavailableRecord, UnavailableReason } from "@/domain/noviply-availability";
 
 export type SharedOperationsState = {
   savedAt: string;
@@ -46,6 +47,8 @@ export type SharedOperationsState = {
   printBatches: PrintBatch[];
   /** Onverwachte fouten die nog niet zijn afgehandeld. */
   openErrors: AppErrorEvent[];
+  /** Modellen en talen die Noviply naar eigen zeggen niet kan printen. */
+  noviplyUnavailable: NoviplyUnavailableRecord[];
   /** Vellen die na de Excel-import zijn toegevoegd. */
   addedSheets: AddedSheet[];
 };
@@ -116,6 +119,19 @@ export type MutationPayload = {
   idempotencyKey: string;
   actorId: string;
 };
+
+export function fetchNoviplyUnavailable() {
+  return request<{ noviplyUnavailable: NoviplyUnavailableRecord[] }>(
+    "/api/noviply-unavailable",
+  ).then((body) => body.noviplyUnavailable);
+}
+
+export function removeNoviplyUnavailable(payload: { id: string; actorId: string }) {
+  return request<{ removed: boolean }>("/api/noviply-unavailable", {
+    method: "DELETE",
+    body: JSON.stringify(payload),
+  });
+}
 
 export function postInventoryMutation(payload: MutationPayload) {
   return request<{

@@ -3462,7 +3462,43 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
      De periodeknoppen waren 34px hoog; met een vinger tik je er dan naast. */
   .report-period { display: flex; width: 100%; }
   .report-period button { flex: 1 1 0; min-height: 44px; padding: 0 8px; }
+
+  /* -- wat Noviply niet kan, en de trackpointvraag -------------------------- */
+  .unavailable-list li { flex-direction: column; align-items: stretch; }
+  .unavailable-list li .secondary-button { width: 100%; }
+  .trackpoint-choice button { flex: 1 1 0; min-width: 0; }
 }
+
+/* Wat Noviply niet kan printen, in het instellingenscherm. */
+.settings-empty { margin: 0; color: var(--muted); font-size: 13px; }
+.unavailable-list { display: flex; flex-direction: column; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.unavailable-list li {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2);
+}
+.unavailable-list li > div { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.unavailable-list strong { color: var(--text); font-size: 14px; }
+.unavailable-list span { color: var(--text-2); font-size: 12.5px; }
+.unavailable-list small { color: var(--muted); font-size: 11.5px; }
+.trackpoint-unknown { color: var(--warn); }
+
+/* De trackpointvraag bij een aanvraag aan Noviply. Zij zien de laptop niet, dus
+   dit antwoord bepaalt of ze het juiste vel maken. */
+.trackpoint-ask { margin: 0; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.trackpoint-ask.missing { border-color: var(--warn); background: var(--warn-soft); }
+.trackpoint-ask legend { padding: 0; color: var(--text); font-size: 13px; font-weight: 800; }
+.trackpoint-ask p { margin: 2px 0 10px; color: var(--muted); font-size: 12px; }
+.trackpoint-ask small { display: block; margin-top: 8px; color: var(--warn); font-size: 12px; font-weight: 700; }
+.trackpoint-choice { display: flex; gap: 8px; }
+.trackpoint-choice button {
+  min-width: 92px; min-height: 44px; padding: 0 18px;
+  border: 1px solid var(--line); border-radius: 11px;
+  background: var(--surface-2); color: var(--text);
+  font-size: 15px; font-weight: 700; cursor: pointer;
+  transition: background .15s, border-color .15s, color .15s;
+}
+.trackpoint-choice button:hover { border-color: var(--brand); }
+.trackpoint-choice button.chosen { border-color: var(--brand); background: var(--brand); color: #fff; }
 
 /* De smalste toestellen: drie prijsknoppen naast elkaar worden te krap. */
 @media (max-width: 420px) {

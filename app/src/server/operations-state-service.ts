@@ -13,6 +13,7 @@ import { listRunWaitlist } from "./run-waitlist-service";
 import { listPrintBatches } from "./print-batch-service";
 import { sharedTransactionDays } from "@/domain/shared-history";
 import { canSeeFaults, listOpenErrors } from "./error-log-service";
+import { listNoviplyUnavailable } from "./noviply-availability-service";
 import {
   listCompatibilityEvidence,
   listModelGroupDecisions,
@@ -91,6 +92,7 @@ export async function readOperationsState(actorId: string) {
     runWaitlist,
     printBatches,
     openErrors,
+    noviplyUnavailable,
     allSheets,
   ] = await Promise.all([
     sql<BalanceRow[]>`
@@ -135,6 +137,7 @@ export async function readOperationsState(actorId: string) {
      * weggeven wat niemand nodig heeft.
      */
     canSeeFaults(actorId).then((mag) => (mag ? listOpenErrors() : [])),
+    listNoviplyUnavailable(),
     // Vellen die na de Excel-import zijn toegevoegd. Die staan alleen in de
     // database, terwijl de werkvloer in de ingebouwde catalogus zoekt — zonder
     // dit zou een nieuw vel onvindbaar blijven tot de volgende import.
@@ -195,6 +198,7 @@ export async function readOperationsState(actorId: string) {
     runWaitlist,
     printBatches,
     openErrors,
+    noviplyUnavailable,
     // Alleen wat de ingebouwde catalogus niet kent; de rest zit er al in.
     addedSheets: allSheets
       .filter((row) => !knownStorageNumbers.has(row.hanging_file_number))

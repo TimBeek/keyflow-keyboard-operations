@@ -1,6 +1,12 @@
 import "server-only";
 import { z } from "zod";
 import { brandFromModel, PrintRequestError } from "@/domain/print-requests";
+import {
+  modelKey,
+  reasonBlocksFuture,
+  scopeForReason,
+  unavailableReasons,
+} from "@/domain/noviply-availability";
 import { markConversionsPrinted } from "./conversion-log-service";
 import { requirePermission } from "./authorization-service";
 import { database } from "./database";
@@ -12,6 +18,9 @@ const createSchema = z.object({
   variant: z.string().max(20).default(""),
   orderReference: z.string().max(80).default(""),
   quantity: z.number().int().min(1).max(200).default(1),
+  // Een toetsenbord met trackpoint heeft een andere indeling. Noviply ziet de
+  // laptop niet, dus moeten ze dit weten voordat ze het vel maken.
+  trackpoint: z.enum(["yes", "no", "unknown"]).default("unknown"),
   reason: z.string().max(500).default(""),
   idempotencyKey: z.string().min(8).max(200),
   actorId: databaseUuidSchema,
@@ -21,6 +30,11 @@ const settleSchema = z.object({
   id: databaseUuidSchema,
   status: z.enum(["printed", "not_printable"]),
   note: z.string().max(500).default(""),
+  /**
+   * Waarom het niet kan. Zonder opgave gaan we uit van een tegenvaller van
+   * vandaag; alleen een blijvende reden verandert het advies van morgen.
+   */
+  unavailableReason: z.enum(unavailableReasons).default("temporary"),
   actorId: databaseUuidSchema,
 });
 
@@ -35,6 +49,7 @@ type PrintRequestRow = {
   variant: string;
   order_reference: string;
   quantity: number;
+  trackpoint: "yes" | "no" | "unknown";
   reason: string;
   requested_at: Date;
   requested_by_name: string;
@@ -54,6 +69,7 @@ function toRecord(row: PrintRequestRow) {
     variant: row.variant,
     orderReference: row.order_reference,
     quantity: row.quantity,
+    trackpoint: row.trackpoint,
     reason: row.reason,
     requestedAt: row.requested_at.toISOString(),
     requestedBy: row.requested_by_name,
@@ -65,7 +81,8 @@ function toRecord(row: PrintRequestRow) {
 }
 
 const selectColumns = `
-  r.id, r.brand, r.model, r.layout, r.variant, r.order_reference, r.quantity, r.reason,
+  r.id, r.brand, r.model, r.layout, r.variant, r.order_reference, r.quantity,
+  r.trackpoint, r.reason,
   r.requested_at, r.status, r.handled_at, r.note,
   requester.display_name as requested_by_name,
   handler.display_name as handled_by_name
@@ -76,7 +93,8 @@ export async function listPrintRequests(actorId: string, limit = 500) {
   const sql = database();
   const rows = await sql<PrintRequestRow[]>`
     select
-      r.id, r.brand, r.model, r.layout, r.variant, r.order_reference, r.quantity, r.reason,
+      r.id, r.brand, r.model, r.layout, r.variant, r.order_reference, r.quantity,
+      r.trackpoint, r.reason,
       r.requested_at, r.status, r.handled_at, r.note,
       requester.display_name as requested_by_name,
       handler.display_name as handled_by_name
@@ -119,12 +137,13 @@ export async function createPrintRequestRecord(rawInput: CreatePrintRequestInput
     const [inserted] = await transaction<{ id: string }[]>`
       insert into print_requests (
         idempotency_key, brand, model, layout, variant,
-        order_reference, quantity, reason, requested_by
+        order_reference, quantity, trackpoint, reason, requested_by
       )
       values (
         ${input.idempotencyKey}, ${brandFromModel(model)}, ${model},
         ${input.layout.trim()}, ${input.variant.trim()},
-        ${input.orderReference.trim()}, ${input.quantity}, ${input.reason.trim()}, ${input.actorId}
+        ${input.orderReference.trim()}, ${input.quantity}, ${input.trackpoint},
+        ${input.reason.trim()}, ${input.actorId}
       )
       returning id
     `;
@@ -179,6 +198,35 @@ export async function settlePrintRequestRecord(rawInput: SettlePrintRequestInput
           handled_by = ${input.actorId}
       where id = ${input.id}
     `;
+
+    /**
+     * Zeggen ze dat ze het model of die taal niet hebben, dan is dat morgen nog
+     * zo. Leg het vast, anders adviseert de app bij de volgende laptop van
+     * hetzelfde model opnieuw de premiumsticker en komt precies dezelfde
+     * afwijzing terug — met de laptop al die tijd apart.
+     */
+    if (input.status === "not_printable" && reasonBlocksFuture(input.unavailableReason)) {
+      const [aanvraag] = await transaction<{ model: string; layout: string }[]>`
+        select model, layout from print_requests where id = ${input.id}
+      `;
+      const bereik = scopeForReason(input.unavailableReason, aanvraag.layout);
+      await transaction`
+        insert into noviply_unavailable (
+          model, model_key, layout, reason, note, source_request_id, recorded_by
+        )
+        values (
+          ${aanvraag.model}, ${modelKey(aanvraag.model)}, ${bereik},
+          ${input.unavailableReason}, ${note}, ${input.id}, ${input.actorId}
+        )
+        on conflict (model_key, layout) where removed_at is null
+        do update set
+          reason = excluded.reason,
+          note = excluded.note,
+          source_request_id = excluded.source_request_id,
+          recorded_at = now(),
+          recorded_by = excluded.recorded_by
+      `;
+    }
 
     // De conversie stond op "wacht op print" zodra de werkvloer hem aanvroeg.
     // Nu het vel er is, is de laptop af. Bij "kan niet geprint" blijft hij

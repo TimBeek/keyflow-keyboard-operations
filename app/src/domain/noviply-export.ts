@@ -8,6 +8,13 @@ import { toCsv, type CsvValue } from "./csv";
 import { printRequestStatusLabel, type PrintRequestRecord } from "./print-requests";
 import { displayStickerSku } from "./sticker-sku";
 
+/** Wat Noviply in het bestand leest; hun kant is Engelstalig. */
+export function trackpointLabel(answer: PrintRequestRecord["trackpoint"]) {
+  if (answer === "yes") return "Yes";
+  if (answer === "no") return "No";
+  return "Not stated";
+}
+
 export type NoviplyStockRow = {
   storageNumber: number;
   model: string;
@@ -58,6 +65,7 @@ const printRequestHeaders = [
   "Model",
   "Language",
   "Enter",
+  "Trackpoint",
   "Sheets",
   "Order number",
   "Reason",
@@ -74,6 +82,9 @@ export function createNoviplyPrintRequestCsv(records: PrintRequestRecord[]) {
     record.model,
     record.layout,
     record.variant,
+    // Met of zonder trackpoint is een ander toetsenbord. Zij zien de laptop
+    // niet, dus zonder deze kolom maken ze mogelijk het verkeerde vel.
+    trackpointLabel(record.trackpoint),
     // Eén order kan meerdere laptops zijn; zonder dit getal print Noviply er één.
     record.quantity,
     record.orderReference,

@@ -1,6 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import {
+  unavailableReasonLabel,
+  type NoviplyUnavailableRecord,
+} from "@/domain/noviply-availability";
 import { conversionMethods } from "@/domain/conversion-policy";
 import { targetLayoutOptions } from "@/domain/keyboard-layouts";
 import type {
@@ -54,9 +58,18 @@ type Props = {
   policy: OperationsPolicy;
   directPrintLayouts: string[];
   onSave: (policy: OperationsPolicy, directPrintLayouts: string[]) => Promise<void>;
+  /** Wat Noviply naar eigen zeggen niet kan printen. */
+  noviplyUnavailable: NoviplyUnavailableRecord[];
+  onAllowNoviplyAgain: (id: string) => void;
 };
 
-export function SettingsWorkspace({ policy, directPrintLayouts, onSave }: Props) {
+export function SettingsWorkspace({
+  policy,
+  directPrintLayouts,
+  onSave,
+  noviplyUnavailable,
+  onAllowNoviplyAgain,
+}: Props) {
   const [draft, setDraft] = useState(policy);
   const [layouts, setLayouts] = useState(directPrintLayouts);
   const [saving, setSaving] = useState(false);
@@ -457,6 +470,53 @@ export function SettingsWorkspace({ policy, directPrintLayouts, onSave }: Props)
             </label>
           ))}
         </div>
+      </section>
+
+      {/* Wat Noviply heeft afgewezen stuurt vanaf dat moment het advies. Nemen
+          ze een model later alsnog op, dan moet dat hier terug te draaien zijn —
+          anders zit de werkvloer eraan vast. */}
+      <section className="panel settings-panel">
+        <div className="order-heading">
+          <div>
+            <span className="workspace-kicker">NOVIPLY</span>
+            <h2>Wat Noviply niet kan printen</h2>
+            <p>
+              Dit komt uit hun eigen meldingen bij een aanvraag. Zolang een regel
+              hier staat, adviseert de app de premiumsticker niet meer voor die
+              laptop en gaat hij verder naar de volgende methode.
+            </p>
+          </div>
+        </div>
+        {noviplyUnavailable.length === 0 ? (
+          <p className="settings-empty">Noviply heeft nog niets afgewezen.</p>
+        ) : (
+          <ul className="unavailable-list">
+            {noviplyUnavailable.map((regel) => (
+              <li key={regel.id}>
+                <div>
+                  <strong>{regel.model}</strong>
+                  <span>
+                    {regel.layout ? `alleen ${regel.layout}` : "alle talen"}
+                    {" · "}
+                    {unavailableReasonLabel(regel.reason)}
+                    {regel.note ? ` · “${regel.note}”` : ""}
+                  </span>
+                  <small>
+                    Gemeld door {regel.recordedBy} op{" "}
+                    {new Date(regel.recordedAt).toLocaleDateString("nl-NL", { day: "numeric", month: "long" })}
+                  </small>
+                </div>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => onAllowNoviplyAgain(regel.id)}
+                >
+                  Weer aanbieden
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
 
       <footer className="settings-save">

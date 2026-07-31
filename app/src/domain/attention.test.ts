@@ -44,6 +44,7 @@ function request(overrides: Partial<PrintRequestRecord> = {}): PrintRequestRecor
     variant: "E1",
     orderReference: "000100002",
     reason: "",
+    trackpoint: "unknown" as const,
     requestedAt: "2026-07-30T09:00:00.000Z",
     requestedBy: "Medewerker",
     status: "not_printable",

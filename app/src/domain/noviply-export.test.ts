@@ -25,6 +25,7 @@ const request: PrintRequestRecord = {
   variant: "E1",
   orderReference: "1906",
   reason: "Not ready during the morning run.",
+  trackpoint: "unknown" as const,
   requestedAt: "2026-07-29T09:15:00.000Z",
   requestedBy: "Medewerker",
   status: "printed",
@@ -110,5 +111,23 @@ describe("noviplyExportFilename", () => {
   it("zet de datum in de naam zodat sorteren op naam werkt", () => {
     expect(noviplyExportFilename("stock", "2026-07-29T09:15:00.000Z"))
       .toBe("noviply-stock-2026-07-29.csv");
+  });
+});
+
+describe("Trackpoint in het bestand voor Noviply", () => {
+  it("staat als eigen kolom in de aanvraagexport", () => {
+    // Noviply ziet de laptop niet. Zonder deze kolom maken ze het vel voor een
+    // toetsenbord zonder trackpoint, terwijl de indeling anders is.
+    const csv = createNoviplyPrintRequestCsv([
+      { ...request, trackpoint: "yes" },
+      { ...request, id: "2", trackpoint: "no" },
+      { ...request, id: "3", trackpoint: "unknown" },
+    ]);
+    const regels = csv.split("\r\n");
+
+    expect(regels[0]).toContain("Trackpoint");
+    expect(regels[1]).toContain("Yes");
+    expect(regels[2]).toContain("No");
+    expect(regels[3]).toContain("Not stated");
   });
 });

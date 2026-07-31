@@ -21,6 +21,7 @@ describe("een aanvraag bij Noviply", () => {
       variant: "E1",
       orderReference: "000097612",
       reason: "",
+      trackpoint: "unknown" as const,
       quantity: 3,
     }, { id: "1", requestedAt: now.toISOString(), requestedBy: "Medewerker" });
 
@@ -34,6 +35,7 @@ describe("een aanvraag bij Noviply", () => {
       variant: "E1",
       orderReference: "000097612",
       reason: "",
+      trackpoint: "unknown" as const,
     }, { id: "1", requestedAt: now.toISOString(), requestedBy: "Medewerker" });
 
     expect(request.quantity).toBe(1);
@@ -49,6 +51,7 @@ describe("een aanvraag bij Noviply", () => {
       variant: "E1",
       orderReference: "000097612",
       reason: "",
+      trackpoint: "unknown" as const,
       requestedAt: now.toISOString(),
       requestedBy: "Medewerker",
       status: "requested",

@@ -8,6 +8,12 @@ import {
   type InventoryTransactionEntry,
 } from "@/domain/operations";
 import { dayKey } from "@/domain/reporting";
+import { trackpointLabel } from "@/domain/noviply-export";
+import {
+  unavailableReasonEnglish,
+  unavailableReasons,
+  type UnavailableReason,
+} from "@/domain/noviply-availability";
 import {
   calculateResupplyLevel,
   measuredHistoryDays,
@@ -68,6 +74,7 @@ type Props = {
     record: PrintRequestRecord,
     status: Exclude<PrintRequestStatus, "requested">,
     note: string,
+    unavailableReason: UnavailableReason,
   ) => Promise<void>;
 };
 
@@ -113,6 +120,12 @@ export function NoviplyWorkspace({
 }: Props) {
   const [blockedId, setBlockedId] = useState("");
   const [blockedNote, setBlockedNote] = useState("");
+  /**
+   * Waarom het niet kan. "We do not have this model" is morgen nog waar, dus
+   * daar hoort de werkvloer niet opnieuw een aanvraag voor te doen. "Not right
+   * now" is dat wel: dat verandert het advies niet.
+   */
+  const [blockedReason, setBlockedReason] = useState<UnavailableReason>("model_unknown");
   const [message, setMessage] = useState("");
   // Kort na het indrukken laat de knop zien dat het seintje weg is. Zonder dat
   // moment gebeurt er in beeld niets tot de server antwoordt.
@@ -205,11 +218,13 @@ export function NoviplyWorkspace({
     record: PrintRequestRecord,
     status: Exclude<PrintRequestStatus, "requested">,
     note: string,
+    reason: UnavailableReason = "temporary",
   ) {
     try {
-      await onSettlePrintRequest(record, status, note);
+      await onSettlePrintRequest(record, status, note, reason);
       setBlockedId("");
       setBlockedNote("");
+      setBlockedReason("model_unknown");
       setMessage(status === "printed"
         ? `${record.model} marked as printed.`
         : `${record.model} reported as not printable.`);
@@ -415,6 +430,7 @@ export function NoviplyWorkspace({
                 <th>Brand / model</th>
                 <th>Language</th>
                 <th>Enter</th>
+                <th>Trackpoint</th>
                 <th>Sheets</th>
                 <th>Order number</th>
                 <th>Requested</th>
@@ -427,6 +443,11 @@ export function NoviplyWorkspace({
                   <td><strong>{request.brand}</strong><span>{request.model}</span></td>
                   <td data-label="Language">{request.layout}</td>
                   <td data-label="Enter">{request.variant || "—"}</td>
+                  <td data-label="Trackpoint">
+                    <b className={request.trackpoint === "unknown" ? "trackpoint-unknown" : ""}>
+                      {trackpointLabel(request.trackpoint)}
+                    </b>
+                  </td>
                   {/* Eén order kan meerdere laptops zijn; meer dan één valt op,
                       want dat is het geval waar misgeprint wordt. */}
                   <td data-label="Sheets"><b className={request.quantity > 1 ? "quantity-many" : ""}>{request.quantity}×</b></td>
@@ -438,17 +459,35 @@ export function NoviplyWorkspace({
                   <td>
                     {blockedId === request.id ? (
                       <div className="noviply-blocked">
+                        {/* Welke reden het is bepaalt of de werkvloer dit model
+                            morgen weer aanbiedt. De eerste twee zijn blijvend. */}
+                        <select
+                          value={blockedReason}
+                          onChange={(event) => setBlockedReason(event.target.value as UnavailableReason)}
+                          aria-label="Why can this not be printed?"
+                        >
+                          {unavailableReasons.map((reason) => (
+                            <option key={reason} value={reason}>
+                              {unavailableReasonEnglish(reason)}
+                            </option>
+                          ))}
+                        </select>
                         <input
                           value={blockedNote}
                           onChange={(event) => setBlockedNote(event.target.value)}
-                          placeholder="Why can this not be printed?"
+                          placeholder="Anything to add? (optional)"
                           maxLength={200}
                           autoFocus
                         />
                         <button
                           type="button"
                           className="danger-ghost-button"
-                          onClick={() => settle(request, "not_printable", blockedNote)}
+                          onClick={() => settle(
+                            request,
+                            "not_printable",
+                            blockedNote.trim() || unavailableReasonEnglish(blockedReason),
+                            blockedReason,
+                          )}
                         >
                           Report
                         </button>
