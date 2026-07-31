@@ -229,8 +229,9 @@ export function EmployeeWorkspace({
   const saleValue = policyValueForBand(saleBand, policy.thresholdEur);
 
   const noviplyMatch = useMemo(
-    () => findNoviplySku(model, targetLayout, catalog, quantities, enterShape),
-    [catalog, enterShape, model, quantities, targetLayout],
+    () => findNoviplySku(model, targetLayout, catalog, quantities, enterShape, (item) =>
+      latestCompatibilityEvidence(compatibilityEvidenceRecords, item.catalogKey, model)?.status ?? null),
+    [catalog, compatibilityEvidenceRecords, enterShape, model, quantities, targetLayout],
   );
   const matched = noviplyMatch.status === "matched" ? noviplyMatch : null;
 
@@ -826,11 +827,21 @@ export function EmployeeWorkspace({
               </div>
 
               {usesSheet && matched && (
-                <dl className="answer-facts">
-                  <div><dt>Stickervel</dt><dd>{matched.item.sku}</dd></div>
-                  <div><dt>Entervorm</dt><dd>{matched.variant}</dd></div>
-                  <div><dt>Nog op voorraad</dt><dd>{quantities[matched.item.catalogKey] ?? matched.item.stock}</dd></div>
-                </dl>
+                <>
+                  <dl className="answer-facts">
+                    <div><dt>Stickervel</dt><dd>{matched.item.sku}</dd></div>
+                    <div><dt>Entervorm</dt><dd>{matched.variant}</dd></div>
+                    <div><dt>Nog op voorraad</dt><dd>{quantities[matched.item.catalogKey] ?? matched.item.stock}</dd></div>
+                  </dl>
+                  {/* Hetzelfde vel ligt vaak in meer dan één map. Staat de
+                      aangewezen map onverwacht leeg, dan hoeft niemand te gaan
+                      zoeken of iets aan te vragen wat er gewoon ligt. */}
+                  {matched.alternatives.length > 0 && (
+                    <p className="answer-alternatives">
+                      Past ook: hangmap {matched.alternatives.map((item) => item.storageNumber).join(", ")}
+                    </p>
+                  )}
+                </>
               )}
 
               {fallbackToPremium && (

@@ -108,16 +108,15 @@ export type NoviplySkuMatch =
       item: InventoryCatalogItem;
       currentStock: number;
       variant: string;
+      /** Andere hangmappen met een vel dat op dit model past. */
+      alternatives: InventoryCatalogItem[];
     }
   | {
       status: "out_of_stock";
       item: InventoryCatalogItem;
       currentStock: 0;
       variant: string;
-    }
-  | {
-      status: "ambiguous";
-      candidates: InventoryCatalogItem[];
+      alternatives: InventoryCatalogItem[];
     }
   | {
       // Het model staat er wel, maar niet in de gekozen entervorm.
@@ -130,12 +129,49 @@ export type NoviplySkuMatch =
       candidates: [];
     };
 
+/**
+ * Eén laptop past vaak in meerdere hangmappen: een vel dat voor de ThinkPad
+ * L380 is ingekocht past net zo goed op een T495, en zo staat hetzelfde model
+ * bij verschillende mappen in de bijbehorende modellen. Welke van die mappen je
+ * pakt maakt voor de laptop niet uit, dus wijst de app er zelf één aan.
+ *
+ * De volgorde: een map waarvan iemand met een foto heeft vastgelegd dat het
+ * past gaat voor, een afgekeurde map achteraan, daarna wat er nog ligt (want
+ * een lege map helpt de werkvloer niet), dan de voorste map met de meeste
+ * vellen. Bij gelijke stand het laagste hangmapnummer, zodat dezelfde laptop
+ * morgen hetzelfde antwoord geeft.
+ */
+function rankCandidates(
+  candidates: InventoryCatalogItem[],
+  quantities: Record<string, number>,
+  evidenceStatusFor?: (item: InventoryCatalogItem) => "approved" | "rejected" | null,
+) {
+  const weging = (item: InventoryCatalogItem) => {
+    const bewijs = evidenceStatusFor?.(item) ?? null;
+    return {
+      bewijs: bewijs === "approved" ? 0 : bewijs === "rejected" ? 2 : 1,
+      voorraad: inventoryQuantity(quantities, item),
+    };
+  };
+  return [...candidates].sort((left, right) => {
+    const a = weging(left);
+    const b = weging(right);
+    if (a.bewijs !== b.bewijs) return a.bewijs - b.bewijs;
+    const aLeeg = a.voorraad <= 0 ? 1 : 0;
+    const bLeeg = b.voorraad <= 0 ? 1 : 0;
+    if (aLeeg !== bLeeg) return aLeeg - bLeeg;
+    if (a.voorraad !== b.voorraad) return b.voorraad - a.voorraad;
+    return left.storageNumber - right.storageNumber;
+  });
+}
+
 export function findNoviplySku(
   model: string,
   targetLayout: string,
   catalog: InventoryCatalogItem[],
   quantities: Record<string, number>,
   wantedVariant?: string,
+  evidenceStatusFor?: (item: InventoryCatalogItem) => "approved" | "rejected" | null,
 ): NoviplySkuMatch {
   const candidates = catalog.filter(
     (item) =>
@@ -165,19 +201,15 @@ export function findNoviplySku(
     };
   }
 
-  if (matchingVariant.length > 1) {
-    return { status: "ambiguous", candidates: matchingVariant };
-  }
-
-  const item = matchingVariant[0];
+  const [item, ...alternatives] = rankCandidates(matchingVariant, quantities, evidenceStatusFor);
   const currentStock = inventoryQuantity(quantities, item);
   const variant = extractStickerVariant(item.sku);
 
   if (currentStock <= 0) {
-    return { status: "out_of_stock", item, currentStock: 0, variant };
+    return { status: "out_of_stock", item, currentStock: 0, variant, alternatives };
   }
 
-  return { status: "matched", item, currentStock, variant };
+  return { status: "matched", item, currentStock, variant, alternatives };
 }
 
 export function extractStickerVariant(sku: string) {
