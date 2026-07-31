@@ -49,6 +49,7 @@ import { realUsageUnits } from "@/domain/real-usage";
 import {
   attentionByKind,
   attentionItems,
+  splitAttention,
   attentionKindLabel,
 } from "@/domain/attention";
 import type { RunWaitlistEntry, RunWaitlistInput } from "@/domain/run-waitlist";
@@ -2256,8 +2257,17 @@ export function Dashboard({
                 </div>
                 <span className="problems-count">{attention.length}</span>
               </div>
+              {/* Twee blokken in plaats van één lijst: bij het bovenste staat er
+                  nu iemand met een laptop stil, bij het onderste merk je het pas
+                  bij de volgende laptop van dat model. Een teamleider hoeft dan
+                  niet zelf te wegen wat zwaarder telt. */}
+              {splitAttention(attention).nu.length > 0 && (
+                <p className="attention-kop nu">
+                  Nu oppakken — hier staat iemand op te wachten
+                </p>
+              )}
               <div className="attention-groups">
-                {[...attentionByKind(attention).entries()].map(([kind, items]) => (
+                {[...attentionByKind(splitAttention(attention).nu).entries()].map(([kind, items]) => (
                   <div key={kind} className={`attention-group ${kind}`}>
                     <h3>
                       {attentionKindLabel[kind]}
@@ -2306,6 +2316,35 @@ export function Dashboard({
                   </div>
                 ))}
               </div>
+
+              {splitAttention(attention).later.length > 0 && (
+                <>
+                  <p className="attention-kop later">Zodra het uitkomt</p>
+                  <div className="attention-groups">
+                    {[...attentionByKind(splitAttention(attention).later).entries()].map(([kind, items]) => (
+                      <div key={kind} className={`attention-group ${kind}`}>
+                        <h3>
+                          {attentionKindLabel[kind]}
+                          <b>{items.length}</b>
+                        </h3>
+                        <ul>
+                          {items.slice(0, 6).map((item) => (
+                            <li key={item.id}>
+                              <strong>{item.title}</strong>
+                              <span>{item.detail}</span>
+                            </li>
+                          ))}
+                        </ul>
+                        {items.length > 6 && (
+                          <p className="report-note">
+                            De zes meest recente staan hier; er zijn er {items.length}.
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </section>
           )}
 

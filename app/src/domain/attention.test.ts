@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { InventoryCatalogItem } from "@/data/inventory-catalog";
-import { attentionByKind, attentionItems, type AttentionInput } from "./attention";
+import { attentionByKind, attentionItems, splitAttention, type AttentionInput } from "./attention";
 import type { PrintBatch } from "./print-batch";
 import type { PrintRequestRecord } from "./print-requests";
 import type { StickerVerificationReport } from "./sticker-verification";
@@ -196,5 +196,29 @@ describe("attentionByKind", () => {
 
     expect([...per.keys()].sort()).toEqual(["cannot_print", "empty_folder", "sheet_mismatch"]);
     expect(per.get("empty_folder")).toHaveLength(1);
+  });
+});
+
+describe("Wat houdt er nu iemand op", () => {
+  it("zet een vel dat niet paste en een model dat Noviply niet kan bovenaan", () => {
+    // Bij die twee staat er iemand met een laptop stil. Een lege hangmap merk je
+    // pas bij de volgende laptop van dat model.
+    const items = attentionItems({
+      verificationReports: [],
+      printRequests: [],
+      printBatches: [],
+      catalog: [],
+      quantities: {},
+    });
+    const gesplitst = splitAttention([
+      { id: "1", kind: "empty_folder", title: "", detail: "", orderReference: "", occurredAt: "" },
+      { id: "2", kind: "sheet_mismatch", title: "", detail: "", orderReference: "", occurredAt: "" },
+      { id: "3", kind: "cannot_print", title: "", detail: "", orderReference: "", occurredAt: "" },
+      { id: "4", kind: "unknown_language", title: "", detail: "", orderReference: "", occurredAt: "" },
+    ]);
+
+    expect(items).toBeDefined();
+    expect(gesplitst.nu.map((i) => i.id)).toEqual(["2", "3"]);
+    expect(gesplitst.later.map((i) => i.id)).toEqual(["1", "4"]);
   });
 });

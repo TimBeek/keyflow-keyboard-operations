@@ -1283,12 +1283,23 @@ export function EmployeeWorkspace({
                       : `${quantity} vellen uit hangmap ${storageNumber} afboeken — ${matched.item.sku} · ${matched.variant}`)
                     : "Klaar — laptop is afgehandeld"}
                 </button>
+              </div>
+              )}
+
+              {/* Eén gevulde knop per stap: dat is de weg vooruit. "Past niet"
+                  is een uitzondering en "Volgende laptop" is afbreken zonder
+                  af te melden — die hoorden niet even hard te roepen als de
+                  handeling zelf. Ze staan er nog, als tekst eronder. */}
+              {!askingSlipDate && (
+              <div className="answer-escapes">
                 {usesSheet && matched && (
-                  <button className="danger-ghost-button" onClick={() => setIssueOpen((open) => !open)}>
-                    Past niet
+                  <button className="answer-escape" onClick={() => setIssueOpen((open) => !open)}>
+                    Vel past niet
                   </button>
                 )}
-                <button className="secondary-button" onClick={() => resetAdvice()}>Volgende laptop</button>
+                <button className="answer-escape" onClick={() => resetAdvice()}>
+                  Leegmaken zonder afmelden
+                </button>
               </div>
               )}
 

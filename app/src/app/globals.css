@@ -1572,6 +1572,8 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 .answer-todo { padding: 17px 19px; border-radius: 12px; background: var(--surface); border-left: 4px solid var(--ok); }
 /* Was een kort kopje in hoofdletters. Er staat nu een hele vraag, en een zin
    in kapitalen leest twee keer zo langzaam. */
+/* De uitwegen: aanwezig maar niet even hard als de handeling zelf. */
+.answer-escapes { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; margin-top: 12px; }
 .answer-doen { margin: 0; color: var(--text); font-size: 16px; font-weight: 700; line-height: 1.45; }
 .answer-todo b { display: block; color: var(--text); font-size: 16px; font-weight: 800; line-height: 1.35; }
 .answer-todo p { margin: 7px 0 0; color: var(--text); font-size: 18px; line-height: 1.5; font-weight: 550; }
@@ -3213,7 +3215,11 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 /* Het paneel zelf heeft geen binnenmarge (dat regelt elke sectie zelf), en die
    ontbrak hier. Alles plakte tegen de rand, en over de volle breedte viel dat
    meteen op. */
-.attention-groups { display: grid; gap: 18px; padding: 16px 20px 20px; }
+/* Twee koppen: wat nu iemand ophoudt, en wat kan wachten. */
+.attention-kop { margin: 0; padding: 14px 20px 0; font-size: 12.5px; font-weight: 800; letter-spacing: .02em; }
+.attention-kop.nu { color: var(--crit); }
+.attention-kop.later { color: var(--text-3); padding-top: 4px; border-top: 1px solid var(--line-soft); margin-top: 4px; }
+.attention-groups { display: grid; gap: 18px; padding: 10px 20px 20px; }
 .attention-group h3 {
   display: flex;
   align-items: center;

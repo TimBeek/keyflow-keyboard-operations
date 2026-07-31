@@ -150,6 +150,28 @@ export const attentionPriority: AttentionKind[] = [
   "unknown_language",
 ];
 
+/**
+ * Wat er nú iemand ophoudt, en wat kan wachten.
+ *
+ * Een vel dat niet paste betekent dat er op dit moment iemand met een laptop
+ * bij de kast staat. Een model dat Noviply niet kan printen houdt een order
+ * tegen die al apart ligt. Dat zijn de twee waar een teamleider vandaag iets
+ * mee moet. Een lege hangmap en een onbekende taalcode merk je pas bij de
+ * volgende laptop van dat model — vervelend, maar niemand staat stil.
+ */
+const blokkeertNu: AttentionKind[] = ["sheet_mismatch", "cannot_print"];
+
+export function isUrgent(item: AttentionItem) {
+  return blokkeertNu.includes(item.kind);
+}
+
+export function splitAttention(items: AttentionItem[]) {
+  return {
+    nu: items.filter(isUrgent),
+    later: items.filter((item) => !isUrgent(item)),
+  };
+}
+
 export function attentionByKind(items: AttentionItem[]) {
   const per = new Map<AttentionKind, AttentionItem[]>();
   for (const kind of attentionPriority) {
