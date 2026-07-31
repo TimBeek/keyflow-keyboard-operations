@@ -57,10 +57,27 @@ export function searchModels(
   query: string,
   limit = 8,
 ): ModelChoice[] {
-  const words = normalize(query).split(" ").filter((word) => word.length >= 2);
-  if (words.length === 0) return [];
+  return searchModelMatches(choices, query, limit).shown;
+}
 
-  return choices
+/**
+ * Hetzelfde zoeken, maar dan met het totaal erbij.
+ *
+ * De lijst blijft kort — twintig regels op een scherm helpen niemand kiezen.
+ * Maar wie "840" typt krijgt twaalf treffers en ziet er acht, en als er dan
+ * "8 modellen" boven staat lijkt de lijst compleet. De EliteBook 840 G3 valt
+ * er stil buiten, en de medewerker pakt de bovenste die erop lijkt — met een
+ * vel dat niet op zijn laptop past. Daarom hoort het totaal mee naar buiten.
+ */
+export function searchModelMatches(
+  choices: ModelChoice[],
+  query: string,
+  limit = 8,
+): { shown: ModelChoice[]; total: number } {
+  const words = normalize(query).split(" ").filter((word) => word.length >= 2);
+  if (words.length === 0) return { shown: [], total: 0 };
+
+  const gevonden = choices
     .map((choice) => ({ choice, score: scoreChoice(choice, words) }))
     .filter((candidate) => candidate.score < 99)
     .sort((left, right) =>
@@ -68,8 +85,9 @@ export function searchModels(
       // Bij gelijke score wint de hangmap: daar ligt een vel voor klaar.
       || Number(left.choice.source === "database") - Number(right.choice.source === "database")
       || left.choice.name.localeCompare(right.choice.name, "nl", { numeric: true }))
-    .slice(0, limit)
     .map((candidate) => candidate.choice);
+
+  return { shown: gevonden.slice(0, limit), total: gevonden.length };
 }
 
 function scoreChoice(choice: ModelChoice, words: string[]) {

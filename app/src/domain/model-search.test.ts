@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { buildModelChoices, searchModels } from "./model-search";
+import { buildModelChoices, searchModelMatches, searchModels } from "./model-search";
+import { catalogModelOptions } from "./model-catalog";
+import { inventoryCatalog } from "@/data/inventory-catalog";
 
 const hangmapModels = ["Dell Latitude 5420", "HP ProBook 640 G5"];
 const choices = buildModelChoices(hangmapModels);
@@ -60,5 +62,30 @@ describe("searchModels", () => {
 
   it("houdt de lijst kort genoeg om uit te kiezen", () => {
     expect(searchModels(choices, "hp").length).toBeLessThanOrEqual(8);
+  });
+});
+
+describe("Wat er buiten de lijst valt", () => {
+  const echteKeuzes = buildModelChoices(catalogModelOptions(inventoryCatalog));
+
+  it("vertelt hoeveel treffers er in totaal zijn", () => {
+    // "840" levert meer op dan er passen. Stond er alleen "8 modellen" boven,
+    // dan lijkt de lijst compleet en kiest de medewerker de bovenste die erop
+    // lijkt — met een vel dat niet op zijn laptop past.
+    const uitkomst = searchModelMatches(echteKeuzes, "840");
+
+    expect(uitkomst.shown).toHaveLength(8);
+    expect(uitkomst.total).toBeGreaterThan(uitkomst.shown.length);
+  });
+
+  it("zegt niets over afkappen als alles past", () => {
+    const uitkomst = searchModelMatches(echteKeuzes, "Dell Latitude 5420");
+
+    expect(uitkomst.total).toBe(uitkomst.shown.length);
+  });
+
+  it("laat searchModels precies doen wat het deed", () => {
+    expect(searchModels(echteKeuzes, "840").map((c) => c.name))
+      .toEqual(searchModelMatches(echteKeuzes, "840").shown.map((c) => c.name));
   });
 });

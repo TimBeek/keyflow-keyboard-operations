@@ -38,7 +38,7 @@ import {
   targetLayoutOptions,
 } from "@/domain/keyboard-layouts";
 import { catalogModelOptions } from "@/domain/model-catalog";
-import { buildModelChoices, searchModels } from "@/domain/model-search";
+import { buildModelChoices, searchModelMatches } from "@/domain/model-search";
 import type { PrintRequestInput, PrintRequestRecord } from "@/domain/print-requests";
 import { printingNow, type PrinterCheckRecord } from "@/domain/printer-check";
 import {
@@ -216,10 +216,11 @@ export function EmployeeWorkspace({
    * de handen, en juist die zonder vel hebben een andere oplossing nodig.
    */
   const modelChoices = useMemo(() => buildModelChoices(modelOptions), [modelOptions]);
-  const modelMatches = useMemo(
-    () => searchModels(modelChoices, modelQuery),
+  const modelZoek = useMemo(
+    () => searchModelMatches(modelChoices, modelQuery),
     [modelChoices, modelQuery],
   );
+  const modelMatches = modelZoek.shown;
   const model = chosenModel ?? (modelMatches.length === 1 ? modelMatches[0].name : "");
   // Openstaan doet hij alleen als er echt iets te kiezen valt: bij één treffer
   // is het model al gekozen, en zonder treffers is er niets om uit te kiezen.
@@ -564,7 +565,19 @@ export function EmployeeWorkspace({
       .slice(0, 6);
   }, [catalog, receiveQuery]);
 
-  const receiveItem = receiveMatches.length === 1 ? receiveMatches[0] : null;
+  /**
+   * Kiezen doe je op de hangmap, niet op het nummer. Hetzelfde artikelnummer
+   * ligt soms in twee mappen; wie dan op een keuzeknop drukte kreeg dat nummer
+   * terug in het zoekveld, waarna er wéér twee treffers waren en er niets
+   * gebeurde. Het hangmapnummer is wel van elkaar te onderscheiden.
+   */
+  const [receiveKey, setReceiveKey] = useState<string | null>(null);
+  const gekozenMap = receiveKey
+    ? receiveMatches.find((item) => item.catalogKey === receiveKey)
+    : undefined;
+  // Past de eerdere keuze niet meer bij wat er nu staat, dan telt gewoon weer
+  // de enige treffer. Zo blijft er nooit een oude keuze hangen.
+  const receiveItem = gekozenMap ?? (receiveMatches.length === 1 ? receiveMatches[0] : null);
 
   async function addStock() {
     if (!receiveItem) {
@@ -590,6 +603,7 @@ export function EmployeeWorkspace({
         text: `${receiveQuantity} toegevoegd aan hangmap ${receiveItem.storageNumber}. Er liggen er nu ${result.newQuantity}.`,
       });
       setReceiveQuery("");
+      setReceiveKey(null);
       setReceiveQuantity(1);
       setReceiveReference("");
       requestAnimationFrame(() => receiveInputRef.current?.focus());
@@ -649,7 +663,11 @@ export function EmployeeWorkspace({
               />
               {pickerOpen && (
                 <div className="model-suggestions" id="model-suggesties" role="listbox">
-                  <strong>{modelMatches.length} modellen — welke bedoel je?</strong>
+                  <strong>
+                    {modelZoek.total > modelMatches.length
+                      ? `${modelMatches.length} van de ${modelZoek.total} — typ de generatie erbij`
+                      : `${modelMatches.length} modellen — welke bedoel je?`}
+                  </strong>
                   {modelMatches.map((candidate) => (
                     <button
                       key={candidate.name}
@@ -1291,13 +1309,13 @@ export function EmployeeWorkspace({
             </div>
           )}
 
-          {receiveMatches.length > 1 && (
+          {receiveMatches.length > 1 && !receiveItem && (
             <div className="worker-waiting">
               <strong>Welke bedoel je?</strong>
               <div className="worker-choices">
                 {receiveMatches.map((item) => (
-                  <button key={item.catalogKey} onClick={() => setReceiveQuery(item.sku)}>
-                    {item.sku} · {item.model}
+                  <button key={item.catalogKey} onClick={() => setReceiveKey(item.catalogKey)}>
+                    {item.sku} · hangmap {item.storageNumber} · {item.model}
                   </button>
                 ))}
               </div>
