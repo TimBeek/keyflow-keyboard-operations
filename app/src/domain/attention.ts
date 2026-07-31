@@ -133,10 +133,33 @@ export function attentionItems(input: AttentionInput): AttentionItem[] {
   return items.sort((left, right) => right.occurredAt.localeCompare(left.occurredAt));
 }
 
+/**
+ * Op volgorde van hoe hard het werk stilstaat.
+ *
+ * Een vel dat niet paste betekent dat er nu iemand met een laptop staat te
+ * wachten. Een model dat Noviply niet kan printen houdt een order tegen. Een
+ * lege hangmap merk je pas bij de vólgende laptop van dat model, en een
+ * onbekende taalcode staat alleen een regel in een printronde in de weg. In die
+ * volgorde hoort management ze te zien, niet in de volgorde waarin ze toevallig
+ * binnenkwamen.
+ */
+export const attentionPriority: AttentionKind[] = [
+  "sheet_mismatch",
+  "cannot_print",
+  "empty_folder",
+  "unknown_language",
+];
+
 export function attentionByKind(items: AttentionItem[]) {
   const per = new Map<AttentionKind, AttentionItem[]>();
+  for (const kind of attentionPriority) {
+    const van = items.filter((item) => item.kind === kind);
+    if (van.length > 0) per.set(kind, van);
+  }
+  // Een soort die hier nog niet in de volgorde staat mag niet stilletjes
+  // wegvallen; die komt achteraan.
   for (const item of items) {
-    per.set(item.kind, [...(per.get(item.kind) ?? []), item]);
+    if (!per.has(item.kind)) per.set(item.kind, items.filter((x) => x.kind === item.kind));
   }
   return per;
 }

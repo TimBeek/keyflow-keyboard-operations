@@ -56,6 +56,7 @@ import {
   type NoviplyUnavailableRecord,
 } from "@/domain/noviply-availability";
 import { EnterShapeGlyph } from "@/components/enter-shape-glyph";
+import { TrackpointGlyph } from "@/components/trackpoint-glyph";
 import { nextPrintRun, type PrintRun } from "@/domain/print-runs";
 import { batchLabel, batchRowForOrder, type PrintBatch } from "@/domain/print-batch";
 import {
@@ -1051,7 +1052,10 @@ export function EmployeeWorkspace({
                   ze het verkeerde vel maken. */}
               {effectiveMethod === "printed_sticker" && (fallbackToPremium || askingSlipDate) && (
                 <fieldset className={`trackpoint-ask${trackpointMissing ? " missing" : ""}`}>
-                  <legend>Zit er een klein rond knopje tussen de G, H en B?</legend>
+                  {/* Geen <legend>: die hangt bij een lange zin over de rand van
+                      het kader heen. Een gewone kop binnen het kader leest
+                      hetzelfde en blijft binnen de lijntjes. */}
+                  <p className="trackpoint-vraag">Zit er een klein rond knopje tussen de G, H en B?</p>
                   <div className="trackpoint-choice">
                     {([["yes", "Ja"], ["no", "Nee"]] as const).map(([waarde, label]) => (
                       <button
@@ -1061,6 +1065,7 @@ export function EmployeeWorkspace({
                         aria-pressed={trackpoint === waarde}
                         onClick={() => { setTrackpoint(waarde); setTrackpointMissing(false); }}
                       >
+                        <TrackpointGlyph present={waarde === "yes"} />
                         {label}
                       </button>
                     ))}

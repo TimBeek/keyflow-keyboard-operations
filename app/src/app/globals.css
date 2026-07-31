@@ -3177,12 +3177,17 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 
 /* Alles waar iemand iets mee moet, gegroepeerd per soort. Vier losse plekken
    maakten dat niemand overzicht had; één lijst met kopjes leest in één blik. */
-.attention-groups { display: grid; gap: 14px; }
+/* Het paneel zelf heeft geen binnenmarge (dat regelt elke sectie zelf), en die
+   ontbrak hier. Alles plakte tegen de rand, en over de volle breedte viel dat
+   meteen op. */
+.attention-groups { display: grid; gap: 18px; padding: 16px 20px 20px; }
 .attention-group h3 {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin: 0 0 7px;
+  margin: 0 0 9px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--line-soft);
   font-size: 12px;
   font-weight: 800;
   letter-spacing: .05em;
@@ -3198,17 +3203,17 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
   font-size: 11.5px;
   text-align: center;
 }
-.attention-group ul { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
+.attention-group ul { display: grid; gap: 9px; margin: 0; padding: 0; list-style: none; }
 .attention-group li {
-  padding: 10px 13px;
+  padding: 12px 15px;
   border: 1px solid var(--line);
   border-left-width: 3px;
   border-radius: 11px;
   background: var(--surface);
 }
-.attention-group li strong { display: block; color: var(--text); font-size: 14px; }
+.attention-group li strong { display: block; margin-bottom: 2px; color: var(--text); font-size: 14px; }
 .attention-group li span { display: block; color: var(--text-2); font-size: 12.5px; }
-.attention-group li small { color: var(--text-3); font-size: 11.5px; }
+.attention-group li small { display: block; margin-top: 4px; color: var(--text-3); font-size: 11.5px; }
 
 /* Kleur per soort, zodat je aan de rand ziet waar het over gaat. */
 .attention-group.sheet_mismatch li { border-left-color: var(--crit); }
@@ -3480,17 +3485,19 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
   .trackpoint-choice button { flex: 1 1 0; min-width: 0; }
 }
 
-/* "Het toetsenbord is al goed" — een uitweg, geen hoofdweg: daarom rustig
-   vormgegeven en niet als vierde grote keuzeknop. */
-.already-correct { margin: -4px 0 4px; }
+/* "Het toetsenbord is al goed" is een echte uitkomst, geen bijzin: hij rondt de
+   laptop in één klik af. Hij stond gestippeld en grijs en viel daardoor weg
+   tegen de achtergrond. Nu leest hij als de andere keuzeknoppen op dit scherm,
+   met de groene rand van "hier hoeft niets meer". */
+.already-correct { margin: -2px 0 6px; }
 .already-correct button {
-  width: 100%; min-height: 52px; padding: 8px 18px;
-  border: 1px dashed var(--line); border-radius: 12px;
-  background: transparent; color: var(--text-2);
-  font-size: 14px; font-weight: 700; cursor: pointer;
-  transition: border-color .15s, color .15s, background .15s;
+  width: 100%; min-height: 56px; padding: 8px 18px;
+  border: 2px solid var(--ok); border-radius: 12px;
+  background: var(--ok-soft); color: var(--ok);
+  font-size: 15px; font-weight: 800; cursor: pointer;
+  transition: background .15s, color .15s;
 }
-.already-correct button:hover { border-color: var(--ok); border-style: solid; background: var(--ok-soft); color: var(--ok); }
+.already-correct button:hover { background: var(--ok); color: #fff; }
 
 /* Een kerncijfer dat er nog niet is: geen getal maar wat we wél weten. */
 .stat-unknown { font-size: 17px !important; letter-spacing: 0 !important; color: var(--text-2) !important; }
@@ -3534,21 +3541,32 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 
 /* De trackpointvraag bij een aanvraag aan Noviply. Zij zien de laptop niet, dus
    dit antwoord bepaalt of ze het juiste vel maken. */
-.trackpoint-ask { margin: 0; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.trackpoint-ask { margin: 0; padding: 16px 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
 .trackpoint-ask.missing { border-color: var(--warn); background: var(--warn-soft); }
-.trackpoint-ask legend { padding: 0; color: var(--text); font-size: 13px; font-weight: 800; }
-.trackpoint-ask p { margin: 2px 0 10px; color: var(--muted); font-size: 12px; }
-.trackpoint-ask small { display: block; margin-top: 8px; color: var(--warn); font-size: 12px; font-weight: 700; }
-.trackpoint-choice { display: flex; gap: 8px; }
+/* Bewust geen <legend>: die gaat bij een lange vraag over de rand van het kader
+   heen. Een gewone alinea binnen het kader leest hetzelfde. */
+.trackpoint-vraag { margin: 0 0 12px; color: var(--text); font-size: 15px; font-weight: 800; line-height: 1.35; }
+.trackpoint-ask small { display: block; margin-top: 10px; color: var(--warn); font-size: 12.5px; font-weight: 700; }
+.trackpoint-choice { display: flex; gap: 10px; }
 .trackpoint-choice button {
-  min-width: 92px; min-height: 44px; padding: 0 18px;
-  border: 1px solid var(--line); border-radius: 11px;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  min-width: 118px; min-height: 44px; padding: 10px 16px;
+  border: 1px solid var(--line); border-radius: 12px;
   background: var(--surface-2); color: var(--text);
   font-size: 15px; font-weight: 700; cursor: pointer;
   transition: background .15s, border-color .15s, color .15s;
 }
-.trackpoint-choice button:hover { border-color: var(--brand); }
-.trackpoint-choice button.chosen { border-color: var(--brand); background: var(--brand); color: #fff; }
+.trackpoint-choice button:hover { border-color: var(--signal); }
+.trackpoint-choice button.chosen { border-color: transparent; background: var(--signal); color: var(--signal-ink); }
+
+/* De tekening: drie toetsen met het knopje ertussen, zodat je ziet waar je moet
+   kijken in plaats van te moeten weten wat een trackpoint is. */
+.trackpoint-glyph { display: block; }
+.trackpoint-key { fill: none; stroke: currentColor; stroke-width: 1.5; opacity: .5; }
+.trackpoint-letter { fill: currentColor; font-size: 11px; font-weight: 700; text-anchor: middle; opacity: .75; }
+.trackpoint-dot { fill: var(--crit); stroke: var(--surface); stroke-width: 1.5; }
+.trackpoint-dot-empty { fill: none; stroke: currentColor; stroke-width: 1.5; stroke-dasharray: 3 3; opacity: .45; }
+.trackpoint-choice button.chosen .trackpoint-dot { stroke: var(--signal); }
 
 /* De smalste toestellen: drie prijsknoppen naast elkaar worden te krap. */
 @media (max-width: 420px) {
