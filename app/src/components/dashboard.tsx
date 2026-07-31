@@ -2190,17 +2190,39 @@ export function Dashboard({
                       <b>{items.length}</b>
                     </h3>
                     <ul>
-                      {items.slice(0, 6).map((item) => (
-                        <li key={item.id}>
-                          <strong>{item.title}</strong>
-                          <span>{item.detail}</span>
-                          <small>
-                            {item.orderReference && `Order ${item.orderReference}`}
-                            {item.orderReference && item.occurredAt && " · "}
-                            {item.occurredAt && formatPersistenceTime(item.occurredAt)}
-                          </small>
-                        </li>
-                      ))}
+                      {items.slice(0, 6).map((item) => {
+                        /* Staat het model geblokkeerd omdat Noviply het niet
+                           had, dan hoort de knop om dat terug te draaien hier
+                           te staan — dit is de plek waar je het probleem ziet. */
+                        const blokkade = kind === "cannot_print"
+                          ? noviplyUnavailable.find((regel) => item.title.toLowerCase().startsWith(regel.model.toLowerCase()))
+                          : undefined;
+                        return (
+                          <li key={item.id}>
+                            <strong>{item.title}</strong>
+                            <span>{item.detail}</span>
+                            <small>
+                              {item.orderReference && `Order ${item.orderReference}`}
+                              {item.orderReference && item.occurredAt && " · "}
+                              {item.occurredAt && formatPersistenceTime(item.occurredAt)}
+                            </small>
+                            {blokkade && (
+                              <div className="attention-action">
+                                <span>
+                                  De werkvloer krijgt hiervoor geen premiumsticker meer aangeraden.
+                                </span>
+                                <button
+                                  type="button"
+                                  className="secondary-button"
+                                  onClick={() => allowNoviplyAgain(blokkade.id)}
+                                >
+                                  Noviply heeft dit model weer
+                                </button>
+                              </div>
+                            )}
+                          </li>
+                        );
+                      })}
                     </ul>
                     {items.length > 6 && (
                       <p className="report-note">

@@ -3464,10 +3464,31 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
   .report-period button { flex: 1 1 0; min-height: 44px; padding: 0 8px; }
 
   /* -- wat Noviply niet kan, en de trackpointvraag -------------------------- */
+  .requests-head { flex-direction: column; align-items: stretch; gap: 10px; }
+  .requests-search input { width: 100%; min-height: 44px; font-size: 16px; }
+  .attention-action { flex-direction: column; align-items: stretch; gap: 8px; }
   .unavailable-list li { flex-direction: column; align-items: stretch; }
   .unavailable-list li .secondary-button { width: 100%; }
   .trackpoint-choice button { flex: 1 1 0; min-width: 0; }
 }
+
+.printer-check-hint { margin: 12px 0 0; color: var(--muted); font-size: 12px; text-align: center; }
+
+/* Kop van het tabblad "Bij Noviply": tekst links, zoeken rechts. */
+.requests-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.requests-head .requests-headline { margin: 0; }
+.requests-search input {
+  width: 260px; height: 40px; padding: 0 13px;
+  border: 1px solid var(--line); border-radius: 10px;
+  background: var(--surface-2); color: var(--text); font-size: 13.5px;
+}
+.requests-search input:focus { outline: none; border-color: var(--brand); }
+.request-group h3 b { margin-left: 8px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--text-2); font-size: 11.5px; }
+.remind-noviply.urgent { border-color: var(--warn); background: var(--warn-soft); }
+
+/* De knop om een blokkade terug te draaien, in de aandachtslijst. */
+.attention-action { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line-soft); }
+.attention-action span { color: var(--muted); font-size: 11.5px; }
 
 /* Wat Noviply niet kan printen, in het instellingenscherm. */
 .settings-empty { margin: 0; color: var(--muted); font-size: 13px; }

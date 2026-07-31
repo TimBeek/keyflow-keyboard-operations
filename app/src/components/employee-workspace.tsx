@@ -183,6 +183,24 @@ export function EmployeeWorkspace({
   // klok, niet blijven staan op het moment dat het scherm openging.
   const now = new Date();
   const requestGroups = useMemo(() => groupPrintRequests(printRequests), [printRequests]);
+  /**
+   * Zoeken op ordernummer of model. Zodra er een dag of wat gewerkt is staan er
+   * tientallen regels, en dan zoek je één order — niet een lijst.
+   */
+  const [requestZoek, setRequestZoek] = useState("");
+  const zichtbaar = useMemo(() => {
+    const woorden = requestZoek.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    if (woorden.length === 0) return requestGroups;
+    const past = (request: PrintRequestRecord) => {
+      const tekst = `${request.model} ${request.layout} ${request.variant} ${request.orderReference} ${request.note}`.toLowerCase();
+      return woorden.every((woord) => tekst.includes(woord));
+    };
+    return {
+      ready: requestGroups.ready.filter(past),
+      waiting: requestGroups.waiting.filter(past),
+      blocked: requestGroups.blocked.filter(past),
+    };
+  }, [requestGroups, requestZoek]);
   // De eerstvolgende automatische ronde van vandaag; niets = beide geweest.
   const nextRun = nextPrintRun(now, policy.printRunTimes);
   const todayLabel = now.toLocaleDateString("nl-NL", { day: "numeric", month: "long" });
@@ -1185,7 +1203,20 @@ export function EmployeeWorkspace({
 
       {tab === "requests" && (
         <section className="worker-panel">
-          <p className="requests-headline">{printRequestHeadline(requestGroups)}</p>
+          <div className="requests-head">
+            <p className="requests-headline">{printRequestHeadline(requestGroups)}</p>
+            {printRequests.length > 4 && (
+              <label className="requests-search">
+                <span className="sr-only">Zoeken in aanvragen</span>
+                <input
+                  type="search"
+                  value={requestZoek}
+                  onChange={(event) => setRequestZoek(event.target.value)}
+                  placeholder="Zoek op ordernummer of model"
+                />
+              </label>
+            )}
+          </div>
 
           {/* De ronde is geweest; nu moet iemand zeggen of het vel er lag.
               Bovenaan, want hier staat een laptop op te wachten. */}
@@ -1256,28 +1287,53 @@ export function EmployeeWorkspace({
             </div>
           )}
 
-          {requestGroups.ready.length > 0 && (
-            <div className="request-group ready">
-              <h3>Klaar om op te halen</h3>
-              {requestGroups.ready.map((request) => (
-                <article key={request.id} className={isFresh(request, now) ? "fresh" : ""}>
+          {/* Wachten staat bovenaan: dat is wat er nog moet gebeuren. Daarna wat
+              niet gaat, en pas onderaan wat al klaarligt — dat is af. */}
+          {zichtbaar.waiting.length > 0 && (
+            <div className="request-group waiting">
+              <h3>Wacht nog bij Noviply<b>{zichtbaar.waiting.length}</b></h3>
+              {zichtbaar.waiting.map((request) => (
+                <article key={request.id}>
                   <div>
                     <strong>{request.model}</strong>
                     <span>{request.layout}{request.variant && ` · ${request.variant}`}</span>
                   </div>
                   <div className="request-order">
                     <b>{request.orderReference || "geen ordernummer"}</b>
-                    <small>geprint door {request.handledBy}</small>
+                    <small>aangevraagd</small>
                   </div>
                 </article>
               ))}
             </div>
           )}
 
-          {requestGroups.blocked.length > 0 && (
+          {/* Er staat werk klaar bij Noviply. Eén seintje is genoeg; zolang er
+              een openstaat blijft de knop weg, anders gaat het rinkelen. */}
+          {requestGroups.waiting.length > 0 && (
+            <div className={`remind-noviply${tooLong ? " urgent" : ""}`}>
+              <div>
+                <strong>
+                  {tooLong
+                    ? "Dit staat al een tijdje open"
+                    : requestGroups.waiting.length === 1
+                      ? "Eén sticker staat klaar om te printen"
+                      : `${requestGroups.waiting.length} stickers staan klaar om te printen`}
+                </strong>
+                <span>
+                  Noviply print &apos;s ochtends en &apos;s middags. Kan het eerder, laat het
+                  ze weten — ze krijgen het meteen in beeld.
+                </span>
+              </div>
+              <button type="button" className="primary-button" onClick={onRemindNoviply}>
+                Noviply een seintje geven
+              </button>
+            </div>
+          )}
+
+          {zichtbaar.blocked.length > 0 && (
             <div className="request-group blocked">
-              <h3>Kan niet geprint worden</h3>
-              {requestGroups.blocked.map((request) => (
+              <h3>Kan niet geprint worden<b>{zichtbaar.blocked.length}</b></h3>
+              {zichtbaar.blocked.map((request) => (
                 <article key={request.id} className={isFresh(request, now) ? "fresh" : ""}>
                   <div>
                     <strong>{request.model}</strong>
@@ -1293,37 +1349,26 @@ export function EmployeeWorkspace({
             </div>
           )}
 
-          {tooLong && (
-            <div className="remind-noviply">
-              <div>
-                <strong>Dit staat al een tijdje open</strong>
-                <span>
-                  Noviply print &apos;s ochtends en &apos;s middags. Duurt het langer, laat het
-                  ze weten — ze krijgen het meteen in beeld.
-                </span>
-              </div>
-              <button type="button" className="primary-button" onClick={onRemindNoviply}>
-                Noviply een seintje geven
-              </button>
-            </div>
-          )}
-
-          {requestGroups.waiting.length > 0 && (
-            <div className="request-group waiting">
-              <h3>Wacht nog bij Noviply</h3>
-              {requestGroups.waiting.map((request) => (
-                <article key={request.id}>
+          {zichtbaar.ready.length > 0 && (
+            <div className="request-group ready">
+              <h3>Klaar om op te halen<b>{zichtbaar.ready.length}</b></h3>
+              {zichtbaar.ready.map((request) => (
+                <article key={request.id} className={isFresh(request, now) ? "fresh" : ""}>
                   <div>
                     <strong>{request.model}</strong>
                     <span>{request.layout}{request.variant && ` · ${request.variant}`}</span>
                   </div>
                   <div className="request-order">
                     <b>{request.orderReference || "geen ordernummer"}</b>
-                    <small>aangevraagd</small>
+                    <small>geprint door {request.handledBy}</small>
                   </div>
                 </article>
               ))}
             </div>
+          )}
+
+          {requestZoek.trim() !== "" && zichtbaar.waiting.length + zichtbaar.blocked.length + zichtbaar.ready.length === 0 && (
+            <p className="requests-empty">Niets gevonden voor “{requestZoek.trim()}”.</p>
           )}
 
           {printRequests.length === 0 && (

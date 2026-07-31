@@ -26,8 +26,8 @@ export function PrintReminderPrompt({
             : `${reminder.openCount} stickers are waiting`}
         </h2>
         <p>
-          {reminder.sentBy} let you know the request list has been sitting for a while.
-          They are holding laptops aside until these are printed.
+          {reminder.sentBy} let you know these are ready to be printed. Those laptops
+          are set aside on the floor until the sheets arrive.
         </p>
         <div className="printer-check-actions">
           <button
@@ -38,6 +38,11 @@ export function PrintReminderPrompt({
             <b>✓</b> Got it
           </button>
         </div>
+        {/* Wegklikken is genoeg; de knop om te starten staat op hun eigen scherm,
+            precies daar waar de lijst met aanvragen ook staat. */}
+        <p className="printer-check-hint">
+          Close this and start whenever you are ready — the request list is right below.
+        </p>
       </div>
     </div>
   );
