@@ -1572,6 +1572,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 .answer-todo { padding: 17px 19px; border-radius: 12px; background: var(--surface); border-left: 4px solid var(--ok); }
 /* Was een kort kopje in hoofdletters. Er staat nu een hele vraag, en een zin
    in kapitalen leest twee keer zo langzaam. */
+.answer-doen { margin: 0; color: var(--text); font-size: 16px; font-weight: 700; line-height: 1.45; }
 .answer-todo b { display: block; color: var(--text); font-size: 16px; font-weight: 800; line-height: 1.35; }
 .answer-todo p { margin: 7px 0 0; color: var(--text); font-size: 18px; line-height: 1.5; font-weight: 550; }
 

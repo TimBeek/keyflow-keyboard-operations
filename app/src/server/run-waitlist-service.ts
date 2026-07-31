@@ -39,6 +39,7 @@ export type SettleRunWaitlistInput = z.input<typeof settleSchema>;
 
 type Row = {
   id: string;
+  idempotency_key: string;
   model: string;
   layout: string;
   variant: string;
@@ -54,7 +55,7 @@ type Row = {
 };
 
 const selectColumns = `
-  w.id, w.model, w.layout, w.variant, w.order_reference, w.quantity,
+  w.id, w.idempotency_key, w.model, w.layout, w.variant, w.order_reference, w.quantity,
   w.expected_run_at, w.expected_run_label, w.created_at, w.status, w.settled_at,
   creator.display_name as created_by_name,
   settler.display_name as settled_by_name
@@ -118,6 +119,28 @@ export async function addToRunWaitlist(rawInput: AddToRunWaitlistInput) {
       limit 1
     `;
     if (existing) {
+      /*
+       * Dezelfde knop twee keer is één laptop; een tweede laptop onder hetzelfde
+       * ordernummer is er twee. Op het idempotentiesleutel-geval is het het
+       * eerste — dan verandert er niets. Legt iemand later een tweede laptop van
+       * dezelfde order apart, dan hoort het aantal omhoog, anders raakt die
+       * laptop stilletzwijgend zoek: hij stond apart maar op geen enkele lijst.
+       */
+      if (existing.idempotency_key !== input.idempotencyKey) {
+        await transaction`
+          update print_run_waitlist
+          set quantity = quantity + ${input.quantity}
+          where id = ${existing.id}
+        `;
+        const [opnieuw] = await transaction<Row[]>`
+          select ${transaction.unsafe(selectColumns)}
+          from print_run_waitlist w
+          join users creator on creator.id = w.created_by
+          left join users settler on settler.id = w.settled_by
+          where w.id = ${existing.id}
+        `;
+        return { record: toRecord(opnieuw), duplicate: false };
+      }
       return { record: toRecord(existing), duplicate: true };
     }
 

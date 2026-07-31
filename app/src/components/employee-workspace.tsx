@@ -80,7 +80,7 @@ function todoFor(method: ConversionMethodId, storageNumber: number | null): stri
     case "printed_sticker":
       return "Breng de printsticker in één keer aan. Herpositioneren kan niet.";
     case "direct_reprint":
-      return "Zet de laptop in de wachtrij voor de toetsenbordsprinter.";
+      return "Zet de laptop klaar voor de toetsenbordsprint.";
     case "loose_stickers":
       return "Alleen met toestemming van je teamleider: plak de losse stickers toets voor toets.";
     case "none":
@@ -140,7 +140,11 @@ type Props = {
   compatibilityEvidenceRecords: CompatibilityEvidenceRecord[];
   onInventoryMutation: (request: InventoryMutationRequest) => Promise<InventoryMutationOutcome>;
   onStickerVerification: (input: StickerVerificationReportInput) => unknown;
-  onRequestPrintSticker: (input: PrintRequestInput) => unknown;
+  /**
+   * Levert een belofte op, en daar wordt op gewacht: anders meldt het scherm
+   * "aangevraagd bij Noviply" terwijl de aanvraag onderweg is stukgelopen.
+   */
+  onRequestPrintSticker: (input: PrintRequestInput) => Promise<unknown> | unknown;
   onRecordConversion: (input: ConversionLogInput) => unknown;
   /** Laptops die apart staan tot de volgende automatische printronde. */
   runWaitlist: RunWaitlistEntry[];
@@ -222,7 +226,13 @@ export function EmployeeWorkspace({
   // elke laptop een keuze. De aanname over de binnenkomende layout hieronder
   // vangt op dat NL en QWERTY US op hetzelfde neerkomen.
   const [targetLayout, setTargetLayout] = useState("QWERTY NL");
-  const [saleBandId, setSaleBandId] = useState<SaleValueBandId>("200_299");
+  /*
+   * Geen voorselectie. Hij stond op €200–299, en daarmee koos de app een
+   * methode op een prijs die niemand had aangeklikt — bij een laptop van 758
+   * euro kwam er dan de verkeerde route uit tot iemand toevallig de prijs
+   * aanraakte. Null betekent: nog niet beantwoord.
+   */
+  const [saleBandId, setSaleBandId] = useState<SaleValueBandId | null>(null);
   const [enterShape, setEnterShape] = useState<EnterShapeId>("");
   const [shapeHelpOpen, setShapeHelpOpen] = useState(false);
   const [orderReference, setOrderReference] = useState("");
@@ -232,7 +242,6 @@ export function EmployeeWorkspace({
   // Eén order kan meerdere laptops zijn. Eén is verreweg het meest voorkomend,
   // dus dat blijft de stand waar niemand iets aan hoeft te doen.
   const [quantity, setQuantity] = useState(1);
-  const [confirmed, setConfirmed] = useState(false);
   const [adviceMessage, setAdviceMessage] = useState<{ tone: "ok" | "warn"; text: string } | null>(null);
   const [issueOpen, setIssueOpen] = useState(false);
   const [failureReason, setFailureReason] = useState<StickerVerificationFailureReason>("position_mismatch");
@@ -253,7 +262,7 @@ export function EmployeeWorkspace({
   // is het model al gekozen, en zonder treffers is er niets om uit te kiezen.
   const pickerOpen = chosenModel === null && modelMatches.length > 1;
 
-  const saleBand = getSaleValueBand(saleBandId);
+  const saleBand = getSaleValueBand(saleBandId ?? "200_299");
   const saleValue = policyValueForBand(saleBand, policy.thresholdEur);
 
   const noviplyMatch = useMemo(
@@ -342,7 +351,12 @@ export function EmployeeWorkspace({
     : recommendation.primary;
   const fallbackToPremium = printerFallback || (printBlocked && recommendation.primary === "direct_reprint");
 
-  const hasAnswer = model !== "";
+  /*
+   * Alle vier de stappen beantwoord, anders geen advies. Eerder verscheen de
+   * kaart al zodra het model erin stond, en dan stond er een methode die op een
+   * niet-gekozen entervorm en een niet-gekozen prijs was gebaseerd.
+   */
+  const hasAnswer = model !== "" && enterShape !== "" && saleBandId !== null;
   const usesSheet = effectiveMethod === "noviply_sheet";
   const storageNumber = matched?.item.storageNumber ?? null;
 
@@ -358,7 +372,11 @@ export function EmployeeWorkspace({
     setOrderReference("");
     setOrderMissing(false);
     setQuantity(1);
-    setConfirmed(false);
+    setEnterShape("");
+    setSaleBandId(null);
+    setTrackpoint("");
+    setTrackpointMissing(false);
+    setAskingSlipDate(false);
     if (!keepMessage) setAdviceMessage(null);
     setIssueOpen(false);
     requestAnimationFrame(() => modelInputRef.current?.focus());
@@ -427,14 +445,14 @@ export function EmployeeWorkspace({
   }
 
   /** Een echte aanvraag: Noviply moet dit vel apart printen. */
-  function requestFromNoviply(reason: string) {
+  async function requestFromNoviply(reason: string) {
     if (needsOrderNumber()) return;
     if (!trackpoint) {
       setTrackpointMissing(true);
       return;
     }
     try {
-      onRequestPrintSticker({
+      await onRequestPrintSticker({
         model,
         layout: stickerLayout(),
         variant: enterShape,
@@ -530,7 +548,6 @@ export function EmployeeWorkspace({
         });
       }
       setAdviceMessage({ tone: "ok", text: "Klaar. Deze methode gebruikt geen voorraadvel, er is niets afgeboekt. Pak de volgende laptop." });
-      setConfirmed(false);
       setPrintBlocked(false);
       setModelQuery("");
       setChosenModel(null);
@@ -576,7 +593,6 @@ export function EmployeeWorkspace({
         tone: "ok",
         text: `Klaar. ${matched.item.sku} is afgeboekt, er liggen er nog ${result.newQuantity} in hangmap ${matched.item.storageNumber}.`,
       });
-      setConfirmed(false);
       setModelQuery("");
       setChosenModel(null);
       setOrderReference("");
@@ -620,7 +636,6 @@ export function EmployeeWorkspace({
         text: `${stickerVerificationFailureLabel(failureReason)}. ${tail} Pak niet zelf een andere variant — vraag je teamleider.`,
       });
       setIssueOpen(false);
-      setConfirmed(false);
     } catch (error) {
       setAdviceMessage({ tone: "warn", text: error instanceof Error ? error.message : "Melden is niet gelukt." });
     }
@@ -777,7 +792,7 @@ export function EmployeeWorkspace({
 
             <label>
               <span>2 · Welke taal moet erop?</span>
-              <select value={targetLayout} onChange={(event) => { setTargetLayout(event.target.value); setConfirmed(false); }}>
+              <select value={targetLayout} onChange={(event) => { setTargetLayout(event.target.value); }}>
                 {targetLayoutOptions.map((option) => (
                   <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
@@ -802,7 +817,7 @@ export function EmployeeWorkspace({
                     key={choice.id}
                     type="button"
                     className={choice.id === enterShape ? "active" : ""}
-                    onClick={() => { setEnterShape(choice.id); setConfirmed(false); }}
+                    onClick={() => { setEnterShape(choice.id); }}
                   >
                     {choice.id !== "" && <EnterShapeGlyph shape={choice.id} />}
                     <strong>{choice.label}</strong>
@@ -825,14 +840,14 @@ export function EmployeeWorkspace({
             )}
 
             <fieldset className="worker-bands">
-              <legend>4 · Wat kost de laptop?</legend>
+              <legend>4 · Voor hoeveel wordt hij verkocht?</legend>
               <div>
                 {saleValueBands.map((band) => (
                   <button
                     key={band.id}
                     type="button"
                     className={band.id === saleBandId ? "active" : ""}
-                    onClick={() => { setSaleBandId(band.id); setConfirmed(false); }}
+                    onClick={() => { setSaleBandId(band.id); }}
                   >
                     {band.shortLabel}
                   </button>
@@ -870,7 +885,6 @@ export function EmployeeWorkspace({
                         className={choice.id === enterShape ? "primary-button" : "secondary-button"}
                         onClick={() => {
                           setEnterShape(choice.id);
-                          setConfirmed(false);
                           setShapeHelpOpen(false);
                         }}
                       >
@@ -896,7 +910,11 @@ export function EmployeeWorkspace({
               <span>
                 {pickerOpen
                   ? "Kies hierboven welk model je bedoelt."
-                  : "Typ hierboven het modelnummer. Het antwoord verschijnt vanzelf."}
+                  : model === ""
+                    ? "Typ hierboven het modelnummer."
+                    : enterShape === ""
+                      ? "Kies bij stap 3 welke Enter-toets erop zit."
+                      : "Kies bij stap 4 voor hoeveel hij wordt verkocht."}
               </span>
             </div>
           )}
@@ -1167,8 +1185,7 @@ export function EmployeeWorkspace({
                 </div>
               ) : (
                 <div className="answer-todo">
-                  <b>Wat moet je doen</b>
-                  <p>{todoFor(effectiveMethod, storageNumber)}</p>
+                  <p className="answer-doen">{todoFor(effectiveMethod, storageNumber)}</p>
                   {/* De koppeling met Roemenië is niet sluitend: zij noemen
                       sommige modellen bij hun interne nummer. Dan moet de
                       medewerker kunnen zeggen dat het niet gaat. */}
@@ -1206,26 +1223,22 @@ export function EmployeeWorkspace({
                   staan ze groot en vooraan. Ze stonden in kleine letters naast
                   een aanvinkvakje, en juist daar ging het mis: een aanvraag
                   zonder ordernummer liep op een foutmelding stuk. */}
-              {/* Tijdens de pakbonvraag zijn die twee knoppen de handeling. Een
-                  vinkje en een "Klaar" eronder is dan niet alleen ruis: je kunt
-                  hem afmelden zonder ooit iets aan te vragen. */}
-              {!askingSlipDate && (
-              <label className={`answer-confirm${confirmed ? " on" : ""}`}>
-                <input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />
-                <span>
-                  {usesSheet && matched
-                    ? `Vel uit hangmap ${storageNumber} klopt: ${matched.item.sku} · ${matched.variant}`
-                    : "Ik heb dit gedaan"}
-                </span>
-              </label>
-              )}
+              {/* Het aanvinkvakje is weg. Het vroeg twee handelingen voor één
+                  besluit, en wat je bevestigde stond in het vakje terwijl je op
+                  de knop drukte. Nu staat de controle in de knop zelf: je leest
+                  waar het vel vandaan komt op het moment dat je hem afboekt.
 
+                  Tijdens de pakbonvraag zijn die twee knoppen de handeling; dan
+                  hoort hier niets te staan, anders kun je afmelden zonder ooit
+                  iets aangevraagd te hebben. */}
               {!askingSlipDate && (
               <div className="answer-actions">
-                <button className="primary-button" disabled={!confirmed} onClick={bookDone}>
-                  {usesSheet
-                    ? (quantity === 1 ? "Vel afboeken" : `${quantity} vellen afboeken`)
-                    : "Klaar"}
+                <button className="primary-button" onClick={bookDone}>
+                  {usesSheet && matched
+                    ? (quantity === 1
+                      ? `Vel uit hangmap ${storageNumber} afboeken — ${matched.item.sku} · ${matched.variant}`
+                      : `${quantity} vellen uit hangmap ${storageNumber} afboeken — ${matched.item.sku} · ${matched.variant}`)
+                    : "Klaar — laptop is afgehandeld"}
                 </button>
                 {usesSheet && matched && (
                   <button className="danger-ghost-button" onClick={() => setIssueOpen((open) => !open)}>
