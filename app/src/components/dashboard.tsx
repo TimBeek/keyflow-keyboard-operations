@@ -1526,7 +1526,15 @@ export function Dashboard({
    * vel twee keer laten uitrollen.
    */
   async function waitForPrintRun(input: RunWaitlistInput) {
-    const idempotencyKey = `wachtronde-${input.orderReference.trim()}-${input.expectedRunAt}`;
+    /*
+     * Een sleutel per handeling, niet per order en ronde. Met die oude sleutel
+     * kreeg een tweede laptop van dezelfde order op dezelfde ronde exact
+     * dezelfde sleutel, en dan zag de server hem als een dubbele klik: er
+     * gebeurde niets, terwijl er wél een tweede laptop apart stond. Nu telt de
+     * server het aantal op. Het scherm maakt zichzelf leeg na een geslaagde
+     * handeling, dus twee keer klikken op hetzelfde vel kan hier niet.
+     */
+    const idempotencyKey = `wachtronde-${crypto.randomUUID()}`;
     const { record } = await addToRunWaitlist({ ...input, idempotencyKey });
     setRunWaitlist((current) => [record, ...current.filter((entry) => entry.id !== record.id)]);
     return record;

@@ -1,3 +1,4 @@
+import type { TrackpointAnswer } from "./print-requests";
 import { runHasPassed } from "./print-runs";
 
 /**
@@ -24,6 +25,8 @@ export type RunWaitlistEntry = {
   expectedRunAt: string;
   /** Hoe die ronde heet tegen de werkvloer: "12:30". */
   expectedRunLabel: string;
+  /** Het antwoord op de trackpointvraag; gaat mee als hij alsnog aangevraagd wordt. */
+  trackpoint: TrackpointAnswer;
   createdAt: string;
   createdBy: string;
   status: RunWaitlistStatus;
@@ -39,6 +42,7 @@ export type RunWaitlistInput = {
   quantity: number;
   expectedRunAt: string;
   expectedRunLabel: string;
+  trackpoint?: TrackpointAnswer;
 };
 
 export class RunWaitlistError extends Error {
@@ -96,6 +100,7 @@ export function createRunWaitlistEntry(
     quantity: Math.max(1, Math.round(input.quantity || 1)),
     expectedRunAt: expected.toISOString(),
     expectedRunLabel: input.expectedRunLabel.trim(),
+    trackpoint: input.trackpoint ?? "unknown",
     createdAt: now.toISOString(),
     createdBy: actor,
     status: "waiting",

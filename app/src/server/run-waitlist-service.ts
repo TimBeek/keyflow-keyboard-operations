@@ -24,6 +24,7 @@ const addSchema = z.object({
   quantity: z.number().int().min(1).max(200).default(1),
   expectedRunAt: z.string().min(1),
   expectedRunLabel: z.string().max(20).default(""),
+  trackpoint: z.enum(["yes", "no", "unknown"]).default("unknown"),
   idempotencyKey: z.string().min(8).max(200),
   actorId: databaseUuidSchema,
 });
@@ -40,6 +41,7 @@ export type SettleRunWaitlistInput = z.input<typeof settleSchema>;
 type Row = {
   id: string;
   idempotency_key: string;
+  trackpoint: "yes" | "no" | "unknown";
   model: string;
   layout: string;
   variant: string;
@@ -55,7 +57,7 @@ type Row = {
 };
 
 const selectColumns = `
-  w.id, w.idempotency_key, w.model, w.layout, w.variant, w.order_reference, w.quantity,
+  w.id, w.idempotency_key, w.trackpoint, w.model, w.layout, w.variant, w.order_reference, w.quantity,
   w.expected_run_at, w.expected_run_label, w.created_at, w.status, w.settled_at,
   creator.display_name as created_by_name,
   settler.display_name as settled_by_name
@@ -71,6 +73,7 @@ function toRecord(row: Row): RunWaitlistEntry {
     quantity: row.quantity,
     expectedRunAt: row.expected_run_at.toISOString(),
     expectedRunLabel: row.expected_run_label,
+    trackpoint: row.trackpoint,
     createdAt: row.created_at.toISOString(),
     createdBy: row.created_by_name,
     status: row.status,
@@ -153,12 +156,12 @@ export async function addToRunWaitlist(rawInput: AddToRunWaitlistInput) {
     const [inserted] = await transaction<{ id: string }[]>`
       insert into print_run_waitlist (
         idempotency_key, model, layout, variant, order_reference, quantity,
-        expected_run_at, expected_run_label, created_by
+        trackpoint, expected_run_at, expected_run_label, created_by
       )
       values (
         ${input.idempotencyKey}, ${input.model.trim()}, ${input.layout.trim()},
         ${input.variant.trim()}, ${input.orderReference.trim()}, ${input.quantity},
-        ${expected}, ${input.expectedRunLabel.trim()}, ${input.actorId}
+        ${input.trackpoint}, ${expected}, ${input.expectedRunLabel.trim()}, ${input.actorId}
       )
       on conflict do nothing
       returning id
@@ -203,9 +206,10 @@ export async function settleRunWaitlistEntry(rawInput: SettleRunWaitlistInput) {
       variant: string;
       order_reference: string;
       quantity: number;
+      trackpoint: "yes" | "no" | "unknown";
       expected_run_label: string;
     }[]>`
-      select id, model, layout, variant, order_reference, quantity, expected_run_label
+      select id, model, layout, variant, order_reference, quantity, trackpoint, expected_run_label
       from print_run_waitlist
       where id = ${input.id} and status = 'waiting'
       for update
@@ -220,11 +224,12 @@ export async function settleRunWaitlistEntry(rawInput: SettleRunWaitlistInput) {
       const [request] = await transaction<{ id: string }[]>`
         insert into print_requests (
           idempotency_key, brand, model, layout, variant,
-          order_reference, quantity, reason, requested_by
+          order_reference, quantity, trackpoint, reason, requested_by
         )
         values (
           ${`waitlist-${entry.id}`}, ${brandFromModel(model)}, ${model},
           ${entry.layout}, ${entry.variant}, ${entry.order_reference}, ${entry.quantity},
+          ${entry.trackpoint},
           ${`Lag er na de ronde van ${entry.expected_run_label || "vandaag"} nog steeds niet bij.`},
           ${input.actorId}
         )

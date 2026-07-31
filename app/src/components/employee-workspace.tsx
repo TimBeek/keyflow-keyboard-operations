@@ -345,6 +345,13 @@ export function EmployeeWorkspace({
    * gaat een aanvraag niet weg voordat dit beantwoord is.
    */
   const [trackpoint, setTrackpoint] = useState<"" | "yes" | "no">("");
+  /**
+   * "Het toetsenbord is al goed" rondde de laptop meteen af. Dan is er geen
+   * moment om het ordernummer erbij te zetten, terwijl je later wilt kunnen
+   * terugzoeken waaróm er niets is gebeurd. De knop opent nu die ene stap;
+   * invullen mag, doorgaan zonder ook.
+   */
+  const [alreadyOpen, setAlreadyOpen] = useState(false);
   const [trackpointMissing, setTrackpointMissing] = useState(false);
   const effectiveMethod: ConversionMethodId = printBlocked && recommendation.primary === "direct_reprint"
     ? "printed_sticker"
@@ -377,6 +384,7 @@ export function EmployeeWorkspace({
     setTrackpoint("");
     setTrackpointMissing(false);
     setAskingSlipDate(false);
+    setAlreadyOpen(false);
     if (!keepMessage) setAdviceMessage(null);
     setIssueOpen(false);
     requestAnimationFrame(() => modelInputRef.current?.focus());
@@ -497,6 +505,16 @@ export function EmployeeWorkspace({
    */
   async function waitForRun(run: PrintRun) {
     if (needsOrderNumber()) return;
+    /*
+     * Ook hier het antwoord op de trackpointvraag. Ligt het vel na de ronde
+     * alsnog niet klaar, dan wordt deze laptop een gewone aanvraag bij Noviply
+     * — en dan moet dat antwoord meegaan, anders staat er bij hen "niet
+     * opgegeven" terwijl de medewerker het wél had ingevuld.
+     */
+    if (!trackpoint) {
+      setTrackpointMissing(true);
+      return;
+    }
     try {
       await onWaitForPrintRun({
         model,
@@ -504,6 +522,7 @@ export function EmployeeWorkspace({
         variant: enterShape,
         orderReference,
         quantity,
+        trackpoint,
         expectedRunAt: run.at.toISOString(),
         expectedRunLabel: run.label,
       });
@@ -833,9 +852,33 @@ export function EmployeeWorkspace({
                 "het is goed". */}
             {model !== "" && (
               <div className="already-correct">
-                <button type="button" onClick={alreadyCorrect}>
-                  Het toetsenbord is al {targetLayout} — geen sticker nodig
-                </button>
+                {alreadyOpen ? (
+                  <div className="already-correct-step">
+                    <p>Het toetsenbord is al {targetLayout}. Er hoeft geen sticker op.</p>
+                    <label className="answer-order">
+                      <span>Ordernummer <em>mag leeg</em></span>
+                      <input
+                        value={orderReference}
+                        inputMode="numeric"
+                        autoFocus
+                        onChange={(event) => setOrderReference(event.target.value)}
+                        placeholder="1859"
+                      />
+                    </label>
+                    <div className="already-correct-actions">
+                      <button type="button" className="primary-button" onClick={alreadyCorrect}>
+                        Klaar — laptop gaat door
+                      </button>
+                      <button type="button" className="answer-escape" onClick={() => setAlreadyOpen(false)}>
+                        Terug
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => setAlreadyOpen(true)}>
+                    Het toetsenbord is al {targetLayout} — geen sticker nodig
+                  </button>
+                )}
               </div>
             )}
 

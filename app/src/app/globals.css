@@ -3532,6 +3532,16 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 }
 .already-correct button:hover { background: var(--ok); color: #fff; }
 
+/* De stap erachter: eerst het ordernummer, dan pas afronden. Dezelfde volgorde
+   als overal — wat je invult staat boven de knop die het gebruikt. */
+.already-correct-step {
+  display: grid; gap: 12px; padding: 16px 18px;
+  border: 2px solid var(--ok); border-radius: 12px; background: var(--ok-soft);
+}
+.already-correct-step > p { margin: 0; color: var(--text); font-size: 15px; font-weight: 700; }
+.already-correct-step .answer-order { max-width: 340px; }
+.already-correct-actions { display: flex; align-items: center; gap: 10px; }
+
 /* Een kerncijfer dat er nog niet is: geen getal maar wat we wél weten. */
 .stat-unknown { font-size: 17px !important; letter-spacing: 0 !important; color: var(--text-2) !important; }
 

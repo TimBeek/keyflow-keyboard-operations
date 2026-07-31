@@ -20,6 +20,7 @@ function entry(overrides: Partial<RunWaitlistEntry> = {}): RunWaitlistEntry {
     quantity: 1,
     expectedRunAt: middagronde.toISOString(),
     expectedRunLabel: "12:30",
+  trackpoint: "unknown" as const,
     createdAt: now.toISOString(),
     createdBy: "Medewerker",
     status: "waiting",
