@@ -45,7 +45,6 @@ import {
   groupPrintRequests,
   isFresh,
   openCount,
-  printRequestHeadline,
   waitingTooLong,
 } from "@/domain/print-request-status";
 import type { ConversionLogInput } from "@/domain/conversion-log";
@@ -136,7 +135,8 @@ type Props = {
   directPrintLayouts: string[];
   printRequests: PrintRequestRecord[];
   printerChecks: PrinterCheckRecord[];
-  onRemindNoviply: () => void;
+  /** Geeft terug of het seintje is verstuurd of al openstond. */
+  onRemindNoviply: () => Promise<"verstuurd" | "stond-al-open">;
   compatibilityEvidenceRecords: CompatibilityEvidenceRecord[];
   onInventoryMutation: (request: InventoryMutationRequest) => Promise<InventoryMutationOutcome>;
   onStickerVerification: (input: StickerVerificationReportInput) => unknown;
@@ -352,6 +352,12 @@ export function EmployeeWorkspace({
    * invullen mag, doorgaan zonder ook.
    */
   const [alreadyOpen, setAlreadyOpen] = useState(false);
+  /**
+   * Het seintje naar Noviply gaf geen enkel teken van leven bij de knop zelf:
+   * de melding kwam in de statusregel onderaan de pagina terecht, en wie boven
+   * op de knop drukte zag niets gebeuren — dus drukte nog een keer.
+   */
+  const [seintje, setSeintje] = useState<"klaar" | "bezig" | "verstuurd" | "stond-al-open" | "mislukt">("klaar");
   const [trackpointMissing, setTrackpointMissing] = useState(false);
   const effectiveMethod: ConversionMethodId = printBlocked && recommendation.primary === "direct_reprint"
     ? "printed_sticker"
@@ -1326,8 +1332,12 @@ export function EmployeeWorkspace({
 
       {tab === "requests" && (
         <section className="worker-panel">
+          {/* De koptekst is weg. Hij vatte samen wat er twee centimeter lager
+              per groep al staat, met een teller erbij — en koos daarbij één
+              groep uit, zodat er "6 stickers liggen klaar om op te halen" boven
+              een balk stond die zei dat er 6 klaarstonden om te printen. Twee
+              waarheden die samen als tegenspraak lezen. */}
           <div className="requests-head">
-            <p className="requests-headline">{printRequestHeadline(requestGroups)}</p>
             {printRequests.length > 4 && (
               <label className="requests-search">
                 <span className="sr-only">Zoeken in aanvragen</span>
@@ -1427,9 +1437,27 @@ export function EmployeeWorkspace({
                   ze weten — ze krijgen het meteen in beeld.
                 </span>
               </div>
-              <button type="button" className="primary-button" onClick={onRemindNoviply}>
-                Noviply een seintje geven
-              </button>
+              {seintje === "verstuurd" || seintje === "stond-al-open" ? (
+                <p className="seintje-gelukt">
+                  {seintje === "verstuurd"
+                    ? "Seintje verstuurd — Noviply krijgt het meteen in beeld"
+                    : "Noviply had dit seintje al; ze zijn ermee bezig"}
+                </p>
+              ) : (
+                <button
+                  type="button"
+                  className="primary-button"
+                  disabled={seintje === "bezig"}
+                  onClick={() => {
+                    setSeintje("bezig");
+                    void onRemindNoviply()
+                      .then((uitkomst) => setSeintje(uitkomst))
+                      .catch(() => setSeintje("mislukt"));
+                  }}
+                >
+                  {seintje === "bezig" ? "Versturen…" : seintje === "mislukt" ? "Niet gelukt — opnieuw" : "Noviply een seintje geven"}
+                </button>
+              )}
             </div>
           )}
 

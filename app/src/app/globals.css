@@ -3558,6 +3558,9 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 
 .printer-check-hint { margin: 12px 0 0; color: var(--muted); font-size: 12px; text-align: center; }
 
+/* De bevestiging staat waar de knop stond, niet onderaan de pagina. */
+.seintje-gelukt { margin: 0; padding: 10px 16px; border-radius: 10px; background: var(--ok-soft); color: var(--ok); font-size: 13.5px; font-weight: 700; }
+
 /* Kop van het tabblad "Bij Noviply": tekst links, zoeken rechts. */
 .requests-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .requests-head .requests-headline { margin: 0; }

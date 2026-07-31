@@ -1621,16 +1621,18 @@ export function Dashboard({
     }
   }
 
-  async function remindNoviply() {
-    try {
-      const { alreadySent } = await sendPrintReminder();
-      await refreshSharedState();
-      setLastAction(alreadySent
-        ? "Noviply had dit seintje al gekregen."
-        : "Noviply heeft een seintje gekregen over de wachtrij.");
-    } catch (error) {
-      setLastAction(error instanceof Error ? error.message : "Het seintje is niet verstuurd.");
-    }
+  /**
+   * Geeft terug wat er gebeurd is, in plaats van het alleen in de statusregel
+   * onderaan te zetten. De medewerker drukt bovenin op een knop; dan hoort het
+   * antwoord daar te verschijnen en niet ergens anders op de pagina.
+   */
+  async function remindNoviply(): Promise<"verstuurd" | "stond-al-open"> {
+    const { alreadySent } = await sendPrintReminder();
+    await refreshSharedState();
+    setLastAction(alreadySent
+      ? "Noviply had dit seintje al gekregen."
+      : "Noviply heeft een seintje gekregen over de wachtrij.");
+    return alreadySent ? "stond-al-open" : "verstuurd";
   }
 
   async function seenReminder(id: string) {
@@ -2104,7 +2106,7 @@ export function Dashboard({
             directPrintLayouts={directPrintLayouts}
             printRequests={printRequests}
             printerChecks={printerChecks}
-            onRemindNoviply={() => void remindNoviply()}
+            onRemindNoviply={remindNoviply}
             onRequestPrintSticker={requestPrintSticker}
             runWaitlist={runWaitlist}
             printBatches={printBatches}
