@@ -1640,7 +1640,7 @@ export function EmployeeWorkspace({
 
           {receiveQuery.trim().length < 2 && (
             <div className="worker-waiting">
-              <span>Typ of scan het stickernummer of het laptopmodel. KeyFlow zoekt zelf de juiste hangmap erbij.</span>
+              <span>Typ of scan het stickernummer of het laptopmodel. ReKey zoekt zelf de juiste hangmap erbij.</span>
             </div>
           )}
 

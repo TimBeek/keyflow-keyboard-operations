@@ -10,7 +10,7 @@ import { synchronizeEntraIdentity } from "@/server/identity-service";
 const identityMode = identityModeFromEnvironment(process.env);
 const entraEnabled = identityMode === "entra";
 const pilotBuildSecret = "keyflow-pilot-auth-disabled-build-secret";
-type KeyFlowTokenIdentity = {
+type ReKeyTokenIdentity = {
   databaseUserId: string;
   externalId: string;
   tenantId: string;
@@ -68,7 +68,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return token;
     },
     session({ session, token }) {
-      const keyflow = token.keyflow as KeyFlowTokenIdentity | undefined;
+      const keyflow = token.keyflow as ReKeyTokenIdentity | undefined;
       if (session.user && keyflow) {
         session.user.id = keyflow.databaseUserId;
         session.user.externalId = keyflow.externalId;

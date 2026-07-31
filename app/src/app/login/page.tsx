@@ -9,7 +9,7 @@ export default function LoginPage() {
         <div className="brand-mark">K</div>
         <span>KEYFLOW · MICROSOFT ENTRA ID</span>
         <h1>Persoonlijk aanmelden</h1>
-        <p>Je Microsoft-app-rol bepaalt automatisch welke KeyFlow-werkruimte je krijgt.</p>
+        <p>Je Microsoft-app-rol bepaalt automatisch welke ReKey-werkruimte je krijgt.</p>
         <button
           type="button"
           onClick={() => void signIn("microsoft-entra-id", { callbackUrl: "/" })}

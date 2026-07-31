@@ -1,5 +1,5 @@
 /**
- * Noviply werkt in hun eigen systeem, niet in KeyFlow. Overtypen is werk dat
+ * Noviply werkt in hun eigen systeem, niet in ReKey. Overtypen is werk dat
  * fouten maakt, dus mogen beide lijsten er als bestand uit. Engelstalig, net
  * als hun schermen.
  */

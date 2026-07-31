@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   // Naast robots.txt: sommige crawlers volgen alleen deze. Een intern
   // werkscherm hoort nergens in zoekresultaten te staan.
   robots: { index: false, follow: false, nocache: true },
-  title: "KeyFlow | Keyboard Operations",
+  title: "ReKey | Keyboard Operations",
   description: "Voorraad- en conversiebeheer voor keyboard layouts",
 };
 

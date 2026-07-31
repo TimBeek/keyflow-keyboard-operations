@@ -7,10 +7,10 @@ export type IdentityMode = (typeof identityModes)[number];
 export const entraAppRoles: Record<UserRole, string> = {
   employee: "KeyFlow.Employee",
   management: "KeyFlow.Management",
-  noviply: "KeyFlow.Noviply",
+  noviply: "ReKey.Noviply",
 };
 
-export type KeyFlowIdentity = {
+export type ReKeyIdentity = {
   externalId: string;
   tenantId: string;
   objectId: string;
@@ -58,7 +58,7 @@ export function roleFromEntraAppRoles(rawRoles: unknown): UserRole {
   if (!roles.success) {
     throw new IdentityClaimsError(
       "INVALID_ROLES_CLAIM",
-      "De Microsoft-login bevat geen geldige lijst met KeyFlow-app-rollen.",
+      "De Microsoft-login bevat geen geldige lijst met ReKey-app-rollen.",
     );
   }
   if (roles.data.includes(entraAppRoles.management)) return "management";
@@ -70,7 +70,7 @@ export function roleFromEntraAppRoles(rawRoles: unknown): UserRole {
   );
 }
 
-export function parseEntraIdentity(profile: unknown): KeyFlowIdentity {
+export function parseEntraIdentity(profile: unknown): ReKeyIdentity {
   const parsed = entraProfileSchema.safeParse(profile);
   if (!parsed.success) {
     throw new IdentityClaimsError(

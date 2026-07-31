@@ -176,12 +176,12 @@ export function SettingsWorkspace({
               Elk vakje is de keuze zelf en het gevolg tegelijk: je klikt aan wat
               de werkvloer moet doen, en je ziet er meteen onder wat eruit komt.
               Staat een vakje op <em>Volgt de verkoopwaarde</em>, dan kiest
-              KeyFlow zoals altijd. Zet je er iets neer, dan gaat dat voor.
+              ReKey zoals altijd. Zet je er iets neer, dan gaat dat voor.
             </p>
             <p>
               Onder elke keuze staat wat er gebeurt als die methode niet kan: een
               lege hangmap, of een model dat de toetsenbordsprinter niet aankan.
-              Laat je dat op <em>vanzelf</em> staan, dan zoekt KeyFlow zelf het
+              Laat je dat op <em>vanzelf</em> staan, dan zoekt ReKey zelf het
               dichtstbijzijnde alternatief.
             </p>
           </div>
@@ -449,7 +449,7 @@ export function SettingsWorkspace({
             <span className="workspace-kicker">TOETSENBORDSPRINTER</span>
             <h2>Wat Notebook Service kan</h2>
             <p>
-              Per laptopmodel weet KeyFlow dit al uit hun eigen productlijst. Deze
+              Per laptopmodel weet ReKey dit al uit hun eigen productlijst. Deze
               lijst geldt alleen voor modellen die daar niet in staan. Laat je hem
               leeg, dan wordt niets geblokkeerd op een model dat we niet kennen.
             </p>

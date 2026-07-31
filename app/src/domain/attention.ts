@@ -122,7 +122,7 @@ export function attentionItems(input: AttentionInput): AttentionItem[] {
         id: `taal-${row.id}`,
         kind: "unknown_language",
         title: `${row.model} · code “${row.languageCode}”`,
-        detail: `Staat in ${batchLabel(batch)}; KeyFlow kent deze taal niet.`,
+        detail: `Staat in ${batchLabel(batch)}; ReKey kent deze taal niet.`,
         orderReference: row.orderReference,
         occurredAt: batch.uploadedAt,
       });

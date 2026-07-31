@@ -85,7 +85,7 @@ export function OrdersWorkspace() {
           <h2>Nog geen besteladvies</h2>
           <p>
             Een besteladvies rekent met gemeten verbruik, levertijd en veiligheidsvoorraad.
-            Zodra er conversies geboekt zijn, weet KeyFlow hoe hard elke hangmap loopt en
+            Zodra er conversies geboekt zijn, weet ReKey hoe hard elke hangmap loopt en
             komt hier een concept te staan dat ergens op berust.
           </p>
         </section>

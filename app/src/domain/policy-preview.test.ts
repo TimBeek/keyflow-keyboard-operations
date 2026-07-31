@@ -75,7 +75,7 @@ describe("een regel per prijsklasse", () => {
 });
 
 describe("wat er gebeurt als de eerste keuze niet kan", () => {
-  it("laat zonder opgave zien waar KeyFlow zelf op uitkomt", () => {
+  it("laat zonder opgave zien waar ReKey zelf op uitkomt", () => {
     // QWERTY US onder de grens wil een voorraadvel; is de hangmap leeg, dan
     // koos de standaardvolgorde de toetsenbordsprint. Dat mag je weten.
     const us = row(defaultOperationsPolicy, "QWERTY US");

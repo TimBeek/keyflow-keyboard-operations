@@ -32,7 +32,7 @@ import {
   type InventoryCatalogItem,
 } from "@/data/inventory-catalog";
 import type { UserRole } from "@/domain/access-control";
-import type { KeyFlowIdentity } from "@/domain/identity";
+import type { ReKeyIdentity } from "@/domain/identity";
 import {
   createCompatibilityEvidenceRecord,
   type CompatibilityEvidenceInput,
@@ -255,7 +255,7 @@ const parkedNavItems: { id: ViewName; label: string; icon: IconName }[] = [
 const viewHeadings: Record<ViewName, { title: string; subtitle: string }> = {
   overview: { title: "Vandaag", subtitle: "Wat er vandaag is omgezet en wat aandacht vraagt." },
   movers: { title: "Hardlopers", subtitle: "Welke stickervellen hard lopen en welke blijven liggen." },
-  layoutgroups: { title: "Layoutgroepen", subtitle: "Laat KeyFlow modellen groeperen die dezelfde sticker delen." },
+  layoutgroups: { title: "Layoutgroepen", subtitle: "Laat ReKey modellen groeperen die dezelfde sticker delen." },
   reports: { title: "Rapportage", subtitle: "Verbruik, dekking en verloop over de tijd." },
   settings: { title: "Instellingen", subtitle: "De regels waar de werkvloer op draait." },
   inventory: { title: "Voorraad", subtitle: "Zoek, controleer en plan alle keyboardstickers." },
@@ -301,7 +301,7 @@ export function Dashboard({
   identity,
   onSignOut,
 }: {
-  identity: KeyFlowIdentity;
+  identity: ReKeyIdentity;
   onSignOut?: () => void;
 }) {
   const [role, setRole] = useState<UserRole>(identity.role);
@@ -1977,10 +1977,10 @@ export function Dashboard({
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `keyflow-backup-${snapshot.savedAt.slice(0, 10)}.json`;
+    link.download = `rekey-backup-${snapshot.savedAt.slice(0, 10)}.json`;
     link.click();
     URL.revokeObjectURL(url);
-    setLastAction("Lokale KeyFlow-back-up gedownload.");
+    setLastAction("Lokale ReKey-back-up gedownload.");
   }
 
 
@@ -1992,7 +1992,7 @@ export function Dashboard({
       <aside className="sidebar">
         <div className="brand">
           <BrandMark />
-          <div><strong>KeyFlow</strong><span>Keyboard Operations</span></div>
+          <div><strong>ReKey</strong><span>Keyboard Operations</span></div>
         </div>
         <nav aria-label="Hoofdnavigatie">
           {/* Noviply is een partner met twee taken; die staan als eigen

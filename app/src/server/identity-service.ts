@@ -1,13 +1,13 @@
 import "server-only";
-import type { KeyFlowIdentity } from "@/domain/identity";
+import type { ReKeyIdentity } from "@/domain/identity";
 import { database } from "./database";
 
-export type SynchronizedIdentity = KeyFlowIdentity & {
+export type SynchronizedIdentity = ReKeyIdentity & {
   databaseUserId: string;
 };
 
 export async function synchronizeEntraIdentity(
-  identity: KeyFlowIdentity,
+  identity: ReKeyIdentity,
 ): Promise<SynchronizedIdentity> {
   const sql = database();
 
@@ -35,7 +35,7 @@ export async function synchronizeEntraIdentity(
     if (!user?.active) {
       throw new IdentitySynchronizationError(
         "ACCOUNT_DISABLED",
-        "Je KeyFlow-account is door management gedeactiveerd.",
+        "Je ReKey-account is door management gedeactiveerd.",
       );
     }
 

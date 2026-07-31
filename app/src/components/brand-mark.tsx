@@ -21,7 +21,7 @@ export function BrandMark({ size = 38 }: { size?: number }) {
       height={size}
       viewBox="0 0 40 40"
       role="img"
-      aria-label="KeyFlow"
+      aria-label="ReKey"
       focusable="false"
     >
       <rect width="40" height="40" rx="11" className="brand-mark-bg" />

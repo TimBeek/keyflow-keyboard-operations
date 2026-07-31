@@ -3,7 +3,7 @@ import { normalizeLayoutName } from "./keyboard-layouts";
 /**
  * De lijst die twee keer per dag naar Noviply gaat.
  *
- * Die lijst komt uit het ordersysteem en werd gemaild. KeyFlow kent de orders
+ * Die lijst komt uit het ordersysteem en werd gemaild. ReKey kent de orders
  * niet, dus zelf genereren zou betekenen dat eerst de hele orderstroom hierheen
  * moet. Importeren is de korte weg naar hetzelfde doel: één plek waar de ronde
  * staat, waar Noviply hem afvinkt, en waar hij naast de losse aanvragen ligt.

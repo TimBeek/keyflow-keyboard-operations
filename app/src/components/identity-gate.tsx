@@ -7,9 +7,9 @@ import {
   useSession,
 } from "next-auth/react";
 import { Dashboard } from "@/components/dashboard";
-import type { IdentityMode, KeyFlowIdentity } from "@/domain/identity";
+import type { IdentityMode, ReKeyIdentity } from "@/domain/identity";
 
-const pilotIdentity: KeyFlowIdentity = {
+const pilotIdentity: ReKeyIdentity = {
   externalId: "keyflow-local-operator",
   tenantId: "pilot",
   objectId: "pilot-management",
@@ -35,13 +35,13 @@ function EntraIdentityGate() {
   const { data: session, status } = useSession();
 
   if (status === "loading") {
-    return <IdentityStatus title="Persoonlijke toegang controleren…" detail="KeyFlow valideert je beveiligde Microsoft-sessie." />;
+    return <IdentityStatus title="Persoonlijke toegang controleren…" detail="ReKey valideert je beveiligde Microsoft-sessie." />;
   }
 
   if (!session?.user) {
     return (
       <IdentityStatus
-        title="Meld je aan bij KeyFlow"
+        title="Meld je aan bij ReKey"
         detail="Gebruik je persoonlijke Microsoft-werkaccount. Je toegewezen app-rol bepaalt automatisch of je werknemer of management bent."
         actionLabel="Aanmelden met Microsoft"
         onAction={() => void signIn("microsoft-entra-id", { callbackUrl: "/" })}
@@ -49,11 +49,11 @@ function EntraIdentityGate() {
     );
   }
 
-  const identity: KeyFlowIdentity = {
+  const identity: ReKeyIdentity = {
     externalId: session.user.externalId,
     tenantId: session.user.tenantId,
     objectId: session.user.id,
-    displayName: session.user.name ?? session.user.email ?? "KeyFlow-gebruiker",
+    displayName: session.user.name ?? session.user.email ?? "ReKey-gebruiker",
     email: session.user.email ?? "",
     role: session.user.role,
     mode: "entra",

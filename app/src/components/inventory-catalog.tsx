@@ -125,7 +125,7 @@ export function InventoryCatalog({
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "keyflow-voorraadcatalogus.csv";
+    link.download = "rekey-voorraadcatalogus.csv";
     link.click();
     URL.revokeObjectURL(url);
   }

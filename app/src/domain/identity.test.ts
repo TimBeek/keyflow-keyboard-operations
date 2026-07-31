@@ -24,7 +24,7 @@ describe("Microsoft Entra-identiteit", () => {
     ])).toBe("management");
   });
 
-  it("weigert een account zonder expliciete KeyFlow-app-rol", () => {
+  it("weigert een account zonder expliciete ReKey-app-rol", () => {
     expect(() => roleFromEntraAppRoles(["Onbekende.Rol"])).toThrowError(
       expect.objectContaining<Partial<IdentityClaimsError>>({
         code: "ROLE_NOT_ASSIGNED",

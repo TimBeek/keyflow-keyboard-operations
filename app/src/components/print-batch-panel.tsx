@@ -256,7 +256,7 @@ export function PrintBatchPanel({
                 /* Een onbekende landcode is geen reden om de regel te weigeren —
                    Noviply print hem toch — maar wel om ernaar te laten kijken. */
                 <div className="batch-warning">
-                  {unknownLanguageRows(shown).length} line(s) have a language code KeyFlow
+                  {unknownLanguageRows(shown).length} line(s) have a language code ReKey
                   does not know:{" "}
                   {[...new Set(unknownLanguageRows(shown).map((row) => row.languageCode))].join(", ")}
                 </div>

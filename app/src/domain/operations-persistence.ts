@@ -314,7 +314,7 @@ export function parseOperationsSnapshot(rawValue: string) {
     const parsed = persistedOperationsStateSchema.safeParse(JSON.parse(rawValue));
     return parsed.success
       ? { success: true as const, state: parsed.data as PersistedOperationsState }
-      : { success: false as const, error: "Het bestand heeft geen geldige KeyFlow-structuur." };
+      : { success: false as const, error: "Het bestand heeft geen geldige ReKey-structuur." };
   } catch {
     return { success: false as const, error: "Het bestand bevat geen geldige JSON." };
   }

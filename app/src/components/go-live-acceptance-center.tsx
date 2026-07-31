@@ -86,7 +86,7 @@ export function GoLiveAcceptanceCenter({
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `keyflow-go-live-dossier-${generatedAt.slice(0, 10)}.json`;
+    link.download = `rekey-go-live-dossier-${generatedAt.slice(0, 10)}.json`;
     link.click();
     URL.revokeObjectURL(url);
     setExportMessage("Controleerbaar JSON-dossier gedownload.");

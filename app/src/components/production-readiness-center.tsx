@@ -177,7 +177,7 @@ export function ProductionReadinessCenter({
         <article>
           <span>Interne vervolgactie</span>
           <strong>{summary.actionRequired}</strong>
-          <small>door KeyFlow-management uit te voeren</small>
+          <small>door ReKey-management uit te voeren</small>
         </article>
         <article className={latest?.result === "failed" ? "attention" : ""}>
           <span>Laatste herstelproef</span>

@@ -803,7 +803,7 @@ export function OperationsManagement({
               <section className="model-group-start">
                 <h3>Layoutgroepen genereren</h3>
                 <p>
-                  KeyFlow zoekt uit welke laptopmodellen dezelfde sticker kunnen gebruiken,
+                  ReKey zoekt uit welke laptopmodellen dezelfde sticker kunnen gebruiken,
                   op basis van gedeelde SKU&apos;s, layouts en E1/E2-varianten uit je eigen voorraad.
                 </p>
                 <button
