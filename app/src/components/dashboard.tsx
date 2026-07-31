@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ConversionAdvisor } from "@/components/conversion-advisor";
 import { AccessManagementDialog } from "@/components/access-management";
 import { EmployeeWorkspace } from "@/components/employee-workspace";
+import { MethodPhotoHelp } from "@/components/method-photo-help";
 import { NoviplyWorkspace, type NoviplyTab } from "@/components/noviply-workspace";
 import { ImportReviewDialog } from "@/components/import-review";
 import { InventoryImportDialog } from "@/components/inventory-import";
@@ -305,6 +306,8 @@ export function Dashboard({
   onSignOut?: () => void;
 }) {
   const [role, setRole] = useState<UserRole>(identity.role);
+  // Het naslagvenster met de vier niveaus; bereikbaar via "Hulp".
+  const [niveausOpen, setNiveausOpen] = useState(false);
   const [activeView, setActiveView] = useState<ViewName>("overview");
   const [showParked, setShowParked] = useState(false);
   const [query, setQuery] = useState("");
@@ -2064,7 +2067,16 @@ export function Dashboard({
               <Icon name="book" /><span>Handbook</span>
             </a>
           )}
-          <button className="nav-item" onClick={() => role === "management" && setAccessOpen(true)}><Icon name="settings" /><span>{role === "management" ? "Toegangsbeheer" : "Hulp"}</span></button>
+          {/* Voor management is dit toegangsbeheer. Voor de werkvloer stond hier
+              "Hulp" met een knop die niets deed; die opent nu de vier niveaus
+              met foto, zodat je ook zonder laptop in je handen kunt opzoeken
+              wat een sticker van twee sterren nou eigenlijk is. */}
+          <button
+            className="nav-item"
+            onClick={() => (role === "management" ? setAccessOpen(true) : setNiveausOpen(true))}
+          >
+            <Icon name="settings" /><span>{role === "management" ? "Toegangsbeheer" : "Hulp"}</span>
+          </button>
           <div className="profile">
             <div className="avatar">{actorInitials}</div>
             <div><strong>{actorName}</strong><span>{role === "management" ? "Management" : role === "noviply" ? "Partner" : "Uitvoering"}</span></div>
@@ -2717,6 +2729,9 @@ export function Dashboard({
           }}
         />
         <ConversionAdvisor open={advisorOpen} onClose={() => setAdvisorOpen(false)} />
+        {niveausOpen && (
+          <MethodPhotoHelp huidig={null} onClose={() => setNiveausOpen(false)} />
+        )}
         <AccessManagementDialog
           open={accessOpen}
           onClose={() => setAccessOpen(false)}

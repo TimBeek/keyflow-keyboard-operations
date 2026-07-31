@@ -14,6 +14,8 @@ import {
   recommendConversion,
   type ConversionMethodId,
 } from "@/domain/conversion-policy";
+import { methodPhoto } from "@/domain/method-photos";
+import { MethodPhotoHelp } from "./method-photo-help";
 import {
   findNoviplySku,
   layoutWithCountry,
@@ -264,6 +266,8 @@ export function EmployeeWorkspace({
   const [saleBandId, setSaleBandId] = useState<SaleValueBandId | null>(null);
   const [enterShape, setEnterShape] = useState<EnterShapeId>("");
   const [shapeHelpOpen, setShapeHelpOpen] = useState(false);
+  // Het venster met de vier niveaus naast elkaar.
+  const [sterHelpOpen, setSterHelpOpen] = useState(false);
   const [orderReference, setOrderReference] = useState("");
   // Aan zodra iemand een aanvraag wil doen zonder ordernummer: dan licht het
   // veld op in plaats van dat er een melding onderaan verschijnt.
@@ -403,6 +407,9 @@ export function EmployeeWorkspace({
   const hasAnswer = model !== "" && enterShape !== "" && saleBandId !== null;
   const usesSheet = effectiveMethod === "noviply_sheet";
   const storageNumber = matched?.item.storageNumber ?? null;
+  // Bij "geen conversie" is er niets te fotograferen; dan blijft de kaart zoals
+  // hij was.
+  const answerPhoto = methodPhoto(effectiveMethod, process.env.NEXT_PUBLIC_BASE_PATH ?? "");
 
   /**
    * Leegmaken voor de volgende laptop. `keepMessage` blijft staan waar de
@@ -941,6 +948,13 @@ export function EmployeeWorkspace({
             </fieldset>
           </div>
 
+          {sterHelpOpen && (
+            <MethodPhotoHelp
+              huidig={hasAnswer ? effectiveMethod : null}
+              onClose={() => setSterHelpOpen(false)}
+            />
+          )}
+
           {shapeHelpOpen && (
             <div
               className="shape-help"
@@ -1007,6 +1021,28 @@ export function EmployeeWorkspace({
           {hasAnswer && (
             <div className={`answer tone-${methodProfile(effectiveMethod).tone}${usesSheet ? "" : " answer-nosheet"}`}>
               <div className="answer-head">
+                {/* De foto staat vóór de naam, want dat is waar het oog het
+                    eerst landt. Hij toont wat je moet pakken; de naam eronder
+                    zegt hoe het heet. Aanklikken geeft alle vier de niveaus
+                    naast elkaar — dan zie je meteen waarin ze verschillen. */}
+                {answerPhoto && (
+                  <button
+                    type="button"
+                    className="answer-photo"
+                    onClick={() => setSterHelpOpen(true)}
+                    aria-label={`Zo ziet het eruit: ${answerPhoto.alt}. Bekijk alle vier de niveaus.`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={answerPhoto.klein}
+                      alt=""
+                      width={answerPhoto.breedte}
+                      height={answerPhoto.hoogte}
+                      decoding="async"
+                    />
+                    <span className="answer-photo-hint" aria-hidden="true">Bekijk groter</span>
+                  </button>
+                )}
                 <div>
                   <span>DIT MOET JE GEBRUIKEN</span>
                   <h2 className={`method-name tone-${methodProfile(effectiveMethod).tone}`}>
@@ -1026,6 +1062,14 @@ export function EmployeeWorkspace({
                     </span>
                     {model} · {matched ? layoutWithCountry(matched.item.layout, matched.item.sku) : targetLayout}
                   </p>
+                  {answerPhoto && (
+                    <p className="answer-photo-uitleg">
+                      {answerPhoto.onderschrift}{" "}
+                      <button type="button" onClick={() => setSterHelpOpen(true)}>
+                        Alle niveaus
+                      </button>
+                    </p>
+                  )}
                   {methodProfile(effectiveMethod).supplier && (
                     <p className="method-supplier">
                       <span>Leverancier</span>

@@ -1715,6 +1715,95 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 .shape-help-grid figcaption strong { color: var(--text); font-size: 17px; }
 .shape-help-grid figcaption span { color: var(--text-2); font-size: 12px; }
 
+/* ── De foto bij het advies ───────────────────────────────────────────────
+   Een medewerker die "Noviply Voorraadstickers ★★" leest weet daarmee nog
+   niet of het vel op tafel het goede is. Een foto ernaast beantwoordt die
+   vraag zonder dat er iets uitgelegd hoeft te worden, dus die staat vóór de
+   naam: eerst zien, dan lezen.
+
+   Vaste bak van 172×104 met object-fit: cover. De vier foto's hebben heel
+   verschillende verhoudingen (van 2,5:1 tot bijna vierkant); zonder bijsnijden
+   wordt de ene tegel twee keer zo hoog als de andere en gaat de kop schuiven.
+   Bijgesneden verliest niemand iets — de hele foto is één tik verderop. */
+.answer-photo {
+  flex: 0 0 auto; display: grid; width: 172px; padding: 0; overflow: hidden;
+  border: 1px solid var(--line); border-radius: 13px;
+  background: var(--surface); cursor: pointer; text-align: left;
+}
+/* De rand volgt het niveau, net als de rand van de kaart zelf; anders staat er
+   een blauw lijntje op een goudkleurige kaart. */
+.answer.tone-basic .answer-photo { border-color: color-mix(in srgb, var(--tier-basic) 46%, transparent); }
+.answer.tone-stock .answer-photo { border-color: color-mix(in srgb, var(--tier-stock) 46%, transparent); }
+.answer.tone-premium .answer-photo { border-color: color-mix(in srgb, var(--tier-premium) 50%, transparent); }
+.answer.tone-professional .answer-photo { border-color: color-mix(in srgb, var(--tier-professional) 50%, transparent); }
+.answer-photo img { display: block; width: 100%; height: 104px; object-fit: cover; object-position: center; }
+.answer-photo-hint {
+  padding: 6px 10px; border-top: 1px solid var(--line-soft); background: var(--surface-2);
+  color: var(--text-2); font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+}
+.answer-photo:hover { border-color: var(--signal); }
+.answer-photo:hover .answer-photo-hint { color: var(--signal); }
+.answer-photo:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+/* De tekstkolom moet de ruimte tussen foto en hangmapnummer opvullen; zonder
+   dit kruipen ze alle drie naar het midden. */
+.answer-head > div:not(.answer-slot) { flex: 1 1 240px; min-width: 0; }
+.answer-head .answer-photo-uitleg { margin-top: 7px; color: var(--text-2); font-size: 13.5px; line-height: 1.5; }
+.answer-head .answer-photo-uitleg button {
+  padding: 0; border: 0; background: transparent; color: var(--signal);
+  font: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 2px; cursor: pointer;
+}
+
+/* ── De vier niveaus naast elkaar ─────────────────────────────────────────
+   Hetzelfde venster als bij de Enter-vormen, want dat kent iedereen al. Bij
+   één en twee sterren staat de sticker zelf op de foto; bij drie en vier de
+   machine, omdat je die hier nooit ziet en dat nou juist verklaart waarom het
+   dan langer duurt. */
+.ster-help { position: fixed; inset: 0; z-index: 60; display: grid; place-items: center; padding: 24px; background: rgb(4 8 13 / .72); }
+.ster-help-panel {
+  width: min(940px, 100%); max-height: 90vh; overflow-y: auto; padding: 20px;
+  border: 1px solid var(--line); border-radius: 18px; background: var(--surface);
+}
+.ster-help-panel:focus { outline: none; }
+.ster-help-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.ster-help-head h3 { margin: 0; color: var(--text); font-size: 18px; }
+.ster-help-head p { margin: 4px 0 0; color: var(--text-2); font-size: 13px; }
+.ster-help-head button { flex: 0 0 auto; width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 9px; background: transparent; color: var(--text-2); font-size: 17px; line-height: 1; cursor: pointer; }
+.ster-help-lijst { display: grid; gap: 12px; }
+.ster-help-item {
+  display: grid; grid-template-columns: 260px 1fr; gap: 16px; padding: 12px;
+  border: 1px solid var(--line-soft); border-radius: 14px; background: var(--surface-2);
+}
+.ster-help-item.is-huidig { border-color: var(--signal-line); background: var(--signal-soft); }
+.ster-help-foto { overflow: hidden; border-radius: 11px; background: var(--raised); }
+.ster-help-foto img { display: block; width: 100%; height: 158px; object-fit: cover; object-position: center; }
+.ster-help-tekst { display: grid; align-content: start; gap: 3px; min-width: 0; }
+.ster-help-niveau { display: flex; align-items: center; gap: 10px; margin: 0; }
+.ster-help-vlag {
+  padding: 2px 8px; border-radius: 999px; background: var(--signal); color: var(--signal-ink);
+  font-size: 10.5px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase;
+}
+.ster-help-item h4 { margin: 2px 0 1px; color: var(--text); font-size: 17px; font-weight: 720; letter-spacing: -.01em; }
+.ster-help-wat { margin: 0; color: var(--text); font-size: 14px; line-height: 1.5; }
+.ster-help-herkomst { margin: 2px 0 0; color: var(--text-2); font-size: 13px; line-height: 1.5; }
+.ster-help-leverancier { margin: 6px 0 0; font-size: 12px; }
+.ster-help-leverancier span { color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 700; font-size: 10.5px; }
+.ster-help-leverancier b { color: var(--text-2); }
+.ster-help-voet { display: flex; justify-content: flex-end; margin-top: 16px; }
+
+/* Op een telefoon staat de foto boven de tekst in plaats van ernaast: naast
+   elkaar houdt geen van beide genoeg breedte over om nog iets te zien. */
+@media (max-width: 620px) {
+  .answer-photo { width: 100%; }
+  .answer-photo img { height: 124px; }
+}
+
+@media (max-width: 720px) {
+  .ster-help { padding: 12px; }
+  .ster-help-panel { padding: 14px; }
+  .ster-help-item { grid-template-columns: 1fr; gap: 11px; }
+  .ster-help-foto img { height: 168px; }
+}
+
 /* Sterke printstickers liggen 's ochtends klaar; zo niet, dan de bestellijst op. */
 .print-ready-choice { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 10px; }
 .print-ready-choice button { min-height: 46px; padding: 0 20px; font-size: 14px; }
