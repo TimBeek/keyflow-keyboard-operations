@@ -384,7 +384,6 @@ export function Dashboard({
     mode: "issue" | "receipt";
     item: InventoryItem;
     catalogItem?: InventoryCatalogItem;
-    onConfirm?: (newQuantity: number) => void;
   } | null>(null);
   const [lastAction, setLastAction] = useState("");
   const demoAccess = identity.mode === "pilot";
@@ -954,40 +953,44 @@ export function Dashboard({
     identity.mode,
   ]);
 
-  function saveMutation(newQuantity: number, quantityDelta: number) {
+  /**
+   * Een voorraadboeking van management gaat dezelfde weg als die van de
+   * werkvloer: naar de server, en bij geen verbinding in de wachtrij.
+   *
+   * Hier stond alleen een wijziging van het scherm. Er ging niets naar de
+   * database en er werd niets bewaard, terwijl het scherm elke twintig seconden
+   * de stand bij de server ophaalt — dus een levering van tweehonderd vellen
+   * stond na twintig seconden weer op de oude stand, zonder foutmelding. De
+   * reden en de opmerking uit het venster gingen ook verloren.
+   */
+  async function saveMutation(
+    newQuantity: number,
+    quantityDelta: number,
+    details: { reasonCode: string; notes: string },
+  ) {
     if (!mutation) return;
     const catalogItem = mutation.catalogItem
       ?? findCatalogItemForInventoryItem(mutation.item);
-    if (mutation.onConfirm) mutation.onConfirm(newQuantity);
-    else if (catalogItem) {
-      setCatalogQuantities((current) =>
-        withInventoryQuantity(current, catalogItem, newQuantity),
-      );
+    if (!catalogItem) {
+      setLastAction(`Geen hangmap gevonden voor ${mutation.item.sku}; er is niets geboekt.`);
+      setMutation(null);
+      return;
     }
-    setStockItems((items) => items.map((item) =>
-      inventoryItemsMatch(item, mutation.item)
-        ? { ...item, stock: newQuantity }
-        : item,
-    ));
-    setTransactions((current) => [
-      ...current,
-      {
-        id: crypto.randomUUID(),
-        occurredAt: new Date().toISOString(),
-        catalogKey: catalogItem?.catalogKey,
-        storageNumber: catalogItem?.storageNumber,
-        sku: mutation.item.sku,
-        model: mutation.item.model,
-        layout: mutation.item.layout,
-        type: quantityDelta > 0 ? "receipt" : "issue",
-        quantityDelta,
-        reasonCode: quantityDelta > 0 ? "supplier_delivery" : "manual_issue",
-        actor: actorName,
-        reference: "Managementboeking",
-      },
-    ]);
-    setLastAction(`${mutation.item.sku}: ${quantityDelta > 0 ? "+" : ""}${quantityDelta} geboekt · nieuwe voorraad ${newQuantity}`);
     setMutation(null);
+    try {
+      await recordEmployeeInventoryMutation({
+        sku: catalogItem.stockKey,
+        type: quantityDelta > 0 ? "receipt" : "issue",
+        quantity: Math.abs(quantityDelta),
+        reasonCode: details.reasonCode,
+        notes: details.notes,
+        actor: actorName,
+      });
+      setLastAction(`${catalogItem.sku}: ${quantityDelta > 0 ? "+" : ""}${quantityDelta} geboekt op hangmap ${catalogItem.storageNumber}.`);
+    } catch (error) {
+      setLastAction(error instanceof Error ? error.message : "De boeking is niet gelukt.");
+    }
+    void newQuantity;
   }
 
   async function recordEmployeeInventoryMutation(request: InventoryMutationRequest) {
@@ -2442,9 +2445,6 @@ export function Dashboard({
                   stock: currentStock,
                   threshold: calculateCatalogThreshold(item.averageWeeklyDemand, item.leadTimeDays, item.safetyStockWeeks),
                 },
-                onConfirm: (newQuantity) => setCatalogQuantities((current) =>
-                  withInventoryQuantity(current, item, newQuantity),
-                ),
               });
             }}
           />

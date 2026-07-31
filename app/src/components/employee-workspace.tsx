@@ -68,7 +68,21 @@ import {
  * Eén concrete handeling per methode. Bewust geen lijst met werkinstructies:
  * de medewerker moet weten wát hij doet, niet dát er instructies bestaan.
  */
-function todoFor(method: ConversionMethodId, storageNumber: number | null): string {
+function todoFor(
+  method: ConversionMethodId,
+  storageNumber: number | null,
+  geenMethodeMogelijk = false,
+): string {
+  /*
+   * "Geen conversie" betekent twee heel verschillende dingen. Meestal: de taal
+   * klopt al, zet hem door. Maar de adviesmotor geeft dezelfde uitkomst als er
+   * géén methode past — met een waarschuwing erbij die zegt: blokkeer de order.
+   * Dat las de werkvloer als "niets aan de hand", en dan gaat er een laptop met
+   * het verkeerde toetsenbord de deur uit zonder dat iemand het weet.
+   */
+  if (geenMethodeMogelijk) {
+    return "Hier past geen enkele methode op. Zet de laptop apart en vraag je teamleider.";
+  }
   switch (method) {
     case "noviply_sheet":
       // Het hangmapnummer staat er al groot boven; dat hier herhalen maakt de
@@ -333,6 +347,8 @@ export function EmployeeWorkspace({
    * premiumsticker, maar die ligt er niet vanzelf: Noviply moet hem printen.
    */
   const printerFallback = recommendation.fellBackFrom === "direct_reprint";
+  /** Het beleid vond niets bruikbaars; dat is iets anders dan "niets nodig". */
+  const geenMethodeMogelijk = recommendation.policy.rule === "no_usable_method";
 
   /**
    * De medewerker heeft zelf gemeld dat de toetsenbordsprint niet gaat. Nodig
@@ -497,7 +513,6 @@ export function EmployeeWorkspace({
         text: `Aangevraagd bij Noviply voor order ${orderReference.trim()}. `
           + "ZET DEZE LAPTOP APART en wacht tot Noviply hem geprint heeft — ga zelf verder met de volgende.",
       });
-      setAskingSlipDate(false);
       resetAdvice({ keepMessage: true });
     } catch (error) {
       setAdviceMessage({
@@ -549,7 +564,6 @@ export function EmployeeWorkspace({
         text: `Order ${orderReference.trim()} komt mee met de printronde van ${run.label}. `
           + "ZET DEZE LAPTOP APART en wacht tot Noviply hem geprint heeft — na de ronde vraagt dit scherm of het vel er lag.",
       });
-      setAskingSlipDate(false);
       resetAdvice({ keepMessage: true });
     } catch (error) {
       setAdviceMessage({
@@ -577,9 +591,7 @@ export function EmployeeWorkspace({
       }
       setAdviceMessage({ tone: "ok", text: "Klaar. Deze methode gebruikt geen voorraadvel, er is niets afgeboekt. Pak de volgende laptop." });
       setPrintBlocked(false);
-      setModelQuery("");
-      setChosenModel(null);
-      setOrderReference("");
+      resetAdvice({ keepMessage: true });
       requestAnimationFrame(() => modelInputRef.current?.focus());
       return;
     }
@@ -621,9 +633,7 @@ export function EmployeeWorkspace({
         tone: "ok",
         text: `Klaar. ${matched.item.sku} is afgeboekt, er liggen er nog ${result.newQuantity} in hangmap ${matched.item.storageNumber}.`,
       });
-      setModelQuery("");
-      setChosenModel(null);
-      setOrderReference("");
+      resetAdvice({ keepMessage: true });
     } catch (error) {
       setAdviceMessage({ tone: "warn", text: error instanceof Error ? error.message : "Afboeken is niet gelukt." });
     }
@@ -1237,7 +1247,7 @@ export function EmployeeWorkspace({
                 </div>
               ) : (
                 <div className="answer-todo">
-                  <p className="answer-doen">{todoFor(effectiveMethod, storageNumber)}</p>
+                  <p className="answer-doen">{todoFor(effectiveMethod, storageNumber, geenMethodeMogelijk)}</p>
                   {/* De koppeling met Roemenië is niet sluitend: zij noemen
                       sommige modellen bij hun interne nummer. Dan moet de
                       medewerker kunnen zeggen dat het niet gaat. */}

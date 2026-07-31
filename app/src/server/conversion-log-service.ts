@@ -8,6 +8,10 @@ import { databaseUuidSchema } from "./validation";
 
 const logSchema = z.object({
   method: z.enum([
+    // Een laptop waarvan het toetsenbord al goed was telt ook mee als werk.
+    // Zonder deze waarde wees de server die regels af, en dan bevestigde het
+    // scherm iets wat nooit is opgeslagen.
+    "none",
     "loose_stickers",
     "noviply_sheet",
     "printed_sticker",

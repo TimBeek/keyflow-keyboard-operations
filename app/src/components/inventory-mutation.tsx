@@ -22,7 +22,17 @@ type Props = {
   mode: "issue" | "receipt";
   item: InventoryItem;
   onClose: () => void;
-  onConfirm: (newQuantity: number, quantityDelta: number) => void;
+  /**
+   * De reden en de opmerking gaan mee. Ze werden hier wel gevraagd maar niet
+   * doorgegeven, waarna er in de database "levering" of "handmatige uitname"
+   * belandde — terwijl dit venster belooft dat reden en toelichting worden
+   * vastgelegd.
+   */
+  onConfirm: (
+    newQuantity: number,
+    quantityDelta: number,
+    details: { reasonCode: string; notes: string },
+  ) => void;
 };
 
 export function InventoryMutationDialog({ open, mode, item, onClose, onConfirm }: Props) {
@@ -56,7 +66,7 @@ export function InventoryMutationDialog({ open, mode, item, onClose, onConfirm }
 
   function confirm() {
     if (!calculation.result) return;
-    onConfirm(calculation.result.newQuantity, calculation.result.quantityDelta);
+    onConfirm(calculation.result.newQuantity, calculation.result.quantityDelta, { reasonCode, notes });
     setQuantity(1);
     setNotes("");
   }
