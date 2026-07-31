@@ -69,3 +69,21 @@ describe("pendingWritesMessage", () => {
     expect(pendingWritesMessage(3)).toContain("3 handelingen");
   });
 });
+
+describe("Wat er na een paginaherlading overblijft", () => {
+  it("houdt een apart gelegde laptop vast", () => {
+    // Deze soort ontbrak in de lijst, waardoor de laptop uit de wachtrij viel
+    // bij het herladen — terwijl hij wel apart op de werkbank stond.
+    const bewaard = JSON.stringify([
+      { kind: "runWaitlist", id: "wachtronde-1", payload: { orderReference: "1859" } },
+    ]);
+
+    expect(readPendingWrites(bewaard)).toHaveLength(1);
+  });
+
+  it("gooit onbekende soorten wel weg", () => {
+    const bewaard = JSON.stringify([{ kind: "verzonnen", id: "x", payload: {} }]);
+
+    expect(readPendingWrites(bewaard)).toHaveLength(0);
+  });
+});

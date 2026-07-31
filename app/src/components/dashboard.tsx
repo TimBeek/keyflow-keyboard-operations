@@ -657,6 +657,26 @@ export function Dashboard({
     window.localStorage.setItem(PENDING_WRITES_KEY, JSON.stringify(pendingWrites));
   }, [pendingWrites, persistenceReady]);
 
+  /** Wat er in de wachtrij stond, in woorden die je kunt natrekken. */
+  function beschrijfWrite(write: PendingWrite) {
+    const p = (write as { payload?: Record<string, unknown> }).payload ?? {};
+    const order = typeof p.orderReference === "string" && p.orderReference ? ` · order ${p.orderReference}` : "";
+    const sku = typeof p.sku === "string" && p.sku ? ` · ${p.sku}` : "";
+    const soort: Record<string, string> = {
+      mutation: "voorraadboeking",
+      printRequest: "printaanvraag",
+      settlePrintRequest: "afvinken van een printaanvraag",
+      conversion: "conversieregistratie",
+      stockCount: "telling",
+      modelGroupReview: "layoutgroepbesluit",
+      compatibilityEvidence: "compatibiliteitsbewijs",
+      skuOverride: "artikelnummer",
+      verificationReport: "controlemelding",
+      runWaitlist: "laptop apart leggen",
+    };
+    return `${soort[write.kind] ?? write.kind}${sku}${order}`;
+  }
+
   const sendPendingWrite = useCallback(async (write: PendingWrite) => {
     if (write.kind === "mutation") {
       await postInventoryMutation(write.payload as never);
@@ -690,14 +710,44 @@ export function Dashboard({
   const flushPendingWrites = useCallback(async () => {
     const queue = pendingWrites;
     if (queue.length === 0) return;
+    /*
+     * Alles wat geen inhoudelijke afwijzing is, blijft staan voor een volgende
+     * poging.
+     *
+     * Hier werd elke fout behandeld als "de server wil dit niet" en de handeling
+     * weggegooid. Maar de meeste antwoorden betekenen "nu even niet": te veel
+     * verzoeken tegelijk (het hele pand zit achter één adres, en er mogen er
+     * zestig per minuut binnenkomen), een verlopen aanmelding na een nacht, of
+     * een storing aan de serverkant. Viel de wifi een half uur weg met tachtig
+     * afboekingen in de rij, dan gingen de eerste zestig goed en werden de rest
+     * stuk voor stuk vernietigd — laptops omgezet, niets afgeboekt, en niemand
+     * die weet welke.
+     */
+    const magOpnieuw = (error: unknown) => {
+      if (error instanceof KeyflowOfflineError) return true;
+      if (!(error instanceof KeyflowApiError)) return true;
+      // 429 te druk · 401/403 aanmelding verlopen · 5xx storing aan hun kant.
+      return error.status === 429 || error.status === 401 || error.status === 403 || error.status >= 500;
+    };
+
     for (const write of queue) {
       try {
         await sendPendingWrite(write);
         setPendingWrites((current) => removePendingWrite(current, write.id));
       } catch (error) {
-        if (error instanceof KeyflowOfflineError) return;
+        if (magOpnieuw(error)) {
+          // Stoppen, niet doorrazen: de volgende loopt tegen dezelfde muur en
+          // dan is de hele rij binnen een seconde opgebrand.
+          setLastAction(error instanceof KeyflowOfflineError
+            ? "Geen verbinding; bewaarde handelingen blijven staan."
+            : "De server kan het even niet aan; bewaarde handelingen blijven staan en gaan straks alsnog.");
+          return;
+        }
         setPendingWrites((current) => removePendingWrite(current, write.id));
-        setLastAction("Een bewaarde handeling is door de server geweigerd en overgeslagen.");
+        // Wát er sneuvelt, niet alleen dát er iets sneuvelde: zonder ordernummer
+        // of artikelnummer valt er met de hand niets te herstellen.
+        const wat = beschrijfWrite(write);
+        setLastAction(`Geweigerd door de server en overgeslagen: ${wat}. Herstel dit met de hand.`);
       }
     }
     await refreshSharedState();

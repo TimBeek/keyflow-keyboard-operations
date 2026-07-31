@@ -3065,6 +3065,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 .batch-upload label.busy { opacity: .6; pointer-events: none; }
 
 .batch-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.batch-tabs { overflow-x: auto; flex-wrap: nowrap; }
 .batch-tabs button {
   display: inline-flex;
   align-items: center;

@@ -329,6 +329,19 @@ export async function deactivateAccount(userId: string, actorId: string) {
     throw new AccessCodeError("Je kunt je eigen toegang niet intrekken.");
   }
   const sql = database();
-  // De persoon blijft in de historie staan; alleen aanmelden kan niet meer.
-  await sql`delete from pilot_credentials where user_id = ${userId}`;
+  await sql.begin(async (transaction) => {
+    // De persoon blijft in de historie staan; aanmelden kan niet meer.
+    await transaction`delete from pilot_credentials where user_id = ${userId}`;
+    /*
+     * En het account gaat op non-actief.
+     *
+     * Alleen de pincode weghalen was niet genoeg: wie op dat moment al was
+     * aangemeld hield een geldig bewijs in zijn browser, en dat blijft
+     * vierentwintig uur werken. Iemand die je vanmiddag intrekt kon dus tot de
+     * volgende dag doorwerken. Elke handeling controleert of het account actief
+     * is, dus hiermee valt het meteen dicht — ook op een apparaat dat al open
+     * stond.
+     */
+    await transaction`update users set active = false where id = ${userId}`;
+  });
 }

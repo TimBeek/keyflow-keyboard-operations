@@ -212,6 +212,12 @@ export function EmployeeWorkspace({
   const [requestZoek, setRequestZoek] = useState("");
   /** Welke aanvraag om bevestiging vraagt voordat hij wordt teruggetrokken. */
   const [intrekken, setIntrekken] = useState("");
+  /**
+   * Eén handeling tegelijk. Twee tikken op "apart zetten" of "aanvragen" —
+   * met een handschoen aan zo gebeurd — leverden twee wachtlijstregels of twee
+   * aanvragen op, en dus twee vellen voor één laptop.
+   */
+  const [bezig, setBezig] = useState(false);
   const zichtbaar = useMemo(() => {
     const woorden = requestZoek.trim().toLowerCase().split(/\s+/).filter(Boolean);
     if (woorden.length === 0) return requestGroups;
@@ -485,11 +491,13 @@ export function EmployeeWorkspace({
 
   /** Een echte aanvraag: Noviply moet dit vel apart printen. */
   async function requestFromNoviply(reason: string) {
+    if (bezig) return;
     if (needsOrderNumber()) return;
     if (!trackpoint) {
       setTrackpointMissing(true);
       return;
     }
+    setBezig(true);
     try {
       await onRequestPrintSticker({
         model,
@@ -525,6 +533,8 @@ export function EmployeeWorkspace({
         tone: "warn",
         text: error instanceof Error ? error.message : "Aanvragen is niet gelukt.",
       });
+    } finally {
+      setBezig(false);
     }
   }
 
@@ -534,6 +544,7 @@ export function EmployeeWorkspace({
    * hij na de ronde bij iemand terugkomt.
    */
   async function waitForRun(run: PrintRun) {
+    if (bezig) return;
     if (needsOrderNumber()) return;
     /*
      * Ook hier het antwoord op de trackpointvraag. Ligt het vel na de ronde
@@ -545,6 +556,7 @@ export function EmployeeWorkspace({
       setTrackpointMissing(true);
       return;
     }
+    setBezig(true);
     try {
       await onWaitForPrintRun({
         model,
@@ -576,6 +588,8 @@ export function EmployeeWorkspace({
         tone: "warn",
         text: error instanceof Error ? error.message : "Apart leggen is niet gelukt.",
       });
+    } finally {
+      setBezig(false);
     }
   }
 
@@ -605,6 +619,7 @@ export function EmployeeWorkspace({
       setAdviceMessage({ tone: "warn", text: "Er is geen bruikbaar voorraadvel voor dit model. Vraag je teamleider." });
       return;
     }
+    setBezig(true);
     try {
       const result = await onInventoryMutation({
         sku: matched.item.stockKey,
@@ -642,6 +657,8 @@ export function EmployeeWorkspace({
       resetAdvice({ keepMessage: true });
     } catch (error) {
       setAdviceMessage({ tone: "warn", text: error instanceof Error ? error.message : "Afboeken is niet gelukt." });
+    } finally {
+      setBezig(false);
     }
   }
 

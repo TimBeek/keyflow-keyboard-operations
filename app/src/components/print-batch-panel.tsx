@@ -138,7 +138,11 @@ export function PrintBatchPanel({
       ) : (
         <>
           <div className="batch-tabs" role="tablist">
-            {running.slice(0, 6).map((batch) => (
+            {/* Geen afkapping meer op zes. Michael werkt de rondes van boven
+                naar beneden af; staat er een zevende open, dan viel de oudste
+                stil uit de tabbladen en bleef die voor altijd onafgemaakt. De
+                strook schuift liever dan dat er werk verdwijnt. */}
+            {running.map((batch) => (
               <button
                 key={batch.id}
                 role="tab"

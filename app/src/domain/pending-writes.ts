@@ -59,6 +59,9 @@ export function readPendingWrites(raw: string | null): PendingWrite[] {
         "mutation", "printRequest", "settlePrintRequest", "conversion",
         "stockCount", "modelGroupReview", "compatibilityEvidence", "skuOverride",
         "verificationReport",
+        // Stond hier niet, waardoor een apart gelegde laptop bij het herladen
+        // van de pagina uit de wachtrij verdween voordat hij verstuurd was.
+        "runWaitlist",
       ].includes(item.kind)
       && Boolean(item.payload));
   } catch {
