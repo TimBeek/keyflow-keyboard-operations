@@ -162,7 +162,13 @@ td, th, .tabular { font-variant-numeric: tabular-nums; }
 .stat-glyph.chart { color: var(--signal); background: var(--signal-soft); }
 .stat-glyph.convert { color: var(--signal); background: var(--signal-soft); }
 
-.content-grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(310px, .8fr); gap: 18px; }
+/* align-items: start, anders rekt elk paneel mee met het langste ernaast: één
+   storing gaf een kaart van een half scherm hoog met niets erin. */
+.content-grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(310px, .8fr); gap: 18px; align-items: start; }
+/* "Aandacht nodig" is waar management op stuurt; dat verdient de volle breedte
+   in plaats van een kolom naast de voorraadtabel. */
+.attention-panel { grid-column: 1 / -1; }
+.attention-panel .attention-groups { grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); align-items: start; }
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); overflow: hidden; }
 .panel-heading { min-height: 70px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 16px 20px; border-bottom: 1px solid var(--surface-2); }
 .panel-heading h2 { margin: 0 0 4px; font-size: 16px; }

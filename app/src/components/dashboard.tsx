@@ -2174,7 +2174,7 @@ export function Dashboard({
           )}
 
           {attention.length > 0 && (
-            <section className="panel problems-panel">
+            <section className="panel problems-panel attention-panel">
               <div className="panel-heading">
                 <div>
                   <h2>Aandacht nodig</h2>
