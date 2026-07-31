@@ -1141,9 +1141,15 @@ export function EmployeeWorkspace({
                           type="button"
                           className="secondary-button"
                           onClick={() => {
-                            if (needsOrderNumber()) return;
-                            // De melding over het ontbrekende ordernummer heeft
-                            // zijn werk gedaan; die moet niet blijven hangen.
+                            /*
+                             * Geen controle op het ordernummer hier. Deze knop
+                             * verstuurt niets — hij laat alleen de volgende
+                             * vraag zien. Blokkeren betekende: klik, sprong
+                             * naar het lege veld, invullen, en dan dezelfde
+                             * knop nóg een keer. De controle staat waar hij
+                             * hoort: op de knoppen die het echt naar Noviply
+                             * sturen.
+                             */
                             setAdviceMessage(null);
                             setAskingSlipDate(true);
                           }}
