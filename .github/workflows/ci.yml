@@ -91,8 +91,8 @@ jobs:
       - name: Apply canonical inventory snapshot
         run: npm run db:bootstrap:apply
 
-      - name: Smoke-test recovery registration
-        run: npm run db:recovery:smoke
+      - name: Run a real backup and restore drill
+        run: npm run db:recovery
 
       - name: Exercise central runtime and acceptance paths
         run: npm run test -- --run src/server/operations-readiness-service.integration.test.ts src/server/go-live-acceptance-service.integration.test.ts src/server/workfloor-acceptance-service.integration.test.ts

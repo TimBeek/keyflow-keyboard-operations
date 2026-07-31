@@ -221,17 +221,50 @@ describe("consumptionTrend", () => {
 
 describe("moverRanking", () => {
   it("berekent hoe lang de voorraad bij dit tempo meegaat", () => {
+    // Vier weken meten: 28 vellen in 28 dagen is 7 per week, en bij 14 op
+    // voorraad gaat dat twee weken mee.
+    const vierWeken = Array.from({ length: 28 }, (_, index) =>
+      issue(`2026-07-${String(2 + index).padStart(2, "0")}`, 1, { id: `d${index}` }));
+    const [row] = moverRanking(vierWeken, [catalogItem], { "hangmap-1": 14 }, 28, "2026-07-29");
+
+    expect(row.used).toBe(28);
+    expect(row.stock).toBe(14);
+    // 28 vellen over 27 gemeten dagen is 7,26 per week; 14 op voorraad gaat
+    // daarmee 1,93 week mee.
+    expect(row.weeksOfStock).toBeCloseTo(1.93, 1);
+  });
+
+  it("zegt niets over dekking zolang er te kort gemeten is", () => {
+    // Vier vellen op één dag zeggen niets over een week. Eerder kwam hier
+    // "twee weken toereikend" uit, en op de knop van drie maanden ineens
+    // zesentwintig — hetzelfde vel, een ander antwoord.
+    const [row] = moverRanking([issue("2026-07-29", 4)], [catalogItem], { "hangmap-1": 8 }, 7, today);
+
+    expect(row.used).toBe(4);
+    expect(row.weeksOfStock).toBeNull();
+  });
+
+  it("geeft hetzelfde antwoord welke periode je ook kiest", () => {
+    const vierWeken = Array.from({ length: 28 }, (_, index) =>
+      issue(`2026-07-${String(2 + index).padStart(2, "0")}`, 1, { id: `d${index}` }));
+    const dekking = [7, 28, 90].map((dagen) =>
+      moverRanking(vierWeken, [catalogItem], { "hangmap-1": 14 }, dagen, "2026-07-29")[0].weeksOfStock ?? 0);
+
+    // Eerder gaf dezelfde hangmap 6,7 / 26,7 / 86,7 weken — dertien keer
+    // verschil op één weergavekeuze. Nu liggen ze binnen een tiende van elkaar.
+    expect(Math.max(...dekking) / Math.min(...dekking)).toBeLessThan(1.1);
+  });
+
+  it("telt het inladen van de bronlijst niet mee als verbruik", () => {
     const [row] = moverRanking(
-      [issue("2026-07-29", 4)],
+      [issue("2026-07-29", 400, { reasonCode: "production_source_bootstrap" })],
       [catalogItem],
       { "hangmap-1": 8 },
       7,
       today,
     );
 
-    expect(row.used).toBe(4);
-    expect(row.stock).toBe(8);
-    expect(row.weeksOfStock).toBeCloseTo(2);
+    expect(row.used).toBe(0);
   });
 
   it("laat de dekking leeg wanneer er niets is verbruikt", () => {

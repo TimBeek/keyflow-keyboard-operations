@@ -219,18 +219,59 @@ describe("ABC-analyse", () => {
     expect(rows[0].velocity).toBe("Hardloper");
     expect(rows.at(-1)?.abcClass).toBe("C");
   });
+
+  it("telt het inladen van de bronlijst en tellingcorrecties niet als verbruik", () => {
+    // Zonder dit werd de hangmap die bij de telling naar nul ging de grootste
+    // hardloper van de lijst, terwijl er nog geen vel van op een laptop zat.
+    const transactions: InventoryTransactionEntry[] = [
+      entry("NB10052E1NL", 2987, "production_source_bootstrap"),
+      entry("NB10052E1NL", -31, "stock_count"),
+      entry("NB10056E1NL", -2, "conversion_usage"),
+    ];
+
+    const rows = calculateAbcAnalysis(inventoryCatalog.slice(0, 3), transactions, {
+      abcAThreshold: 80,
+      abcBThreshold: 95,
+    });
+
+    const ingeladen = rows.find((row) => row.sku === "NB10052E1NL");
+    const gebruikt = rows.find((row) => row.sku === "NB10056E1NL");
+
+    expect(ingeladen?.issueUnits).toBe(0);
+    expect(ingeladen?.receiptUnits).toBe(0);
+    expect(gebruikt?.issueUnits).toBe(2);
+    expect(rows[0].sku).toBe("NB10056E1NL");
+  });
+
+  it("telt een levering wel, en een correctie erop ook", () => {
+    const transactions: InventoryTransactionEntry[] = [
+      entry("NB10052E1NL", 40, "supplier_delivery"),
+      entry("NB10052E1NL", 1, "correction"),
+    ];
+
+    const rows = calculateAbcAnalysis(inventoryCatalog.slice(0, 3), transactions, {
+      abcAThreshold: 80,
+      abcBThreshold: 95,
+    });
+
+    expect(rows.find((row) => row.sku === "NB10052E1NL")?.receiptUnits).toBe(41);
+  });
 });
 
-function entry(sku: string, quantityDelta: number): InventoryTransactionEntry {
+function entry(
+  sku: string,
+  quantityDelta: number,
+  reasonCode = quantityDelta < 0 ? "conversion_usage" : "supplier_delivery",
+): InventoryTransactionEntry {
   return {
-    id: `${sku}-${quantityDelta}`,
+    id: `${sku}-${quantityDelta}-${reasonCode}`,
     occurredAt: "2026-07-27T08:00:00.000Z",
     sku,
     model: "Testmodel",
     layout: "QWERTY US",
     type: quantityDelta < 0 ? "issue" : "receipt",
     quantityDelta,
-    reasonCode: "test",
+    reasonCode,
     actor: "Test",
   };
 }

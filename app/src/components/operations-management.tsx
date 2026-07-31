@@ -22,6 +22,9 @@ import {
   type ModelGroupProposal,
   type ModelGroupReviewInput,
 } from "@/domain/model-grouping";
+import { isBookkeeping, realReceiptUnits, realUsageUnits } from "@/domain/real-usage";
+import { measuredHistoryDays, minimumHistoryDays } from "@/domain/resupply";
+import { dayKey } from "@/domain/reporting";
 import {
   calculateAbcAnalysis,
   layoutWithCountry,
@@ -211,6 +214,9 @@ export function OperationsManagement({
   const [evidenceNotes, setEvidenceNotes] = useState("");
   const [evidenceMessage, setEvidenceMessage] = useState("");
 
+  const gemetenDagen = measuredHistoryDays(transactions, dayKey(new Date().toISOString()));
+  const genoegGemeten = gemetenDagen >= minimumHistoryDays;
+
   const analysis = useMemo(
     () => calculateAbcAnalysis(inventoryCatalog, transactions, policy),
     [policy, transactions],
@@ -219,12 +225,12 @@ export function OperationsManagement({
     () => [...transactions].sort((a, b) => b.occurredAt.localeCompare(a.occurredAt)).slice(0, 18),
     [transactions],
   );
-  const issued = transactions
-    .filter((entry) => entry.quantityDelta < 0)
-    .reduce((sum, entry) => sum + Math.abs(entry.quantityDelta), 0);
-  const received = transactions
-    .filter((entry) => entry.quantityDelta > 0)
-    .reduce((sum, entry) => sum + entry.quantityDelta, 0);
+  // Alleen echte bewegingen. Het inladen van de bronlijst stond hier als
+  // "leveringen en correcties" — bijna drieduizend vellen die nooit geleverd
+  // zijn — en de tellingcorrecties stonden als verbruik.
+  const issued = realUsageUnits(transactions);
+  const received = realReceiptUnits(transactions);
+  const bookkeepingRows = transactions.filter(isBookkeeping).length;
   const currentStock = inventoryCatalog.reduce(
     (sum, item) => sum + inventoryQuantity(quantities, item),
     0,
@@ -520,8 +526,8 @@ export function OperationsManagement({
       {showStockStats && (
         <section className="workspace-stats">
           <article><span>Actuele catalogusvoorraad</span><strong>{currentStock}</strong><small>vellen per fysieke hangmap</small></article>
-          <article><span>Uitgeboekt</span><strong>{issued}</strong><small>sinds de start geregistreerd</small></article>
-          <article><span>Ingeboekt</span><strong>{received}</strong><small>leveringen en correcties</small></article>
+          <article><span>Verbruikt</span><strong>{issued}</strong><small>vellen op een laptop gegaan</small></article>
+          <article><span>Ontvangen</span><strong>{received}</strong><small>{bookkeepingRows} regels inladen en tellingen niet meegerekend</small></article>
           <article className={mismatchCount + blockedUnusedCount > 0 ? "attention" : ""}><span>Controle-afwijkingen</span><strong>{verificationAlertCount}</strong><small>{mismatchCount} uitval · {blockedUnusedCount} zonder afboeking</small></article>
         </section>
       )}
@@ -560,7 +566,22 @@ export function OperationsManagement({
 
         {tab === "abc" && (
           <div className="operations-tab-content">
-            <div className="abc-summary">
+            {/* Zonder genoeg meetdagen zegt een indeling in hardlopers niets.
+                Negen gebruikte vellen op twee dagen maken van de eerste de
+                beste hangmap een "hardloper met 53% aandeel" — een getal waar
+                op ingekocht wordt terwijl er niets achter zit. */}
+            {!genoegGemeten && (
+              <div className="abc-not-yet">
+                <strong>Nog te weinig gebruik om hardlopers aan te wijzen</strong>
+                <p>
+                  Er is {gemetenDagen === 0 ? "nog niet" : `${gemetenDagen} ${gemetenDagen === 1 ? "dag" : "dagen"}`} gemeten
+                  en er {issued === 1 ? "is één vel" : `zijn ${issued} vellen`} echt verbruikt.
+                  Vanaf {minimumHistoryDays} dagen werken staat hier wat er hard doorheen gaat.
+                  Tot die tijd blijft de tabel hieronder een kale telling van wat er is gebruikt.
+                </p>
+              </div>
+            )}
+            <div className="abc-summary" hidden={!genoegGemeten}>
               {(["A", "B", "C"] as const).map((abcClass) => {
                 const rows = analysis.filter((row) => row.abcClass === abcClass);
                 return (
@@ -574,23 +595,34 @@ export function OperationsManagement({
             </div>
             <div className="table-wrap">
               <table className="operations-table">
-                <thead><tr><th>Klasse</th><th>Sticker / model</th><th>Variant</th><th>Uit</th><th>In</th><th>Netto</th><th>Aandeel</th></tr></thead>
+                <thead><tr>{genoegGemeten && <th>Klasse</th>}<th>Sticker / model</th><th>Variant</th><th>Verbruikt</th><th>Ontvangen</th><th>Netto</th>{genoegGemeten && <th>Aandeel</th>}</tr></thead>
                 <tbody>
                   {analysis.slice(0, 14).map((row) => (
                     <tr key={row.catalogKey}>
-                      <td><span className={`abc-pill class-${row.abcClass.toLowerCase()}`}>{row.abcClass}</span><small>{row.velocity}</small></td>
+                      {genoegGemeten && (
+                        <td><span className={`abc-pill class-${row.abcClass.toLowerCase()}`}>{row.abcClass}</span><small>{row.velocity}</small></td>
+                      )}
                       <td><strong>{row.sku || `Hangmap ${row.storageNumber}`}</strong><span>{row.model} · {row.layout}</span></td>
                       <td><strong>{row.sku.match(/E\d+/i)?.[0] ?? "—"}</strong></td>
                       <td><b className="movement-out">−{row.issueUnits}</b></td>
                       <td><b className="movement-in">+{row.receiptUnits}</b></td>
                       <td><strong>{formatDelta(row.netMovement)}</strong></td>
-                      <td><strong>{row.sharePercentage.toFixed(1)}%</strong><span>cum. {row.cumulativePercentage.toFixed(1)}%</span></td>
+                      {genoegGemeten && (
+                        <td><strong>{row.sharePercentage.toFixed(1)}%</strong><span>cum. {row.cumulativePercentage.toFixed(1)}%</span></td>
+                      )}
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <p className="analysis-explanation">ABC wordt berekend op uitgaande gebruikswaarde: aantal uitgeboekte vellen × kostprijs. Daardoor kunnen dure of veelgebruikte SKU&apos;s als eerste aandacht krijgen.</p>
+            <p className="analysis-explanation">
+              Geteld wordt wat er echt is verbruikt: vellen die op een laptop zijn
+              gegaan. Het inladen van de voorraadlijst en de tellingcorrecties
+              staan wel in de geschiedenis, maar tellen hier niet mee.
+              {genoegGemeten
+                ? " De indeling in klassen volgt het aandeel in dat verbruik."
+                : ` Een indeling in hardlopers volgt zodra er ${minimumHistoryDays} dagen gemeten is.`}
+            </p>
           </div>
         )}
 

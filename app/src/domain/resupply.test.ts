@@ -128,3 +128,41 @@ describe("calculateResupplyLevel", () => {
     expect(level?.weeklyDemand).toBeCloseTo(1);
   });
 });
+
+describe("Wat als meetdag telt", () => {
+  const boeking = (dagen: number, reasonCode: string, delta: number): InventoryTransactionEntry => ({
+    id: `${reasonCode}-${dagen}`,
+    occurredAt: new Date(Date.UTC(2026, 6, 31 - dagen, 9)).toISOString(),
+    sku: "NB10172E1NL",
+    model: "Dell Latitude 5420",
+    layout: "QWERTY US",
+    type: delta < 0 ? "issue" : "receipt",
+    quantityDelta: delta,
+    reasonCode,
+    actor: "Test",
+  });
+
+  it("telt het inladen van de bronlijst niet als gemeten dag", () => {
+    // Dit gebeurde op de dag dat de app werd ingericht. Zou het meetellen, dan
+    // meet je dagen waarop niemand heeft gewerkt.
+    const dagen = measuredHistoryDays([boeking(30, "production_source_bootstrap", 2987)], "2026-07-31");
+
+    expect(dagen).toBe(0);
+  });
+
+  it("telt een levering niet als meetdag voor verbruik", () => {
+    const dagen = measuredHistoryDays([boeking(20, "supplier_delivery", 40)], "2026-07-31");
+
+    expect(dagen).toBe(0);
+  });
+
+  it("begint te tellen bij het eerste vel dat er echt doorheen ging", () => {
+    const dagen = measuredHistoryDays([
+      boeking(30, "production_source_bootstrap", 2987),
+      boeking(20, "supplier_delivery", 40),
+      boeking(9, "conversion_usage", -1),
+    ], "2026-07-31");
+
+    expect(dagen).toBe(9);
+  });
+});

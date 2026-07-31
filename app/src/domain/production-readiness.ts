@@ -145,17 +145,24 @@ export function productionReadinessGates(
   const recoveryReady = latestDrill?.result === "passed";
 
   return [
+    /*
+     * Deze twee stonden hard op "gereed" en telden dus altijd mee in "X van 7
+     * poorten gereed". Dat is geen meting maar een bewering: de app kan van
+     * binnenuit niet zien of de laatste CI-run groen was of dat de beginimport
+     * daarna nog is geverifieerd. Zolang dat bewijs niet binnenkomt hoort hier
+     * te staan dat het buiten de app aangetoond moet worden.
+     */
     {
       id: "release",
       label: "Geteste applicatierelease",
-      status: "ready",
-      detail: "CI, beveiligingsaudit, private hosting en versieherkomst zijn ingericht.",
+      status: "external",
+      detail: "Toon de laatste groene CI-run en de beveiligingsaudit van de uitgerolde versie.",
     },
     {
       id: "database_bootstrap",
       label: "Gecontroleerde beginimport",
-      status: "ready",
-      detail: "Preflight, transactionele bootstrap en verificatie zijn reproduceerbaar.",
+      status: "external",
+      detail: "Draai npm run db:verify op productie en leg de uitkomst vast.",
     },
     {
       id: "managed_database",

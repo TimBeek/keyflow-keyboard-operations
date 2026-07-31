@@ -8,6 +8,7 @@
 
 import type { InventoryCatalogItem } from "@/data/inventory-catalog";
 import type { InventoryTransactionEntry } from "./operations";
+import { isRealUsage } from "./real-usage";
 import { dayKey, daysBetween } from "./reporting";
 
 /**
@@ -76,6 +77,18 @@ export function measuredHistoryDays(
 ) {
   const days = transactions
     .filter((entry) => entry.aggregated !== true)
+    /*
+     * Meten begint bij het eerste vel dat er echt doorheen ging.
+     *
+     * Twee dingen die hier eerder misgingen. Het inladen van de bronlijst
+     * gebeurde op de dag dat de app werd ingericht; dat als startpunt nemen
+     * meet dagen die niemand heeft gewerkt. En een levering telde mee als
+     * meetdag, terwijl we hier verbruik per week uitrekenen: een levering van
+     * drie weken geleden en pas gisteren het eerste vel gaf een verbruik dat
+     * drie keer te laag uitkwam — met een "OK" boven een hangmap die volgende
+     * week leeg is.
+     */
+    .filter(isRealUsage)
     .map((entry) => dayKey(entry.occurredAt))
     .filter(Boolean)
     .sort();

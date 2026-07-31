@@ -1,5 +1,6 @@
 import type { InventoryCatalogItem } from "@/data/inventory-catalog";
 import { normalizeLayoutName } from "./keyboard-layouts";
+import { realReceiptUnits, realUsageUnits } from "./real-usage";
 import type { OperationalMethodId } from "@/domain/conversion-policy";
 import { inventoryQuantity } from "./inventory-quantities";
 import { modelMatchesCatalogItem } from "./model-catalog";
@@ -262,12 +263,11 @@ export function calculateAbcAnalysis(
         ? entry.catalogKey === item.catalogKey
         : item.dataQuality === "ready" && entry.sku === item.sku,
     );
-    const issueUnits = skuTransactions
-      .filter((entry) => entry.quantityDelta < 0)
-      .reduce((sum, entry) => sum + Math.abs(entry.quantityDelta), 0);
-    const receiptUnits = skuTransactions
-      .filter((entry) => entry.quantityDelta > 0)
-      .reduce((sum, entry) => sum + entry.quantityDelta, 0);
+    // Alleen wat er echt doorheen is gegaan. Het inladen van de bronlijst en de
+    // tellingcorrecties zeggen niets over hoe hard een vel loopt; die meetellen
+    // maakte van een leeggeboekte hangmap de grootste hardloper van de lijst.
+    const issueUnits = realUsageUnits(skuTransactions);
+    const receiptUnits = realReceiptUnits(skuTransactions);
 
     return {
       catalogKey: item.catalogKey,

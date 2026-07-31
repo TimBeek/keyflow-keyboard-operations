@@ -1287,26 +1287,6 @@ export function EmployeeWorkspace({
             </div>
           )}
 
-          {/* Wachten staat bovenaan: dat is wat er nog moet gebeuren. Daarna wat
-              niet gaat, en pas onderaan wat al klaarligt — dat is af. */}
-          {zichtbaar.waiting.length > 0 && (
-            <div className="request-group waiting">
-              <h3>Wacht nog bij Noviply<b>{zichtbaar.waiting.length}</b></h3>
-              {zichtbaar.waiting.map((request) => (
-                <article key={request.id}>
-                  <div>
-                    <strong>{request.model}</strong>
-                    <span>{request.layout}{request.variant && ` · ${request.variant}`}</span>
-                  </div>
-                  <div className="request-order">
-                    <b>{request.orderReference || "geen ordernummer"}</b>
-                    <small>aangevraagd</small>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
-
           {/* Er staat werk klaar bij Noviply. Eén seintje is genoeg; zolang er
               een openstaat blijft de knop weg, anders gaat het rinkelen. */}
           {requestGroups.waiting.length > 0 && (
@@ -1327,6 +1307,26 @@ export function EmployeeWorkspace({
               <button type="button" className="primary-button" onClick={onRemindNoviply}>
                 Noviply een seintje geven
               </button>
+            </div>
+          )}
+
+          {/* Wachten staat bovenaan: dat is wat er nog moet gebeuren. Daarna wat
+              niet gaat, en pas onderaan wat al klaarligt — dat is af. */}
+          {zichtbaar.waiting.length > 0 && (
+            <div className="request-group waiting">
+              <h3>Wacht nog bij Noviply<b>{zichtbaar.waiting.length}</b></h3>
+              {zichtbaar.waiting.map((request) => (
+                <article key={request.id}>
+                  <div>
+                    <strong>{request.model}</strong>
+                    <span>{request.layout}{request.variant && ` · ${request.variant}`}</span>
+                  </div>
+                  <div className="request-order">
+                    <b>{request.orderReference || "geen ordernummer"}</b>
+                    <small>aangevraagd</small>
+                  </div>
+                </article>
+              ))}
             </div>
           )}
 

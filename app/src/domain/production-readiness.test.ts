@@ -93,9 +93,9 @@ describe("productiecontinuïteit", () => {
       .toMatchObject({ status: "ready" });
     expect(productionReadinessSummary([drill])).toEqual({
       total: 7,
-      ready: 3,
+      ready: 1,
       actionRequired: 0,
-      external: 4,
+      external: 6,
     });
   });
 
@@ -110,9 +110,9 @@ describe("productiecontinuïteit", () => {
       personalIdentityReady: true,
     })).toEqual({
       total: 7,
-      ready: 5,
+      ready: 3,
       actionRequired: 0,
-      external: 2,
+      external: 4,
     });
   });
 });

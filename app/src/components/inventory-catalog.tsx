@@ -81,9 +81,12 @@ export function InventoryCatalog({
         return {
           ...item,
           advice,
+          // Leeg is leeg: dat weet je zonder een enkele meting. De overige
+          // statussen zeggen iets over verbruik en blijven dus "onbekend"
+          // zolang dat verbruik er niet is.
           catalogStatus: item.dataQuality === "blocked"
             ? "data_issue" as const
-            : advice?.status ?? "unconfigured" as const,
+            : advice?.status ?? (item.stock <= 0 ? "out" as const : "unconfigured" as const),
         };
       })
       .filter((item) => {
@@ -132,7 +135,20 @@ export function InventoryCatalog({
       <section className="workspace-stats">
         <article><span>Catalogus</span><strong>{inventoryCatalogSummary.rowCount}</strong><small>volledige Excel-hangmappen</small></article>
         <article><span>Momentopname</span><strong>{inventoryCatalogSummary.totalQuantity.toLocaleString("nl-NL")}</strong><small>stickervellen uit de bron</small></article>
-        <article className="attention"><span>Bestelactie</span><strong>{actionCount}</strong><small>in getoonde planningsset</small></article>
+        {/* Zolang er geen verbruik gemeten is kan er niets over bestellen
+            gezegd worden. Er stond een oranje "0", en dat leest als "niets
+            nodig" — terwijl er op dat moment vijf hangmappen leeg waren. */}
+        {planningCatalog.length === 0 ? (
+          <article>
+            <span>Bestelactie</span>
+            <strong className="stat-unknown">Nog niet te zeggen</strong>
+            <small>verbruik is nog niet lang genoeg gemeten</small>
+          </article>
+        ) : (
+          <article className={actionCount > 0 ? "attention" : ""}>
+            <span>Bestelactie</span><strong>{actionCount}</strong><small>in getoonde planningsset</small>
+          </article>
+        )}
         <article><span>Broncontrole</span><strong>{inventoryCatalogSummary.blockedRows}</strong><small>regels veilig geblokkeerd</small></article>
       </section>
 
@@ -145,7 +161,7 @@ export function InventoryCatalog({
           </div>
           <div className="catalog-filters">
             <label><span>Layout</span><select value={layout} onChange={(event) => setLayout(event.target.value)}><option value="all">Alle layouts</option><option>QWERTY US</option><option>AZERTY FR</option><option>QWERTZ DE</option></select></label>
-            <label><span>Status</span><select value={status} onChange={(event) => setStatus(event.target.value as StatusFilter)}><option value="all">Alle statussen</option><option value="data_issue">Bronprobleem</option><option value="out">Uitverkocht</option><option value="critical">Kritiek</option><option value="order">Bestellen</option><option value="healthy">Gezond</option><option value="excess">Overvoorraad</option><option value="unconfigured">Planning ontbreekt</option></select></label>
+            <label><span>Status</span><select value={status} onChange={(event) => setStatus(event.target.value as StatusFilter)}><option value="all">Alle statussen</option><option value="data_issue">Bronprobleem</option><option value="out">Uitverkocht</option><option value="critical" disabled={planningCatalog.length === 0}>Kritiek — vereist gemeten verbruik</option><option value="order" disabled={planningCatalog.length === 0}>Bestellen — vereist gemeten verbruik</option><option value="healthy" disabled={planningCatalog.length === 0}>Gezond — vereist gemeten verbruik</option><option value="excess" disabled={planningCatalog.length === 0}>Overvoorraad — vereist gemeten verbruik</option><option value="unconfigured">Planning ontbreekt</option></select></label>
             <label><span>Opslag</span><select value={location} onChange={(event) => setLocation(event.target.value)}><option value="all">Alle opslag</option><option>Hangmappenwagen</option></select></label>
             <label><span>Sortering</span><select value={sort} onChange={(event) => setSort(event.target.value as typeof sort)}><option value="urgency">Urgentie</option><option value="stock">Laagste voorraad</option><option value="usage">Hoogste verbruik</option></select></label>
           </div>

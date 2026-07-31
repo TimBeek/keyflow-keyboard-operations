@@ -9,6 +9,8 @@ import type { InventoryCatalogItem } from "@/data/inventory-catalog";
 import type { ConversionLogEntry } from "./conversion-log";
 import { inventoryQuantity } from "./inventory-quantities";
 import type { InventoryTransactionEntry, OperationalMethodId } from "./operations";
+import { isRealUsage } from "./real-usage";
+import { measuredHistoryDays, minimumHistoryDays } from "./resupply";
 
 export const reportPeriods = [
   { id: "week", label: "7 dagen", days: 7 },
@@ -73,9 +75,19 @@ function measurable(entry: InventoryTransactionEntry) {
   return entry.aggregated !== true;
 }
 
+/**
+ * Een afboeking die echt verbruik is. Het inladen van de bronlijst en de
+ * tellingcorrecties staan ook als beweging in de boeken, maar er is geen laptop
+ * mee geholpen — die meetellen maakt van een leeggeboekte hangmap de drukste
+ * van de lijst.
+ */
+function verbruik(entry: InventoryTransactionEntry) {
+  return measurable(entry) && isRealUsage(entry);
+}
+
 function issuedUnits(transactions: InventoryTransactionEntry[], window: PeriodWindow) {
   return transactions
-    .filter((entry) => measurable(entry) && entry.type === "issue" && inWindow(entry.occurredAt, window))
+    .filter((entry) => verbruik(entry) && inWindow(entry.occurredAt, window))
     .reduce((sum, entry) => sum + Math.abs(entry.quantityDelta), 0);
 }
 
@@ -271,12 +283,20 @@ export function moverRanking(
   today: string,
 ): MoverRow[] {
   const window = periodWindow(days, today);
-  const weeks = days / 7;
+  /*
+   * Delen door de gekozen periode gaf een antwoord dat van een knop afhing.
+   * Drie vellen op één werkdag werden bij "7 dagen" 0,43 per week en bij "3
+   * maanden" 0,03 — waarmee dezelfde hangmap er de ene keer op stond als nog
+   * negen weken toereikend en de andere keer als tachtig. Er is maar één
+   * eerlijke noemer: het aantal dagen dat er werkelijk gemeten is.
+   */
+  const gemeten = measuredHistoryDays(transactions, today);
+  const weeks = Math.max(1, Math.min(days, gemeten)) / 7;
+  const genoegGemeten = gemeten >= minimumHistoryDays;
 
   const usageFor = (item: InventoryCatalogItem, period: PeriodWindow) => transactions
     .filter((entry) =>
-      measurable(entry)
-      && entry.type === "issue"
+      verbruik(entry)
       && inWindow(entry.occurredAt, period)
       && (entry.catalogKey ? entry.catalogKey === item.catalogKey : entry.sku === item.sku))
     .reduce((sum, entry) => sum + Math.abs(entry.quantityDelta), 0);
@@ -298,7 +318,9 @@ export function moverRanking(
         previousUsed,
         delta: used - previousUsed,
         stock,
-        weeksOfStock: perWeek > 0 ? stock / perWeek : null,
+        // Onder de meetdrempel is elk weekgetal ruis; dan hoort er een streepje
+        // te staan in plaats van een cijfer waar op ingekocht wordt.
+        weeksOfStock: genoegGemeten && perWeek > 0 ? stock / perWeek : null,
       };
     })
     .sort((left, right) => right.used - left.used || left.storageNumber - right.storageNumber);

@@ -51,11 +51,18 @@ export function ProductionReadinessCenter({
   const [backupReference, setBackupReference] = useState("");
   const [targetEnvironment, setTargetEnvironment] =
     useState<RecoveryDrillInput["targetEnvironment"]>("recovery");
-  const [startedAt, setStartedAt] = useState(() =>
-    localDateTime(new Date(now.getTime() - 60 * 60_000)));
-  const [completedAt, setCompletedAt] = useState(() => localDateTime(now));
-  const [rpoMinutes, setRpoMinutes] = useState("15");
-  const [rtoMinutes, setRtoMinutes] = useState("60");
+  /*
+   * Leeg beginnen, ook al is invullen dan meer werk.
+   *
+   * Deze velden stonden voorgevuld op een venster van precies een uur met RPO
+   * 15 en RTO 60. Wie een echte proef draaide en de velden niet aanraakte, legde
+   * die verzonnen getallen vast onder het kopje "Gemeten" — en daarmee stond er
+   * bewijs in het go-livedossier dat niemand had gemeten.
+   */
+  const [startedAt, setStartedAt] = useState("");
+  const [completedAt, setCompletedAt] = useState("");
+  const [rpoMinutes, setRpoMinutes] = useState("");
+  const [rtoMinutes, setRtoMinutes] = useState("");
   const [result, setResult] = useState<RecoveryDrillInput["result"]>("passed");
   const [checks, setChecks] = useState<Record<RecoveryCheckKey, boolean>>({
     migrations: false,
