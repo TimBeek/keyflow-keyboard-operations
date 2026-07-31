@@ -1570,7 +1570,9 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 .answer-alternatives { margin: 9px 2px 0; color: var(--muted); font-size: 12.5px; }
 
 .answer-todo { padding: 17px 19px; border-radius: 12px; background: var(--surface); border-left: 4px solid var(--ok); }
-.answer-todo b { display: block; color: var(--ok); font-size: 12px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; }
+/* Was een kort kopje in hoofdletters. Er staat nu een hele vraag, en een zin
+   in kapitalen leest twee keer zo langzaam. */
+.answer-todo b { display: block; color: var(--text); font-size: 16px; font-weight: 800; line-height: 1.35; }
 .answer-todo p { margin: 7px 0 0; color: var(--text); font-size: 18px; line-height: 1.5; font-weight: 550; }
 
 .answer-warning { margin: 0; padding: 14px 16px; border-radius: 12px; background: var(--warn-soft); border: 1px solid color-mix(in srgb, var(--warn) 30%, transparent); color: var(--text); font-size: 15px; }
@@ -3482,7 +3484,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
    vormgegeven en niet als vierde grote keuzeknop. */
 .already-correct { margin: -4px 0 4px; }
 .already-correct button {
-  width: 100%; min-height: 52px; padding: 0 18px;
+  width: 100%; min-height: 52px; padding: 8px 18px;
   border: 1px dashed var(--line); border-radius: 12px;
   background: transparent; color: var(--text-2);
   font-size: 14px; font-weight: 700; cursor: pointer;
