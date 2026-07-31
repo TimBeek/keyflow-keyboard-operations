@@ -1561,24 +1561,10 @@ export function EmployeeWorkspace({
             </div>
           )}
 
-          {zichtbaar.cancelled.length > 0 && (
-            <div className="request-group cancelled">
-              <h3>Ingetrokken<b>{zichtbaar.cancelled.length}</b></h3>
-              {zichtbaar.cancelled.map((request) => (
-                <article key={request.id}>
-                  <div>
-                    <strong>{request.model}</strong>
-                    <span>{request.layout}{request.variant && ` · ${request.variant}`}</span>
-                  </div>
-                  <div className="request-order">
-                    <b>{request.orderReference || "geen ordernummer"}</b>
-                    <small>ingetrokken door {request.handledBy}</small>
-                  </div>
-                </article>
-              ))}
-            </div>
-          )}
-
+          {/* Ingetrokken aanvragen staan hier niet meer. Ze blijven in de
+              database staan — terug te zoeken wie wat terugtrok — maar op de
+              werkbank helpen ze niemand: het is werk dat juist níét gedaan
+              hoeft te worden. */}
           {zichtbaar.ready.length > 0 && (
             <div className="request-group ready">
               <h3>Klaar om op te halen<b>{zichtbaar.ready.length}</b></h3>

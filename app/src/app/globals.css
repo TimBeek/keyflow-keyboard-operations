@@ -3192,6 +3192,19 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
    zijbalkvoet neemt het geen ruimte weg van het werk. */
 .sidebar-footer a.nav-item { text-decoration: none; }
 
+/* Het merk van Noviply boven hun eigen scherm. Rustig en aan de rand: het is
+   een herkenningspunt, geen reclame. De hoogte staat vast zodat de rest van het
+   scherm niet verspringt als hun bestand later een andere verhouding heeft. */
+.noviply-logo { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+.noviply-logo img { height: 34px; width: auto; max-width: 190px; object-fit: contain; display: block; }
+.noviply-logo-naam { color: var(--text); font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
+.noviply-logo-rol {
+  padding: 4px 10px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--surface-2);
+  color: var(--text-2); font-size: 11px; font-weight: 700;
+  letter-spacing: .06em; text-transform: uppercase;
+}
+
 /* De dagbalk: wat er vandaag is afgehandeld, en waarmee.
    Twee pixels tussenruimte tussen de stukken, zodat aangrenzende kleuren nooit
    in elkaar overlopen — dat scheelt precies bij de paren die voor kleurenblinden

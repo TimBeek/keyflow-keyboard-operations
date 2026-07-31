@@ -8,6 +8,7 @@ import {
   type InventoryTransactionEntry,
 } from "@/domain/operations";
 import { dayKey } from "@/domain/reporting";
+import { NoviplyLogo } from "@/components/noviply-logo";
 import { trackpointLabel } from "@/domain/noviply-export";
 import {
   unavailableReasonEnglish,
@@ -235,6 +236,9 @@ export function NoviplyWorkspace({
 
   return (
     <div className="noviply-workspace">
+      {/* Hun eigen merk boven hun eigen scherm. Michael werkt hier de hele dag;
+          dan hoort het niet aan te voelen als een hoekje van onze app. */}
+      <NoviplyLogo />
       {/* Vier kengetallen op elk scherm maakt van elk scherm een stapel. Ze
           horen bij het werk dat nog moet gebeuren, niet bij de kast of bij
           wat al is afgehandeld. */}
