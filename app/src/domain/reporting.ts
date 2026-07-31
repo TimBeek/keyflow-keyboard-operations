@@ -7,6 +7,7 @@
 
 import type { InventoryCatalogItem } from "@/data/inventory-catalog";
 import type { ConversionLogEntry } from "./conversion-log";
+import type { ConversionMethodId } from "./conversion-policy";
 import { inventoryQuantity } from "./inventory-quantities";
 import type { InventoryTransactionEntry, OperationalMethodId } from "./operations";
 import { isRealUsage } from "./real-usage";
@@ -101,7 +102,7 @@ export function changePercentage(current: number, previous: number) {
 export type ConversionDay = {
   day: string;
   total: number;
-  byMethod: Record<OperationalMethodId, number>;
+  byMethod: Record<ConversionMethodId, number>;
 };
 
 const methodOrder: OperationalMethodId[] = [
@@ -111,7 +112,13 @@ const methodOrder: OperationalMethodId[] = [
   "direct_reprint",
 ];
 
-const emptyMethodTally = (): Record<OperationalMethodId, number> => ({
+/**
+ * "none" hoort erbij: een laptop waarvan het toetsenbord al goed was telt mee
+ * als afgehandeld werk. Zonder die sleutel viel hij buiten elke grafiek en leek
+ * er minder gedaan dan er is.
+ */
+const emptyMethodTally = (): Record<ConversionMethodId, number> => ({
+  none: 0,
   loose_stickers: 0,
   noviply_sheet: 0,
   printed_sticker: 0,
@@ -157,7 +164,7 @@ export type ConversionBucket = {
   endDay: string;
   dayCount: number;
   total: number;
-  byMethod: Record<OperationalMethodId, number>;
+  byMethod: Record<ConversionMethodId, number>;
 };
 
 /**

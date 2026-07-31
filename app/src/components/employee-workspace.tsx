@@ -376,6 +376,37 @@ export function EmployeeWorkspace({
     }
   }
 
+  /**
+   * Soms zit de gevraagde taal er al op.
+   *
+   * De adviesmotor kent dit geval al — hij geeft "geen conversie" als de
+   * huidige layout gelijk is aan de gewenste — maar dit scherm vroeg de huidige
+   * layout nooit uit en vulde er expres iets anders in. De laptop stond immers
+   * bij de stickerafdeling omdat er iets moest gebeuren. Dat klopt niet altijd:
+   * er komt er af en toe een langs die toevallig al goed is, en die hoeft dan
+   * niet door een van de vier methodes.
+   *
+   * Er gaat niets van de voorraad af, want er komt geen vel op. Hij wordt wel
+   * vastgelegd, anders verdwijnt de laptop uit de telling en lijkt er minder
+   * werk gedaan dan er is.
+   */
+  function alreadyCorrect() {
+    logConversion({
+      method: "none",
+      status: "completed",
+      model,
+      targetLayout,
+      variant: enterShape,
+      orderReference,
+      quantity,
+    });
+    resetAdvice();
+    setAdviceMessage({
+      tone: "ok",
+      text: `Vastgelegd: dit toetsenbord is al ${targetLayout}. Er hoeft geen sticker op.`,
+    });
+  }
+
   /** De taal zoals hij op het vel komt te staan; die moet Noviply zien. */
   function stickerLayout() {
     return matched ? layoutWithCountry(matched.item.layout, matched.item.sku) : targetLayout;
@@ -780,6 +811,18 @@ export function EmployeeWorkspace({
               </div>
             </fieldset>
 
+            {/* Zit de gevraagde taal er al op, dan is de laptop hier klaar en
+                hoeft de prijs niet eens ingevuld te worden. De taal staat in de
+                knop, zodat je bevestigt wát er al goed is in plaats van alleen
+                "het is goed". */}
+            {model !== "" && (
+              <div className="already-correct">
+                <button type="button" onClick={alreadyCorrect}>
+                  Het toetsenbord is al {targetLayout} — geen sticker nodig
+                </button>
+              </div>
+            )}
+
             <fieldset className="worker-bands">
               <legend>4 · Wat kost de laptop?</legend>
               <div>
@@ -939,158 +982,11 @@ export function EmployeeWorkspace({
                 </div>
               )}
 
-              {/* Noviply krijgt de laptop niet te zien. Het trackpoint verandert
-                  de indeling van het toetsenbord, dus zonder dit antwoord kunnen
-                  ze het verkeerde vel maken. */}
-              {effectiveMethod === "printed_sticker" && (fallbackToPremium || askingSlipDate) && (
-                <fieldset className={`trackpoint-ask${trackpointMissing ? " missing" : ""}`}>
-                  <legend>Zit er een trackpoint op?</legend>
-                  <p>Het knopje midden tussen de G, H en B.</p>
-                  <div className="trackpoint-choice">
-                    {([["yes", "Ja"], ["no", "Nee"]] as const).map(([waarde, label]) => (
-                      <button
-                        key={waarde}
-                        type="button"
-                        className={trackpoint === waarde ? "chosen" : ""}
-                        aria-pressed={trackpoint === waarde}
-                        onClick={() => { setTrackpoint(waarde); setTrackpointMissing(false); }}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                  {trackpointMissing && <small>Noviply heeft dit nodig voordat ze printen.</small>}
-                </fieldset>
-              )}
-
-              {effectiveMethod === "printed_sticker" ? (
-                <div className="answer-todo">
-                  {/* De toetsenbordsprinter kan dit model niet; de rondes van
-                      Noviply kennen hem dus ook niet. Dan is de pakbondatum
-                      niet interessant en moet er gewoon aangevraagd worden. */}
-                  {fallbackToPremium ? (
-                    <>
-                      <b>Vraag de sticker aan bij Noviply</b>
-                      <p>Er ligt niets voorgeprint voor dit geval — de rondes kennen hem niet.</p>
-                      <div className="print-ready-choice">
-                        <button
-                          type="button"
-                          className="secondary-button"
-                          onClick={() => requestFromNoviply("Keyboard printer cannot handle this model.")}
-                        >
-                          Aanvragen bij Noviply
-                        </button>
-                      </div>
-                    </>
-                  ) : askingSlipDate ? (
-                    <>
-                      <b>Welke datum staat op de pakbon?</b>
-                      <p>
-                        {nextRun
-                          ? `Vandaag? Dan komt het vel om ${nextRun.label} vanzelf mee.`
-                          : "Beide rondes zijn geweest — vandaag komt er niets meer mee."}
-                      </p>
-                      <div className="print-ready-choice">
-                        {nextRun && (
-                          <button
-                            type="button"
-                            className="primary-button"
-                            onClick={() => void waitForRun(nextRun)}
-                          >
-                            Vandaag — {todayLabel}
-                          </button>
-                        )}
-                        <button
-                          type="button"
-                          className="secondary-button"
-                          onClick={() => requestFromNoviply(nextRun
-                            ? "Packing slip from an earlier day; was not in the run."
-                            : "Both runs for today had already gone.")}
-                        >
-                          {nextRun ? "Een eerdere datum — aanvragen" : "Aanvragen bij Noviply"}
-                        </button>
-                        <button
-                          type="button"
-                          className="answer-escape"
-                          onClick={() => setAskingSlipDate(false)}
-                        >
-                          Terug
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <b>Ligt de sticker al klaar?</b>
-                      <p>Buitenlandse orders worden in twee vaste rondes voorgeprint.</p>
-                      <div className="print-ready-choice">
-                        <button
-                          type="button"
-                          className="primary-button"
-                          onClick={() => setAdviceMessage({
-                            tone: "ok",
-                            text: "Pak de voorgeprinte sticker uit de klaargelegde stapel en breng hem in één keer aan.",
-                          })}
-                        >
-                          Ja — pak hem uit de stapel
-                        </button>
-                        <button
-                          type="button"
-                          className="secondary-button"
-                          onClick={() => {
-                            if (needsOrderNumber()) return;
-                            // De melding over het ontbrekende ordernummer heeft
-                            // zijn werk gedaan; die moet niet blijven hangen.
-                            setAdviceMessage(null);
-                            setAskingSlipDate(true);
-                          }}
-                        >
-                          Nee — moet nog geprint
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
-              ) : (
-                <div className="answer-todo">
-                  <b>Wat moet je doen</b>
-                  <p>{todoFor(effectiveMethod, storageNumber)}</p>
-                  {/* De koppeling met Roemenië is niet sluitend: zij noemen
-                      sommige modellen bij hun interne nummer. Dan moet de
-                      medewerker kunnen zeggen dat het niet gaat. */}
-                  {effectiveMethod === "direct_reprint" && printScope.status !== "supported" && (
-                    <button
-                      type="button"
-                      className="answer-escape"
-                      onClick={() => setPrintBlocked(true)}
-                    >
-                      Lukt niet — dit model kan niet door de toetsenbordsprinter
-                    </button>
-                  )}
-                </div>
-              )}
-
-              {noviplyMatch.status === "out_of_stock" && (
-                <p className="answer-warning">Dit vel is op. Meld het bij je teamleider en gebruik zolang een andere methode.</p>
-              )}
-              {noviplyMatch.status === "other_variant" && (
-                <p className="answer-warning">
-                  Voor dit model ligt geen {enterShape}-vel in de hangmappen, alleen{" "}
-                  {noviplyMatch.availableVariants.join(" en ")}. Controleer de Enter-toets nog
-                  eens, of vraag je teamleider.
-                </p>
-              )}
-              {evidence?.status === "rejected" && (
-                <p className="answer-warning">Dit vel is eerder afgekeurd voor dit model. Gebruik het niet.</p>
-              )}
-
-              {adviceMessage && (
-                <p className={adviceMessage.tone === "ok" ? "answer-done" : "answer-warning"}>{adviceMessage.text}</p>
-              )}
-
-              {/* Dit zijn de twee dingen die de medewerker zelf invult, dus
-                  staan ze groot en vooraan. Ze stonden in kleine letters naast
-                  een aanvinkvakje, en juist daar ging het mis: een aanvraag
-                  zonder ordernummer liep op een foutmelding stuk. */}
+              {/* Eerst invullen, dan pas de knoppen. Andersom liep je vast: je
+                  klikte op "moet nog geprint", de app sprong naar het lege
+                  ordernummerveld, en na het invullen moest je diezelfde knop
+                  nog een keer aanklikken. Alles wat een knop nodig heeft staat
+                  nu erboven, in leesvolgorde. */}
               <div className="answer-input-row">
                 <label className={`answer-order${orderMissing ? " needs" : ""}`}>
                   {/* Alleen bij een aanvraag moet Noviply weten om welke order
@@ -1150,6 +1046,155 @@ export function EmployeeWorkspace({
                 )}
               </div>
 
+              {/* Noviply krijgt de laptop niet te zien. Het trackpoint verandert
+                  de indeling van het toetsenbord, dus zonder dit antwoord kunnen
+                  ze het verkeerde vel maken. */}
+              {effectiveMethod === "printed_sticker" && (fallbackToPremium || askingSlipDate) && (
+                <fieldset className={`trackpoint-ask${trackpointMissing ? " missing" : ""}`}>
+                  <legend>Zit er een klein rond knopje tussen de G, H en B?</legend>
+                  <div className="trackpoint-choice">
+                    {([["yes", "Ja"], ["no", "Nee"]] as const).map(([waarde, label]) => (
+                      <button
+                        key={waarde}
+                        type="button"
+                        className={trackpoint === waarde ? "chosen" : ""}
+                        aria-pressed={trackpoint === waarde}
+                        onClick={() => { setTrackpoint(waarde); setTrackpointMissing(false); }}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  {trackpointMissing && <small>Kies eerst ja of nee.</small>}
+                </fieldset>
+              )}
+
+              {effectiveMethod === "printed_sticker" ? (
+                <div className="answer-todo">
+                  {/* De toetsenbordsprinter kan dit model niet; de rondes van
+                      Noviply kennen hem dus ook niet. Dan is de pakbondatum
+                      niet interessant en moet er gewoon aangevraagd worden. */}
+                  {fallbackToPremium ? (
+                    <>
+                      <b>Deze sticker ligt niet voorgeprint klaar</b>
+                      <div className="print-ready-choice">
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          onClick={() => requestFromNoviply("Keyboard printer cannot handle this model.")}
+                        >
+                          Aanvragen bij Noviply
+                        </button>
+                      </div>
+                    </>
+                  ) : askingSlipDate ? (
+                    <>
+                      <b>Is deze order vandaag besteld? Kijk de datum op de pakbon.</b>
+                      {!nextRun && (
+                        <p>Beide printrondes van vandaag zijn geweest.</p>
+                      )}
+                      <div className="print-ready-choice">
+                        {nextRun && (
+                          <button
+                            type="button"
+                            className="primary-button"
+                            onClick={() => void waitForRun(nextRun)}
+                          >
+                            Ja, vandaag besteld — zet hem apart, de sticker komt om {nextRun.label} mee
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          onClick={() => requestFromNoviply(nextRun
+                            ? "Packing slip from an earlier day; was not in the run."
+                            : "Both runs for today had already gone.")}
+                        >
+                          {nextRun
+                            ? "Nee, eerdere datum — nu aanvragen bij Noviply"
+                            : "Aanvragen bij Noviply"}
+                        </button>
+                        <button
+                          type="button"
+                          className="answer-escape"
+                          onClick={() => setAskingSlipDate(false)}
+                        >
+                          Terug
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <b>Kijk in de stapel voorgeprinte stickers. Ligt deze order erbij?</b>
+                      <div className="print-ready-choice">
+                        <button
+                          type="button"
+                          className="primary-button"
+                          onClick={() => setAdviceMessage({
+                            tone: "ok",
+                            text: "Pak de voorgeprinte sticker uit de klaargelegde stapel en breng hem in één keer aan.",
+                          })}
+                        >
+                          Ja, ligt erbij
+                        </button>
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          onClick={() => {
+                            if (needsOrderNumber()) return;
+                            // De melding over het ontbrekende ordernummer heeft
+                            // zijn werk gedaan; die moet niet blijven hangen.
+                            setAdviceMessage(null);
+                            setAskingSlipDate(true);
+                          }}
+                        >
+                          Nee, ligt er niet
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <div className="answer-todo">
+                  <b>Wat moet je doen</b>
+                  <p>{todoFor(effectiveMethod, storageNumber)}</p>
+                  {/* De koppeling met Roemenië is niet sluitend: zij noemen
+                      sommige modellen bij hun interne nummer. Dan moet de
+                      medewerker kunnen zeggen dat het niet gaat. */}
+                  {effectiveMethod === "direct_reprint" && printScope.status !== "supported" && (
+                    <button
+                      type="button"
+                      className="answer-escape"
+                      onClick={() => setPrintBlocked(true)}
+                    >
+                      Lukt niet — dit model kan niet door de toetsenbordsprinter
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {noviplyMatch.status === "out_of_stock" && (
+                <p className="answer-warning">Dit vel is op. Meld het bij je teamleider en gebruik zolang een andere methode.</p>
+              )}
+              {noviplyMatch.status === "other_variant" && (
+                <p className="answer-warning">
+                  Voor dit model ligt geen {enterShape}-vel in de hangmappen, alleen{" "}
+                  {noviplyMatch.availableVariants.join(" en ")}. Controleer de Enter-toets nog
+                  eens, of vraag je teamleider.
+                </p>
+              )}
+              {evidence?.status === "rejected" && (
+                <p className="answer-warning">Dit vel is eerder afgekeurd voor dit model. Gebruik het niet.</p>
+              )}
+
+              {adviceMessage && (
+                <p className={adviceMessage.tone === "ok" ? "answer-done" : "answer-warning"}>{adviceMessage.text}</p>
+              )}
+
+              {/* Dit zijn de twee dingen die de medewerker zelf invult, dus
+                  staan ze groot en vooraan. Ze stonden in kleine letters naast
+                  een aanvinkvakje, en juist daar ging het mis: een aanvraag
+                  zonder ordernummer liep op een foutmelding stuk. */}
               {/* Tijdens de pakbonvraag zijn die twee knoppen de handeling. Een
                   vinkje en een "Klaar" eronder is dan niet alleen ruis: je kunt
                   hem afmelden zonder ooit iets aan te vragen. */}

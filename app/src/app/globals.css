@@ -3478,6 +3478,18 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
   .trackpoint-choice button { flex: 1 1 0; min-width: 0; }
 }
 
+/* "Het toetsenbord is al goed" — een uitweg, geen hoofdweg: daarom rustig
+   vormgegeven en niet als vierde grote keuzeknop. */
+.already-correct { margin: -4px 0 4px; }
+.already-correct button {
+  width: 100%; min-height: 52px; padding: 0 18px;
+  border: 1px dashed var(--line); border-radius: 12px;
+  background: transparent; color: var(--text-2);
+  font-size: 14px; font-weight: 700; cursor: pointer;
+  transition: border-color .15s, color .15s, background .15s;
+}
+.already-correct button:hover { border-color: var(--ok); border-style: solid; background: var(--ok-soft); color: var(--ok); }
+
 /* Een kerncijfer dat er nog niet is: geen getal maar wat we wél weten. */
 .stat-unknown { font-size: 17px !important; letter-spacing: 0 !important; color: var(--text-2) !important; }
 

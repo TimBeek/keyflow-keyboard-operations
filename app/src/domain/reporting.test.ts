@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { InventoryCatalogItem } from "@/data/inventory-catalog";
 import type { ConversionLogEntry } from "./conversion-log";
+import type { ConversionMethodId } from "./conversion-policy";
 import type { InventoryTransactionEntry, OperationalMethodId } from "./operations";
 import {
   bucketConversionDays,
@@ -22,7 +23,7 @@ const today = "2026-07-29";
 /** Lokale tijd zonder Z: dan valt de dag niet om door de tijdzone van de runner. */
 function conversion(
   day: string,
-  method: OperationalMethodId,
+  method: ConversionMethodId,
   overrides: Partial<ConversionLogEntry> = {},
 ): ConversionLogEntry {
   return {
@@ -299,5 +300,20 @@ describe("historie", () => {
       issue("2026-07-28", 400, { id: "baseline", aggregated: true }),
       issue("2026-07-29", 5),
     ])).toBe(400);
+  });
+});
+
+describe("Een laptop waarvan het toetsenbord al goed was", () => {
+  it("telt mee als afgehandeld werk", () => {
+    // Er gaat geen vel op, maar de laptop is wel door de handen gegaan. Viel
+    // hij buiten de telling, dan lijkt er minder gedaan dan er is.
+    const entries = [
+      conversion("2026-07-29", "none"),
+      conversion("2026-07-29", "noviply_sheet", { id: "2" }),
+    ];
+
+    const totalen = conversionTotals(entries, 7, today);
+
+    expect(totalen.current).toBe(2);
   });
 });

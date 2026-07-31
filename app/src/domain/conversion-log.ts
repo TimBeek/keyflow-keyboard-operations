@@ -7,7 +7,7 @@
  * voorraadgevolg.
  */
 
-import type { OperationalMethodId } from "./operations";
+import type { ConversionMethodId, OperationalMethodId } from "./conversion-policy";
 
 /**
  * Vraagt de medewerker een sticker aan bij Noviply, dan is zijn deel klaar maar
@@ -18,7 +18,7 @@ export type ConversionStatus = "completed" | "awaiting_print";
 export type ConversionLogEntry = {
   id: string;
   occurredAt: string;
-  method: OperationalMethodId;
+  method: ConversionMethodId;
   status: ConversionStatus;
   model: string;
   targetLayout: string;
@@ -38,7 +38,7 @@ export type ConversionLogEntry = {
 };
 
 export type ConversionLogInput = {
-  method: OperationalMethodId;
+  method: ConversionMethodId;
   status: ConversionStatus;
   model: string;
   targetLayout: string;
