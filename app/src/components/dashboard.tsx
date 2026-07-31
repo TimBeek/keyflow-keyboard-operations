@@ -14,6 +14,7 @@ import { PrinterCheckPrompt } from "@/components/printer-check-prompt";
 import { PrintReminderPrompt } from "@/components/print-reminder-prompt";
 import { SettingsWorkspace } from "@/components/settings-workspace";
 import { ErrorReporter } from "@/components/error-reporter";
+import { BrandMark } from "@/components/brand-mark";
 import type { AppErrorEvent } from "@/server/error-log-service";
 import { AddStickerSheetDialog } from "@/components/add-sticker-sheet";
 import type { AcceptanceSyncState } from "@/components/go-live-acceptance-center";
@@ -1990,7 +1991,7 @@ export function Dashboard({
       <ErrorReporter role={role} />
       <aside className="sidebar">
         <div className="brand">
-          <div className="brand-mark">K</div>
+          <BrandMark />
           <div><strong>KeyFlow</strong><span>Keyboard Operations</span></div>
         </div>
         <nav aria-label="Hoofdnavigatie">
