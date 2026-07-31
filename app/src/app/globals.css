@@ -3232,3 +3232,239 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 .fault-list span { display: block; color: var(--text-2); font-size: 12px; }
 .fault-list small { color: var(--text-3); font-size: 11.5px; }
 .fault-list button { flex: none; min-height: 36px; padding: 0 14px; font-size: 12.5px; }
+
+/* ==========================================================================
+   Telefoon (iPhone en Android, tot 640px)
+
+   Het bureaublad is en blijft waar dit voor gemaakt is. Alles hieronder staat
+   daarom in een blok achteraan: boven 640px wordt er geen regel van gelezen,
+   dus aan het bureaubladontwerp verandert niets. Wat hier gebeurt is de app
+   bruikbaar maken op een toestel in de hand: de zijbalk gaat liggen, brede
+   tabellen worden kaartjes, en niets valt meer buiten beeld.
+   ========================================================================== */
+@media (max-width: 640px) {
+  /* -- de zijbalk wordt een liggende strook --------------------------------
+     Hij stond rechtop en at 74px van de 390 die je hebt. Erger nog: hij was
+     100vh hoog en aan de bovenkant vastgezet, waardoor de onderkant - met het
+     handboek voor Noviply en het toegangsbeheer - op een telefoon nooit in
+     beeld kwam, hoe ver je ook scrolde. */
+  .app-shell { grid-template-columns: minmax(0, 1fr); min-height: 100dvh; }
+  .sidebar {
+    position: sticky; top: 0; z-index: 30;
+    height: auto; padding: 6px 10px;
+    flex-direction: row; align-items: center; gap: 6px;
+    overflow-x: auto;
+    border-right: 0; border-bottom: 1px solid var(--rail-line);
+  }
+  .sidebar .brand { display: none; }
+  .sidebar nav { display: flex; gap: 4px; }
+  .nav-item { flex: 0 0 auto; width: auto; min-width: 46px; min-height: 46px; padding: 0 12px; justify-content: center; }
+  .nav-more { margin-top: 0; padding-top: 0; border-top: 0 !important; }
+  .sidebar-footer { margin: 0 0 0 auto; padding-top: 0; border-top: 0; display: flex; align-items: center; gap: 4px; }
+  .profile { padding: 0; }
+  .main { padding: 18px 12px 24px; }
+
+  /* -- de balk met rollen en afmelden --------------------------------------
+     Die was breder dan het scherm en trok de hele pagina zijwaarts mee. */
+  .session-bar { flex-wrap: wrap; width: 100%; gap: 8px; }
+  .role-tabs { flex: 1 1 100%; }
+  .role-tabs button { flex: 1 1 0; min-width: 0; height: 44px; padding: 0 6px; }
+  .session-user { flex: 1 1 100%; height: 48px; justify-content: space-between; }
+  .session-user button { min-height: 44px; padding: 0 14px; }
+
+  /* -- brede tabellen worden een kaartje per regel --------------------------
+     De tabel paste al in zijn eigen schuifvenster, maar de knop om iets af te
+     vinken stond honderden pixels naar rechts terwijl de eerste kolom dan uit
+     beeld was. Je vinkt dan af zonder te zien welke regel je afvinkt. */
+  .noviply-panel .operations-table, .noviply-panel .operations-table tbody,
+  .noviply-panel .operations-table tr, .noviply-panel .operations-table td,
+  .catalog-table, .catalog-table tbody, .catalog-table tr, .catalog-table td,
+  .stock-panel table, .stock-panel tbody, .stock-panel tr, .stock-panel td,
+  table.policy-editor, table.policy-editor tbody,
+  table.policy-editor tr, table.policy-editor td { display: block; width: auto; }
+
+  .noviply-panel .operations-table thead, .catalog-table thead,
+  .stock-panel thead, table.policy-editor thead { display: none; }
+
+  .noviply-panel .operations-table tr, .catalog-table tr,
+  .stock-panel tr, table.policy-editor tr {
+    margin-bottom: 10px; padding: 12px 14px;
+    border: 1px solid var(--line); border-radius: 12px; background: var(--surface);
+  }
+  .noviply-panel .operations-table td, .catalog-table td,
+  .stock-panel td, table.policy-editor td { padding: 3px 0; border-top: 0; }
+
+  .noviply-panel .operations-table td[data-label]::before,
+  .catalog-table td[data-label]::before,
+  .stock-panel td[data-label]::before,
+  table.policy-editor td[data-label]::before {
+    content: attr(data-label); display: block; margin-bottom: 2px;
+    color: var(--muted); font-size: 10.5px; font-weight: 700;
+    letter-spacing: .05em; text-transform: uppercase;
+  }
+
+  .noviply-panel .operations-table td:last-child,
+  .catalog-table td:last-child, .stock-panel td:last-child {
+    margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line-soft);
+  }
+  .catalog-table td:last-child .row-action,
+  .stock-panel td:last-child .row-action { width: 100%; }
+
+  .noviply-panel .table-wrap, .catalog-panel .table-wrap,
+  .stock-panel .table-wrap, .settings-view .table-wrap { overflow-x: visible; }
+
+  /* -- invoervelden op 16px ------------------------------------------------
+     Safari op de iPhone zoomt in zodra je in een veld tikt dat kleiner is, en
+     zoomt daarna niet terug uit. Twee van deze velden krijgen vanzelf de
+     aandacht, dus dat gebeurde zonder dat iemand er iets voor deed. */
+  .global-search input,
+  .form-grid input, .form-grid select,
+  .mutation-form select, .mutation-form textarea, .stepper input,
+  .sheet-grid input, .sheet-grid select, .sheet-field input,
+  .catalog-filters select, .sku-edit input,
+  .settings-grid select, .settings-grid input,
+  .policy-editor select, .policy-editor input,
+  .layout-rules select, .layout-rules input,
+  .noviply-blocked input, .batch-blocked input,
+  .history-search input { font-size: 16px; }
+
+  /* -- tikdoelen groot genoeg voor een vinger ------------------------------ */
+  .row-action, .fault-list button, .noviply-panel-head > button,
+  .noviply-actions .primary-button, .noviply-actions button, .noviply-blocked button,
+  .batch-row-actions button, .batch-blocked button, .batch-tabs button,
+  .batch-archive > button, .batch-archive-list button,
+  .sku-edit button, .catalog-result-line button,
+  .secondary-button, .primary-button, .employee-primary,
+  .settings-grid select, .policy-editor select,
+  .layout-rules select, .layout-rules input { min-height: 44px; height: auto; }
+
+  .row-action, .sku-edit button, .catalog-result-line button,
+  .batch-archive > button { padding: 0 14px; }
+  .panel-heading button { min-height: 44px; padding: 0 12px; }
+  .panel-heading .more-button { min-width: 44px; }
+  .stepper { height: 48px; grid-template-columns: 48px 1fr 48px; }
+  .shape-help-head button { width: 44px; height: 44px; font-size: 22px; }
+  .sku-edit-open { display: block; width: max-content; min-height: 44px; margin: 8px 0 0; padding: 0 14px; font-size: 12.5px; }
+
+  /* Het tikvlak vergroten zonder het bolletje zelf groter te maken. */
+  .worker-help { position: relative; }
+  .worker-variants legend .worker-help { width: 26px; min-width: 26px; height: 26px; min-height: 26px; font-size: 14px; }
+  .worker-help::after { content: ""; position: absolute; inset: -9px; }
+  .history-search button { width: 26px; height: 26px; right: 9px; }
+  .history-search button::after { content: ""; position: absolute; inset: -9px; }
+
+  /* -- vensters op de echte schermhoogte -----------------------------------
+     100vh is op iOS de hoogte inclusief de adresbalk, dus de onderkant van een
+     venster viel buiten beeld. dvh is wat je werkelijk ziet. */
+  .advisor-modal, .mutation-modal, .import-modal, .access-modal,
+  .keyboard-reference-modal, .unlock-modal, .sheet-modal { max-height: 94dvh; }
+  .review-modal { height: 94dvh; }
+  .shape-help-panel { max-height: 92dvh; }
+  .unlock-modal, .sheet-modal { border-radius: 18px 18px 0 0; }
+  .modal-footer, .modal-actions { padding-bottom: calc(16px + env(safe-area-inset-bottom)); }
+
+  /* -- werkvloer ----------------------------------------------------------- */
+  .worker-panel { padding: 16px; }
+  .answer { padding: 16px; }
+  .answer-head > div { min-width: 0; }
+  .answer-head h2 { font-size: 21px; }
+  .answer-slot { padding: 10px 16px; }
+  .answer-slot strong { font-size: 40px; }
+  .answer-input-row { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .answer-order { min-width: 0; }
+  .answer-order input { width: 100%; min-width: 0; min-height: 56px; font-size: 22px; }
+  .answer-quantity { min-width: 0; }
+  .answer-quantity .quantity-stepper { display: grid; grid-template-columns: 56px minmax(0, 1fr) 56px; }
+  .answer-quantity .quantity-stepper button { width: 100%; height: 56px; }
+  .answer-quantity .quantity-stepper input { width: 100%; min-width: 0; min-height: 56px; }
+
+  .worker-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+  .worker-tabs button { min-width: 0; padding: 8px 6px; font-size: 13px; line-height: 1.25; overflow-wrap: anywhere; }
+  .tab-badge { margin-left: 4px; }
+
+  .request-group article { flex-wrap: wrap; gap: 10px 12px; }
+  .request-group article > div:first-child { flex: 1 1 auto; min-width: 0; }
+  .request-settle { flex: 1 1 100%; }
+  .request-settle button { flex: 1 1 0; }
+
+  .shape-help { padding: 10px; }
+  .shape-help-panel { padding: 14px; }
+  .shape-help-grid { grid-template-columns: minmax(0, 1fr); }
+  .shape-help-grid figure { padding: 10px; }
+
+  .model-suggestions button { flex-wrap: wrap; align-items: flex-start; gap: 2px; min-height: 48px; }
+  .model-suggestions button > span { flex: 1 1 100%; overflow-wrap: anywhere; }
+  .model-suggestions button small { white-space: normal; }
+
+  /* -- Noviply ------------------------------------------------------------- */
+  .printer-state { flex-direction: column; align-items: stretch; gap: 12px; }
+  .printer-go { width: 100%; }
+  .history-search { width: 100%; }
+  .history-search input { min-width: 0; width: 100%; padding-right: 44px; }
+  .noviply-actions, .noviply-blocked { flex-wrap: wrap; }
+  .noviply-actions button, .batch-row-actions button { flex: 1 1 45%; }
+  .noviply-blocked, .batch-blocked { flex-wrap: wrap; }
+  .noviply-blocked input, .batch-blocked input { min-width: 0; width: 100%; min-height: 44px; }
+  .noviply-blocked button, .batch-blocked button { flex: 1 1 45%; }
+  .noviply-totals { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; }
+  .noviply-totals article { padding: 10px 11px; }
+  .noviply-totals span { font-size: 10px; }
+  .noviply-totals strong { font-size: 22px; }
+  .noviply-totals small { display: none; }
+
+  /* -- management ---------------------------------------------------------- */
+  .fault-list li { flex-direction: column; align-items: stretch; gap: 10px; }
+  .fault-list li > div { min-width: 0; }
+  .fault-list strong { overflow-wrap: anywhere; }
+  .panel-heading { flex-direction: column; align-items: stretch; gap: 10px; }
+  .panel-heading button { justify-content: center; border: 1px solid var(--line); border-radius: 11px; }
+  .panel-heading .more-button { align-self: flex-end; }
+  .action-card { min-height: 0; padding: 12px 14px; grid-template-columns: 40px 1fr auto; gap: 12px; }
+  .action-icon { width: 40px; height: 40px; }
+  .stats-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat-card { min-height: 0; padding: 14px 16px; }
+  .stat-card strong { margin: 4px 0 3px; font-size: 26px; }
+  .stat-glyph { display: none; }
+  .global-search { height: 48px; }
+  .global-search kbd { display: none; }
+  .sheet-grid { grid-template-columns: 1fr; }
+
+  /* -- catalogus ----------------------------------------------------------- */
+  .catalog-filters { display: grid; grid-template-columns: 1fr; gap: 10px; width: 100%; }
+  .catalog-filters label { min-width: 0; }
+  .catalog-filters select { width: 100%; min-width: 0; min-height: 48px; }
+  .catalog-toolbar .secondary-button { width: 100%; }
+  .sku-edit { flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  .sku-edit input { flex: 1 1 100%; width: auto; min-height: 48px; }
+  .sku-edit button { flex: 1 1 0; }
+  .workspace-stats { gap: 10px; }
+  .workspace-stats article { min-height: 0; padding: 13px 12px; }
+  .workspace-stats span { font-size: 10px; letter-spacing: .02em; overflow-wrap: anywhere; }
+  .workspace-stats strong { margin: 6px 0 4px; font-size: 22px; }
+  .workspace-stats small { overflow-wrap: anywhere; }
+
+  /* -- instellingen -------------------------------------------------------- */
+  table.policy-editor .policy-language { min-width: 0; background: var(--surface-2); padding: 10px 14px; }
+  table.policy-editor .policy-outcome { font-size: 13px; }
+  .settings-view .settings-panel { padding: 16px 14px; }
+  .settings-view .settings-panel > .order-heading { padding: 0 0 14px; }
+  .settings-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .settings-grid input[type="time"] {
+    min-height: 44px; padding: 0 11px;
+    border: 1px solid var(--line); border-radius: 10px;
+    background: var(--surface-2); color: var(--text);
+  }
+  .settings-save { flex-direction: column; align-items: stretch; gap: 10px; padding: 12px 14px; }
+  .settings-save span { text-align: center; }
+  .settings-save .primary-button { width: 100%; }
+
+  /* -- rapportage ----------------------------------------------------------
+     De periodeknoppen waren 34px hoog; met een vinger tik je er dan naast. */
+  .report-period { display: flex; width: 100%; }
+  .report-period button { flex: 1 1 0; min-height: 44px; padding: 0 8px; }
+}
+
+/* De smalste toestellen: drie prijsknoppen naast elkaar worden te krap. */
+@media (max-width: 420px) {
+  .worker-bands > div { grid-template-columns: repeat(2, 1fr); }
+}

@@ -274,16 +274,16 @@ export function PrintBatchPanel({
                   <tbody>
                     {shown.rows.map((row) => (
                       <tr key={row.id} className={row.status === "open" ? "" : "settled"}>
-                        <td>{row.lineNumber}</td>
+                        <td data-label="#">{row.lineNumber}</td>
                         <td><strong>{row.model}</strong></td>
-                        <td>
+                        <td data-label="Language">
                           {row.layout || <span className="batch-unknown">{row.languageCode}?</span>}
                         </td>
-                        <td>{row.variant || "—"}</td>
-                        <td>
+                        <td data-label="Enter">{row.variant || "—"}</td>
+                        <td data-label="Sheets">
                           <b className={row.quantity > 1 ? "quantity-many" : ""}>{row.quantity}×</b>
                         </td>
-                        <td><b className="order-cell">{row.orderReference || "—"}</b></td>
+                        <td data-label="Order number"><b className="order-cell">{row.orderReference || "—"}</b></td>
                         <td>
                           {row.status === "open" ? (
                             blockedRow === row.id ? (

@@ -195,7 +195,16 @@ export function SettingsWorkspace({ policy, directPrintLayouts, onSave }: Props)
                       && cell.from.toLowerCase() === row.layout.toLowerCase();
                     const rule = eigen ? cell.rule : null;
                     return (
-                      <td key={band} className={cell.rule ? "has-rule" : ""}>
+                      <td
+                        key={band}
+                        // Op een telefoon vervalt de tabelkop en wordt elke rij
+                        // een kaartje; dan moet bij de keuzelijst staan om welke
+                        // prijsklasse het gaat.
+                        data-label={band === "below"
+                          ? `Onder €${draft.thresholdEur}`
+                          : `Vanaf €${draft.thresholdEur}`}
+                        className={cell.rule ? "has-rule" : ""}
+                      >
                         <select
                           value={rule ? rule.method : ""}
                           onChange={(event) => setRule(

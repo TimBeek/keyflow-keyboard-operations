@@ -425,13 +425,13 @@ export function NoviplyWorkspace({
               {open.map((request) => (
                 <tr key={request.id}>
                   <td><strong>{request.brand}</strong><span>{request.model}</span></td>
-                  <td>{request.layout}</td>
-                  <td>{request.variant || "—"}</td>
+                  <td data-label="Language">{request.layout}</td>
+                  <td data-label="Enter">{request.variant || "—"}</td>
                   {/* Eén order kan meerdere laptops zijn; meer dan één valt op,
                       want dat is het geval waar misgeprint wordt. */}
-                  <td><b className={request.quantity > 1 ? "quantity-many" : ""}>{request.quantity}×</b></td>
-                  <td><b className="order-cell">{request.orderReference || "—"}</b></td>
-                  <td>
+                  <td data-label="Sheets"><b className={request.quantity > 1 ? "quantity-many" : ""}>{request.quantity}×</b></td>
+                  <td data-label="Order number"><b className="order-cell">{request.orderReference || "—"}</b></td>
+                  <td data-label="Requested">
                     <strong>{formatMoment(request.requestedAt)}</strong>
                     <span>{request.reason || request.requestedBy}</span>
                   </td>
@@ -605,23 +605,23 @@ export function NoviplyWorkspace({
                 {historyShown.map((entry) => (
                   <tr key={entry.id}>
                     <td><strong>{entry.brand}</strong><span>{entry.model}</span></td>
-                    <td>{entry.layout}{entry.variant && ` · ${entry.variant}`}</td>
-                    <td>
+                    <td data-label="Language">{entry.layout}{entry.variant && ` · ${entry.variant}`}</td>
+                    <td data-label="Sheets">
                       <b className={entry.quantity > 1 ? "quantity-many" : ""}>{entry.quantity}×</b>
                     </td>
-                    <td><b className="order-cell">{entry.orderReference || "—"}</b></td>
-                    <td>
+                    <td data-label="Order number"><b className="order-cell">{entry.orderReference || "—"}</b></td>
+                    <td data-label="Where from">
                       {entry.source === "run"
                         ? <span className="from-run">{entry.sourceLabel}</span>
                         : <span className="from-request">Extra request</span>}
                     </td>
-                    <td>
+                    <td data-label="Outcome">
                       <span className={`print-status ${entry.outcome}`}>
                         {entry.outcome === "printed" ? "✓ Printed" : "✕ Cannot print"}
                       </span>
                       {entry.note && <span>{entry.note}</span>}
                     </td>
-                    <td>{entry.handledAt ? formatMoment(entry.handledAt) : "—"}</td>
+                    <td data-label="Handled">{entry.handledAt ? formatMoment(entry.handledAt) : "—"}</td>
                   </tr>
                 ))}
               </tbody>

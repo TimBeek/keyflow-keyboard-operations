@@ -210,11 +210,11 @@ export function InventoryCatalog({
                       <small className="form-error" key={issue}>{issue}</small>
                     ))}
                   </td>
-                  <td><span className="layout-badge">{item.layout}</span><small>{item.location} · nr. {item.storageNumber}</small></td>
-                  <td><b className={item.stock === 0 ? "zero" : ""}>{item.stock}</b><span>{item.reserved} gereserveerd</span></td>
-                  <td>{item.advice ? <><strong>{item.averageWeeklyDemand.toLocaleString("nl-NL")} / week</strong><span>{item.leadTimeDays} dagen levertijd</span></> : <><strong>Nog niet gemeten</strong><span>Transactiehistorie vereist</span></>}</td>
-                  <td>{item.advice ? <><strong>{item.advice.coverageWeeks === null ? "Geen vraag" : `${item.advice.coverageWeeks} weken`}</strong><span>ROP {item.advice.reorderPoint}</span></> : <strong>—</strong>}</td>
-                  <td><span className={`planning-status ${item.catalogStatus}`}>{statusLabel(item.catalogStatus)}</span>{item.advice && item.advice.recommendedOrderQuantity > 0 && <small>Advies +{item.advice.recommendedOrderQuantity}</small>}</td>
+                  <td data-label="Layout / hangmap"><span className="layout-badge">{item.layout}</span><small>{item.location} · nr. {item.storageNumber}</small></td>
+                  <td data-label="Voorraad"><b className={item.stock === 0 ? "zero" : ""}>{item.stock}</b><span>{item.reserved} gereserveerd</span></td>
+                  <td data-label="Verbruik">{item.advice ? <><strong>{item.averageWeeklyDemand.toLocaleString("nl-NL")} / week</strong><span>{item.leadTimeDays} dagen levertijd</span></> : <><strong>Nog niet gemeten</strong><span>Transactiehistorie vereist</span></>}</td>
+                  <td data-label="Dekking">{item.advice ? <><strong>{item.advice.coverageWeeks === null ? "Geen vraag" : `${item.advice.coverageWeeks} weken`}</strong><span>ROP {item.advice.reorderPoint}</span></> : <strong>—</strong>}</td>
+                  <td data-label="Planstatus"><span className={`planning-status ${item.catalogStatus}`}>{statusLabel(item.catalogStatus)}</span>{item.advice && item.advice.recommendedOrderQuantity > 0 && <small>Advies +{item.advice.recommendedOrderQuantity}</small>}</td>
                   <td><button className="row-action" disabled={item.dataQuality === "blocked"} onClick={() => onReceive(item)}>Ontvangen</button></td>
                 </tr>
               ))}

@@ -2197,12 +2197,12 @@ export function Dashboard({
                   {filteredStock.map((item) => (
                     <tr key={item.sku}>
                       <td><strong>{item.model}</strong><span>{item.sku}</span></td>
-                      <td><span className="layout-badge">{item.layout}</span></td>
-                      <td>
+                      <td data-label="Layout"><span className="layout-badge">{item.layout}</span></td>
+                      <td data-label="Voorraad">
                         <b className={item.stock === 0 ? "zero" : ""}>{item.stock}</b>
                         <span>{item.threshold === null ? "minimum nog niet bekend" : ` / min. ${item.threshold}`}</span>
                       </td>
-                      <td>
+                      <td data-label="Status">
                         {item.stock === 0
                           ? <span className="status critical">Leeg</span>
                           : item.threshold !== null && item.stock < item.threshold
