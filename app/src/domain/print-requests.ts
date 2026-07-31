@@ -6,7 +6,7 @@
  * bestellijst te staan — de lijst die Noviply nu nog in een pdf bijhoudt.
  */
 
-export type PrintRequestStatus = "requested" | "printed" | "not_printable";
+export type PrintRequestStatus = "requested" | "printed" | "not_printable" | "cancelled";
 
 export type PrintRequestInput = {
   model: string;

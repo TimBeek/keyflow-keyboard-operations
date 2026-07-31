@@ -53,7 +53,7 @@ type PrintRequestRow = {
   reason: string;
   requested_at: Date;
   requested_by_name: string;
-  status: "requested" | "printed" | "not_printable";
+  status: "requested" | "printed" | "not_printable" | "cancelled";
   handled_at: Date | null;
   handled_by_name: string | null;
   note: string;
@@ -156,6 +156,73 @@ export async function createPrintRequestRecord(rawInput: CreatePrintRequestInput
       where r.id = ${inserted.id}
     `;
     return { record: toRecord(row), duplicate: false };
+  });
+}
+
+const cancelSchema = z.object({
+  id: databaseUuidSchema,
+  actorId: databaseUuidSchema,
+});
+
+export type CancelPrintRequestInput = z.input<typeof cancelSchema>;
+
+/**
+ * Een aanvraag terugtrekken die verkeerd is ingevoerd.
+ *
+ * Dit mag de werkvloer zelf, want zij merken de vergissing en zij hebben haast:
+ * elke minuut die verstrijkt is een minuut waarin Noviply het verkeerde vel kan
+ * printen. Wat al is afgehandeld blijft staan — een geprint vel trek je niet
+ * terug met een knop, daar hoort een gesprek bij.
+ *
+ * De aanvraag wordt niet verwijderd maar op "ingetrokken" gezet: hij heeft
+ * bestaan, en in de geschiedenis moet te zien zijn dat hij is teruggetrokken en
+ * door wie.
+ */
+export async function cancelPrintRequestRecord(rawInput: CancelPrintRequestInput) {
+  const input = cancelSchema.parse(rawInput);
+  await requirePermission(input.actorId, "conversion.execute");
+  const sql = database();
+
+  return sql.begin(async (transaction) => {
+    const [current] = await transaction<{ status: string; order_reference: string }[]>`
+      select status, order_reference from print_requests where id = ${input.id} for update
+    `;
+    if (!current) {
+      throw new PrintRequestError("Deze aanvraag bestaat niet meer.");
+    }
+    if (current.status !== "requested") {
+      throw new PrintRequestError(
+        current.status === "printed"
+          ? "Noviply heeft dit vel al geprint; intrekken kan niet meer. Overleg met je teamleider."
+          : "Deze aanvraag is al afgehandeld en kan niet meer worden ingetrokken.",
+      );
+    }
+
+    await transaction`
+      update print_requests
+      set status = 'cancelled', handled_at = now(), handled_by = ${input.actorId}
+      where id = ${input.id} and status = 'requested'
+    `;
+
+    /*
+     * De conversie stond op "wacht op print" zodra de aanvraag de deur uit ging.
+     * Blijft die staan, dan wacht er voor altijd een laptop op een vel dat nooit
+     * komt — en telt hij mee in "wacht op Noviply".
+     */
+    await transaction`
+      delete from conversion_log
+      where order_reference = ${current.order_reference}
+        and status = 'awaiting_print'
+    `;
+
+    const [row] = await transaction<PrintRequestRow[]>`
+      select ${transaction.unsafe(selectColumns)}
+      from print_requests r
+      join users requester on requester.id = r.requested_by
+      left join users handler on handler.id = r.handled_by
+      where r.id = ${input.id}
+    `;
+    return { record: toRecord(row) };
   });
 }
 

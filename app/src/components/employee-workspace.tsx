@@ -167,6 +167,8 @@ type Props = {
   /** Wat Noviply naar eigen zeggen niet kan printen. */
   noviplyUnavailable: NoviplyUnavailableRecord[];
   onWaitForPrintRun: (input: RunWaitlistInput) => Promise<unknown>;
+  /** Een verkeerd ingevoerde aanvraag terugtrekken voordat Noviply hem print. */
+  onCancelPrintRequest: (record: PrintRequestRecord) => Promise<void>;
   onSettleRunWait: (id: string, outcome: "collected" | "escalated") => void;
 };
 
@@ -188,6 +190,7 @@ export function EmployeeWorkspace({
   printBatches,
   noviplyUnavailable,
   onWaitForPrintRun,
+  onCancelPrintRequest,
   onSettleRunWait,
 }: Props) {
   const [tab, setTab] = useState<Tab>("advice");
@@ -207,6 +210,8 @@ export function EmployeeWorkspace({
    * tientallen regels, en dan zoek je één order — niet een lijst.
    */
   const [requestZoek, setRequestZoek] = useState("");
+  /** Welke aanvraag om bevestiging vraagt voordat hij wordt teruggetrokken. */
+  const [intrekken, setIntrekken] = useState("");
   const zichtbaar = useMemo(() => {
     const woorden = requestZoek.trim().toLowerCase().split(/\s+/).filter(Boolean);
     if (woorden.length === 0) return requestGroups;
@@ -218,6 +223,7 @@ export function EmployeeWorkspace({
       ready: requestGroups.ready.filter(past),
       waiting: requestGroups.waiting.filter(past),
       blocked: requestGroups.blocked.filter(past),
+      cancelled: requestGroups.cancelled.filter(past),
     };
   }, [requestGroups, requestZoek]);
   // De eerstvolgende automatische ronde van vandaag; niets = beide geweest.
@@ -1489,6 +1495,31 @@ export function EmployeeWorkspace({
                     <b>{request.orderReference || "geen ordernummer"}</b>
                     <small>aangevraagd</small>
                   </div>
+                  {/* Verkeerd ingevoerd? Dan moet hij weg kunnen zolang Noviply
+                      er nog niet aan begonnen is. Wachten betekent een vel dat
+                      nergens op past. */}
+                  <div className="request-settle">
+                    {intrekken === request.id ? (
+                      <>
+                        <span className="request-vraag">Aanvraag intrekken?</span>
+                        <button
+                          type="button"
+                          className="danger-ghost-button"
+                          onClick={() => {
+                            setIntrekken("");
+                            void onCancelPrintRequest(request).catch(() => undefined);
+                          }}
+                        >
+                          Ja, intrekken
+                        </button>
+                        <button type="button" onClick={() => setIntrekken("")}>Terug</button>
+                      </>
+                    ) : (
+                      <button type="button" onClick={() => setIntrekken(request.id)}>
+                        Verkeerd ingevoerd
+                      </button>
+                    )}
+                  </div>
                 </article>
               ))}
             </div>
@@ -1507,6 +1538,24 @@ export function EmployeeWorkspace({
                     <b>{request.orderReference || "geen ordernummer"}</b>
                     {/* Zonder de reden weet niemand wat er dan wél moet gebeuren. */}
                     <small>{request.note || "geen reden opgegeven"}</small>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+
+          {zichtbaar.cancelled.length > 0 && (
+            <div className="request-group cancelled">
+              <h3>Ingetrokken<b>{zichtbaar.cancelled.length}</b></h3>
+              {zichtbaar.cancelled.map((request) => (
+                <article key={request.id}>
+                  <div>
+                    <strong>{request.model}</strong>
+                    <span>{request.layout}{request.variant && ` · ${request.variant}`}</span>
+                  </div>
+                  <div className="request-order">
+                    <b>{request.orderReference || "geen ordernummer"}</b>
+                    <small>ingetrokken door {request.handledBy}</small>
                   </div>
                 </article>
               ))}

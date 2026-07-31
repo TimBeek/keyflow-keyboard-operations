@@ -16,6 +16,8 @@ export type PrintRequestGroups = {
   waiting: PrintRequestRecord[];
   /** Kan niet geprint worden; hier moet iemand iets mee. */
   blocked: PrintRequestRecord[];
+  /** Teruggetrokken door de werkvloer voordat Noviply eraan begon. */
+  cancelled: PrintRequestRecord[];
 };
 
 /** Hoe lang iets "nieuw" is voor wie er niet de hele dag naar kijkt. */
@@ -29,6 +31,8 @@ export function groupPrintRequests(requests: PrintRequestRecord[]): PrintRequest
     ready: requests.filter((request) => request.status === "printed").sort(byMoment),
     waiting: requests.filter((request) => request.status === "requested").sort(byMoment),
     blocked: requests.filter((request) => request.status === "not_printable").sort(byMoment),
+    /** Teruggetrokken door de werkvloer; blijft zichtbaar in de geschiedenis. */
+    cancelled: requests.filter((request) => request.status === "cancelled").sort(byMoment),
   };
 }
 

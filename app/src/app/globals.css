@@ -3570,6 +3570,9 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
   background: var(--surface-2); color: var(--text); font-size: 13.5px;
 }
 .requests-search input:focus { outline: none; border-color: var(--brand); }
+.request-group.cancelled article { opacity: .72; }
+.request-group.cancelled article::before { background: var(--text-3); }
+.request-vraag { color: var(--text-2); font-size: 13px; font-weight: 700; }
 .request-group h3 b { margin-left: 8px; padding: 1px 8px; border-radius: 999px; background: var(--surface-2); color: var(--text-2); font-size: 11.5px; }
 .remind-noviply.urgent { border-color: var(--warn); background: var(--warn-soft); }
 

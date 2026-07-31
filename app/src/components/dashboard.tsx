@@ -97,6 +97,7 @@ import {
 import {
   fetchSharedState,
   patchPrintRequest,
+  cancelPrintRequest,
   fetchNoviplyUnavailable,
   removeNoviplyUnavailable,
   postConversion,
@@ -1712,6 +1713,25 @@ export function Dashboard({
     return entry;
   }
 
+  /**
+   * Een aanvraag terugtrekken die verkeerd is ingevoerd. Bewust niet in de
+   * offline-wachtrij: dit is een race tegen Noviply's printer, en een intrekking
+   * die pas morgen aankomt heeft geen zin. Zonder verbinding hoort er te staan
+   * dat het niet gelukt is, zodat iemand kan bellen.
+   */
+  async function cancelPrintRequestRecord(record: PrintRequestRecord) {
+    try {
+      const { record: bijgewerkt } = await cancelPrintRequest(record.id, { actorId });
+      setPrintRequests((current) =>
+        current.map((item) => (item.id === bijgewerkt.id ? bijgewerkt : item)));
+      await refreshSharedState();
+      setLastAction(`Aanvraag ${record.orderReference || record.model} is ingetrokken.`);
+    } catch (error) {
+      setLastAction(error instanceof Error ? error.message : "Intrekken is niet gelukt.");
+      throw error;
+    }
+  }
+
   /** Noviply heeft het model alsnog: de blokkade eraf en het advies mag weer. */
   function allowNoviplyAgain(id: string) {
     const vorige = noviplyUnavailable;
@@ -2131,6 +2151,7 @@ export function Dashboard({
             printBatches={printBatches}
             noviplyUnavailable={noviplyUnavailable}
             onWaitForPrintRun={waitForPrintRun}
+            onCancelPrintRequest={cancelPrintRequestRecord}
             onSettleRunWait={(id, outcome) => void settleRunWaitlist(id, outcome)}
             onRecordConversion={recordConversion}
             catalog={workingCatalog}

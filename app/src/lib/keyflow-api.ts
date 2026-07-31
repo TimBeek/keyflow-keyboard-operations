@@ -120,6 +120,13 @@ export type MutationPayload = {
   actorId: string;
 };
 
+export function cancelPrintRequest(id: string, payload: { actorId: string }) {
+  return request<{ record: PrintRequestRecord }>(`/api/print-requests/${id}/cancel`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 export function fetchNoviplyUnavailable() {
   return request<{ noviplyUnavailable: NoviplyUnavailableRecord[] }>(
     "/api/noviply-unavailable",
