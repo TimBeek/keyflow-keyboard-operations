@@ -1,9 +1,18 @@
 name: Publish preview to GitHub Pages
 
-# Publiceert de statische KeyFlow-preview naar GitHub Pages bij elke push naar main,
-# zodat de live meekijkversie meebeweegt met de repository.
-# Let op: dit is dezelfde preview als de Sites-build — client-side, zonder database
-# en zonder Microsoft-login (KEYFLOW_AUTH_MODE staat niet op "entra", dus pilotmodus).
+# Deze publicatie is uitgezet.
+#
+# Er stond hier een meekijkversie van de app, gebouwd bij elke push naar main en
+# publiek bereikbaar zonder inlog. Die versie praat niet met de database — er
+# stonden dus geen voorraadstanden, ordernummers of aanvragen in — maar de
+# meegeleverde code bevatte wél de volledige stickercatalogus: alle
+# artikelnummers, alle 148 hangmapnummers met de bijbehorende laptopmodellen, de
+# naam van de leverancier en een medewerkersnaam. Dat hoort niet op een open
+# adres te staan.
+#
+# In plaats van de app publiceert dit nu één lege pagina, zodat wat er stond
+# meteen verdwijnt. Wil je de site helemaal weg hebben, zet Pages dan uit onder
+# Settings > Pages > Source > None; daarna mag dit bestand ook weg.
 
 on:
   push:
@@ -16,7 +25,6 @@ permissions:
   pages: write
   id-token: write
 
-# Eén publicatie tegelijk; een lopende deploy niet halverwege afbreken.
 concurrency:
   group: pages
   cancel-in-progress: false
@@ -24,47 +32,30 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: app
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: npm
-          cache-dependency-path: app/package-lock.json
-
-      - name: Configure Pages
-        id: pages
-        uses: actions/configure-pages@v5
-
-      - name: Install locked dependencies
-        run: npm ci
-
-      - name: Build static preview
-        # base_path is leeg voor een gebruikerssite en /<repo> voor een projectsite.
-        run: npm run build
-        env:
-          KEYFLOW_BASE_PATH: ${{ steps.pages.outputs.base_path }}
-
-      - name: Use the app as 404 fallback
-        # Pages heeft geen router-worker: elke onbekende URL komt op 404.html uit.
-        # De app zelf teruggeven houdt diepe links werkend, net als de Sites-preview.
-        run: cp dist/assets/index.html dist/assets/404.html
-
-      - name: Skip Jekyll processing
-        # Zonder dit bestand negeert Pages alle mappen die met een underscore
-        # beginnen — precies waar Next zijn assets neerzet (_next/).
-        run: touch dist/assets/.nojekyll
+      - name: Build a page with nothing on it
+        run: |
+          mkdir -p leeg
+          cat > leeg/index.html <<'HTML'
+          <!doctype html>
+          <html lang="nl">
+            <head>
+              <meta charset="utf-8" />
+              <meta name="robots" content="noindex, nofollow" />
+              <title>Niet in gebruik</title>
+            </head>
+            <body>
+              <p>Deze pagina is niet in gebruik.</p>
+            </body>
+          </html>
+          HTML
+          cp leeg/index.html leeg/404.html
+          touch leeg/.nojekyll
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: app/dist/assets
+          path: leeg
 
   deploy:
     needs: build

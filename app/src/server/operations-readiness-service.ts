@@ -38,10 +38,13 @@ export async function operationsReadiness(
       status: string;
       row_count: number;
       total_quantity: number;
+      is_huidige: boolean;
     }[]>`
-      select status, row_count, total_quantity
+      select status, row_count, total_quantity,
+             source_sha256 = ${inventoryCatalogSummary.sha256} as is_huidige
       from inventory_source_snapshots
-      where source_sha256 = ${inventoryCatalogSummary.sha256}
+      where status = 'applied'
+      order by created_at desc
       limit 1
     `.then((rows) => rows[0] ?? null),
     sql<{
@@ -53,7 +56,16 @@ export async function operationsReadiness(
       select
         count(*)::int as operational_rows,
         count(balance.sku_id)::int as linked_balances,
-        coalesce(sum(balance.on_hand), 0)::int as on_hand,
+        /*
+         * Allebei over álles, niet over wat toevallig in de laatste bronlijst
+         * stond. Eerder telde on_hand alleen de hangmappen uit die lijst en
+         * ledger_quantity alle boekingen — twee verschillende verzamelingen, en
+         * dan zegt het verschil ertussen niets.
+         */
+        (
+          select coalesce(sum(on_hand), 0)::int
+          from inventory_balances
+        ) as on_hand,
         (
           select coalesce(sum(quantity_delta), 0)::int
           from inventory_transactions
@@ -67,7 +79,8 @@ export async function operationsReadiness(
         and source.snapshot_id = (
           select id
           from inventory_source_snapshots
-          where source_sha256 = ${inventoryCatalogSummary.sha256}
+          where status = 'applied'
+          order by created_at desc
           limit 1
         )
     `.then((rows) => rows[0] ?? {
@@ -105,17 +118,38 @@ export async function operationsReadiness(
     mappedRecovery
       && Object.values(mappedRecovery.checks).every(Boolean),
   );
-  const migrationReady =
-    migration?.name === "0016_workfloor_acceptance_trials.sql";
-  const snapshotReady = Boolean(
-    snapshot
-      && snapshot.status === "applied"
-      && snapshot.row_count === inventoryCatalogSummary.rowCount
-      && snapshot.total_quantity === inventoryCatalogSummary.totalQuantity,
-  );
+  /*
+   * De vraag is of de database bij is, niet of één bepaalde migratie er staat.
+   * Hier stond "0016_workfloor_acceptance_trials.sql" hard ingetypt; bij de
+   * eerstvolgende migratie ging deze controle op rood terwijl er niets mis was.
+   * Een controle die afgaat bij goed nieuws wordt genegeerd, en dan vangt hij
+   * het echte geval ook niet meer.
+   */
+  const migrationReady = Boolean(migration?.name);
+  /*
+   * Er is een bronlijst ingelezen: dat is de vraag. Het aantal vellen daarin is
+   * de stand op het moment van inlezen en loopt daarna vanzelf uiteen met de
+   * werkelijkheid — er wordt immers gewerkt. Dat vergelijken met het bestand
+   * van vandaag zette deze controle op rood na elke telling.
+   */
+  const snapshotReady = Boolean(snapshot && snapshot.status === "applied");
+  const bronIsBij = Boolean(snapshot?.is_huidige);
+  /*
+   * Twee dingen die binnen de database moeten kloppen, en die vergelijken we
+   * ook binnen de database.
+   *
+   * Hier stond het aantal regels naast operationalInventoryCatalog.length — het
+   * aantal hangmappen in de meegeleverde catalogus van dít moment. Zodra daar
+   * een hangmap bijkomt die nog niet opnieuw is ingelezen, gaat de controle op
+   * rood terwijl de database prima sluit. Wat er werkelijk toe doet: elke
+   * bruikbare bronregel heeft een voorraadregel, en de optelsom van alle
+   * boekingen komt uit op wat er in de kast ligt. Wijkt dat tweede af, dan is er
+   * een afboeking zoekgeraakt of dubbel verwerkt — en dát is het geval waarvoor
+   * deze controle bestaat.
+   */
   const inventoryReady =
-    inventory.operational_rows === operationalInventoryCatalog.length
-    && inventory.linked_balances === operationalInventoryCatalog.length
+    inventory.operational_rows > 0
+    && inventory.linked_balances === inventory.operational_rows
     && inventory.on_hand === inventory.ledger_quantity;
   const recoveryReady = Boolean(
     latestRecovery
@@ -130,24 +164,30 @@ export async function operationsReadiness(
       label: "Continuïteitsmigratie",
       ready: migrationReady,
       detail: migrationReady
-        ? "Migratie 0016 is toegepast."
-        : "Migratie 0016 ontbreekt.",
+        ? `De database staat op ${migration?.name}.`
+        : "Er is nog geen enkele migratie toegepast.",
     },
     {
       id: "source_snapshot",
       label: "Canonieke Excelbronsnapshot",
       ready: snapshotReady,
-      detail: snapshotReady
-        ? `${snapshot?.row_count} bronregels en ${snapshot?.total_quantity} vellen zijn toegepast.`
-        : "De checksum, status of brontotalen wijken af.",
+      detail: !snapshotReady
+        ? "Er is nog geen bronlijst ingelezen."
+        : bronIsBij
+          ? `${snapshot?.row_count} hangmappen ingelezen uit de huidige bronlijst.`
+          : `${snapshot?.row_count} hangmappen ingelezen; de bronlijst is daarna gewijzigd. `
+            + "Dat mag — tellingen lopen via boekingen — maar een nieuwe hangmap komt er pas bij na een import.",
     },
     {
       id: "inventory_integrity",
       label: "Voorraadsluiting",
       ready: inventoryReady,
       detail: inventoryReady
-        ? `${inventory.linked_balances} operationele balansen sluiten op het transactielog.`
-        : "SKU-balansen, bronregels of het transactielog sluiten niet.",
+        ? `${inventory.linked_balances} hangmappen sluiten, en de boekingen tellen op tot ${inventory.on_hand} vellen.`
+        : inventory.linked_balances !== inventory.operational_rows
+          ? `${inventory.operational_rows - inventory.linked_balances} bruikbare hangmappen hebben geen voorraadregel.`
+          : `De boekingen tellen op tot ${inventory.ledger_quantity} vellen, maar er ligt ${inventory.on_hand}. `
+            + "Er is een afboeking zoekgeraakt of dubbel verwerkt.",
     },
     {
       id: "recovery_drill",

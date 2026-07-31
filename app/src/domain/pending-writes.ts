@@ -16,7 +16,15 @@ export type PendingWrite =
   | { kind: "modelGroupReview"; id: string; payload: Record<string, unknown> }
   | { kind: "compatibilityEvidence"; id: string; payload: Record<string, unknown> }
   | { kind: "skuOverride"; id: string; payload: Record<string, unknown> }
-  | { kind: "verificationReport"; id: string; payload: Record<string, unknown> };
+  | { kind: "verificationReport"; id: string; payload: Record<string, unknown> }
+  /**
+   * Een laptop apart leggen voor de eerstvolgende printronde. Dit is de enige
+   * handeling van de werkvloer die de kast niet raakt maar wel iets vastlegt:
+   * de laptop staat fysiek apart en moet na de ronde bij iemand terugkomen.
+   * Ging de verbinding op dat moment weg, dan stond hij apart zonder dat
+   * iemand het wist.
+   */
+  | { kind: "runWaitlist"; id: string; payload: Record<string, unknown> };
 
 export const PENDING_WRITES_KEY = "keyflow.pending-writes.v1";
 

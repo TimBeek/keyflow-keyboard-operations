@@ -209,9 +209,12 @@ export function EmployeeWorkspace({
   // De eerstvolgende automatische ronde van vandaag; niets = beide geweest.
   const nextRun = nextPrintRun(now, policy.printRunTimes);
   const todayLabel = now.toLocaleDateString("nl-NL", { day: "numeric", month: "long" });
-  const waitGroups = useMemo(() => groupRunWaitlist(runWaitlist, now),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [runWaitlist, now.getTime()]);
+  /*
+   * Bewust geen useMemo. De klok verandert elke render, dus stond hier een
+   * geheugen dat nooit iets onthield — met een uitgezette waarschuwing erboven
+   * om dat te verbergen. Gewoon uitrekenen is korter en doet hetzelfde.
+   */
+  const waitGroups = groupRunWaitlist(runWaitlist, now);
   // Wat er nog bij Noviply staat: "ik heb er zoveel uitstaan". Zodra er geprint
   // is valt het getal vanzelf weg.
   const openAtNoviply = openCount(printRequests);

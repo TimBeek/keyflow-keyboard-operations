@@ -52,7 +52,7 @@ import {
   splitAttention,
   attentionKindLabel,
 } from "@/domain/attention";
-import type { RunWaitlistEntry, RunWaitlistInput } from "@/domain/run-waitlist";
+import { createRunWaitlistEntry, type RunWaitlistEntry, type RunWaitlistInput } from "@/domain/run-waitlist";
 import { unseenBatches, type PrintBatch } from "@/domain/print-batch";
 import {
   reasonBlocksFuture,
@@ -674,6 +674,8 @@ export function Dashboard({
       await postCompatibilityEvidence(write.payload);
     } else if (write.kind === "verificationReport") {
       await postVerificationReport(write.payload);
+    } else if (write.kind === "runWaitlist") {
+      await addToRunWaitlist(write.payload as never);
     } else {
       await putSkuOverride(write.payload as never);
     }
@@ -1536,9 +1538,23 @@ export function Dashboard({
      * handeling, dus twee keer klikken op hetzelfde vel kan hier niet.
      */
     const idempotencyKey = `wachtronde-${crypto.randomUUID()}`;
-    const { record } = await addToRunWaitlist({ ...input, idempotencyKey });
-    setRunWaitlist((current) => [record, ...current.filter((entry) => entry.id !== record.id)]);
-    return record;
+    const payload = { ...input, idempotencyKey };
+    try {
+      const { record } = await addToRunWaitlist(payload);
+      setRunWaitlist((current) => [record, ...current.filter((entry) => entry.id !== record.id)]);
+      return record;
+    } catch (error) {
+      if (!(error instanceof KeyflowOfflineError)) throw error;
+      /*
+       * Geen verbinding, maar de laptop staat wel apart op de werkbank. Hem
+       * hier laten mislukken betekent: hij ligt daar en niemand weet ervan.
+       * In de wachtrij, en zodra de verbinding terug is gaat hij alsnog.
+       */
+      queueWrite({ kind: "runWaitlist", id: idempotencyKey, payload });
+      const lokaal = createRunWaitlistEntry(input, actorName, new Date());
+      setRunWaitlist((current) => [lokaal, ...current]);
+      return lokaal;
+    }
   }
 
   /** Na de ronde: het vel lag er, of het lag er niet en dan gaat het alsnog. */
