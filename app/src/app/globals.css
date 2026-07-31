@@ -3503,6 +3503,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 /* De knop om een blokkade terug te draaien, in de aandachtslijst. */
 .attention-action { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line-soft); }
 .attention-action span { color: var(--muted); font-size: 11.5px; }
+.attention-action button { flex: 0 0 auto; white-space: nowrap; }
 
 /* Wat Noviply niet kan printen, in het instellingenscherm. */
 .settings-empty { margin: 0; color: var(--muted); font-size: 13px; }

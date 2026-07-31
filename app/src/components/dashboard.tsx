@@ -2216,7 +2216,7 @@ export function Dashboard({
                                   className="secondary-button"
                                   onClick={() => allowNoviplyAgain(blokkade.id)}
                                 >
-                                  Noviply heeft dit model weer
+                                  Weer aanbieden
                                 </button>
                               </div>
                             )}
