@@ -5,10 +5,10 @@ import { useState } from "react";
 /**
  * Het logo van Noviply, boven hun eigen werkscherm.
  *
- * Het bestand hoort in public/noviply-logo.svg (of .png) te staan en komt van
- * Noviply zelf. Bewust niet nagetekend: een merk natekenen levert altijd
- * verkeerde verhoudingen en een verkeerd lettertype op, en het is hun merk —
- * dat hoor je te gebruiken zoals zij het aanleveren.
+ * Het bestand staat in public/noviply-logo.png en komt van Noviply zelf. Bewust
+ * niet nagetekend: een merk natekenen levert altijd verkeerde verhoudingen en
+ * een verkeerd lettertype op, en het is hun merk — dat hoor je te gebruiken
+ * zoals zij het aanleveren.
  *
  * Zolang het bestand er niet is staat hun naam er in onze eigen letters. Dat
  * ziet er verzorgd uit en valt niemand op als een gat; zodra het bestand er
@@ -24,7 +24,7 @@ export function NoviplyLogo() {
       {gevonden ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={`${basis}/noviply-logo.svg`}
+          src={`${basis}/noviply-logo.png`}
           alt="Noviply"
           onError={() => setGevonden(false)}
         />

@@ -1,11 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" width="40" height="40">
   <!--
-    Hetzelfde beeldmerk als in de app: een vel dat op een toets komt.
-    Hier met vaste kleuren, want een browsertabblad leest geen stylesheet.
-    Het blauw is dat van de app (--signal, #2E9BF0).
+    Een toets met een letter erop — precies wat de app doet.
+
+    De eerste opzet was een vel dat op een toets landt: twee lichte vlakken over
+    elkaar. Mooi op groot formaat, maar in een browsertabblad zijn dat zestien
+    pixels, en dan blijven er twee vage vlekken over waar niemand iets in
+    herkent. Op dat formaat leest maar één ding: een letter.
+
+    Dus een toetsdop met zijn rand, en daarop de R van ReKey. Het blauw is dat
+    van de app (--signal, #2E9BF0). Vaste kleuren hier, want een tabblad leest
+    geen stylesheet.
   -->
   <rect width="40" height="40" rx="11" fill="#2E9BF0"/>
-  <rect x="7" y="14" width="19" height="19" rx="4.5" fill="#FFFFFF" fill-opacity="0.38"/>
-  <rect x="10" y="17" width="13" height="13" rx="2.5" fill="#FFFFFF" fill-opacity="0.22"/>
-  <rect x="17" y="7" width="16" height="16" rx="3.5" fill="#FFFFFF"/>
+  <rect x="7" y="7" width="26" height="26" rx="7" fill="#FFFFFF" fill-opacity="0.22"/>
+  <rect x="10" y="10" width="20" height="20" rx="5" fill="#FFFFFF"/>
+  <text x="20" y="26.5" text-anchor="middle" font-family="Segoe UI, system-ui, sans-serif"
+        font-size="15" font-weight="800" fill="#2E9BF0">R</text>
 </svg>
