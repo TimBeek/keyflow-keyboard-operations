@@ -6,6 +6,7 @@ import {
   PrintBatchError,
   batchNumberFromFileName,
   parsePrintBatch,
+  type ParsedBatch,
   type PrintBatch,
   type PrintBatchRow,
 } from "@/domain/print-batch";
@@ -191,7 +192,38 @@ export async function importPrintBatch(input: {
       "Het rondenummer staat niet in de bestandsnaam. Noem het bestand batch-1-… of batch-2-…, of geef het nummer op.",
     );
   }
-  const sha256 = createHash("sha256").update(input.bytes).digest("hex");
+  return storePrintBatch({
+    runDate: parsed.runDate,
+    batchNumber: number,
+    fileName: input.fileName,
+    fingerprint: createHash("sha256").update(input.bytes).digest("hex"),
+    rows: parsed.rows,
+    actorId: input.actorId,
+  });
+}
+
+/**
+ * Een ronde wegschrijven, ongeacht waar hij vandaan komt.
+ *
+ * Dit was het staartstuk van de bestandsimport. Sinds het ordersysteem de ronde
+ * ook rechtstreeks kan posten, moesten beide wegen precies hetzelfde doen —
+ * anders krijg je twee soorten rondes die net iets anders in de database staan,
+ * en dat merk je pas als er iets misgaat. Eén plek dus, twee ingangen.
+ */
+export async function storePrintBatch(input: {
+  runDate: string;
+  batchNumber: number;
+  /** Waar hij vandaan kwam: een bestandsnaam, of de naam van de koppeling. */
+  fileName: string;
+  /** Vingerafdruk van de inhoud, om een tweede levering te herkennen. */
+  fingerprint: string;
+  rows: ParsedBatch["rows"];
+  actorId: string;
+}) {
+  await requirePermission(input.actorId, "print.fulfil");
+  const parsed = { runDate: input.runDate, rows: input.rows };
+  const number = input.batchNumber;
+  const sha256 = input.fingerprint;
   const sql = database();
 
   return sql.begin(async (transaction) => {
@@ -234,6 +266,73 @@ export async function importPrintBatch(input: {
     }
     return { batchId: batch.id, rows: parsed.rows.length, duplicate: false, sameFile: false };
   });
+}
+
+/**
+ * Welk rondenummer krijgt een levering die er zelf geen noemt?
+ *
+ * Het ordersysteem stuurt twee keer per dag; de eerste levering van een dag is
+ * ronde 1, de tweede ronde 2. Doortellen op wat er die dag al staat is dus
+ * precies goed — en het houdt zichzelf recht als er een keer een derde komt.
+ *
+ * Staat dezelfde lijst er al, dan is dit geen nieuwe ronde maar een herhaalde
+ * levering: een koppeling die geen antwoord kreeg en het opnieuw probeert. Die
+ * krijgt de bestaande ronde terug, want twee keer dezelfde lijst betekent twee
+ * keer printen.
+ */
+async function bestaandOfVolgendNummer(runDate: string, fingerprint: string) {
+  const sql = database();
+  const [zelfde] = await sql<{ batch_number: number }[]>`
+    select batch_number from print_batches
+    where run_date = ${runDate} and source_sha256 = ${fingerprint} and deleted_at is null
+    limit 1
+  `;
+  if (zelfde) return { number: zelfde.batch_number, herhaald: true };
+
+  const [laatste] = await sql<{ hoogste: number | null }[]>`
+    select max(batch_number) as hoogste from print_batches
+    where run_date = ${runDate} and deleted_at is null
+  `;
+  const volgende = (laatste?.hoogste ?? 0) + 1;
+  if (volgende > 9) {
+    throw new PrintBatchError(
+      `Er staan vandaag al negen rondes. Geef zelf een rondenummer op als dit er echt bij hoort.`,
+    );
+  }
+  return { number: volgende, herhaald: false };
+}
+
+/**
+ * De ronde zoals het ordersysteem hem aanlevert.
+ *
+ * Zonder rondenummer telt hij door op de dag; met een nummer erbij wint dat,
+ * zodat een nagestuurde ronde 2 ook echt ronde 2 wordt.
+ */
+export async function importResyncBatch(input: {
+  runDate: string;
+  batchNumber?: number;
+  source: string;
+  fingerprint: string;
+  rows: ParsedBatch["rows"];
+  actorId: string;
+}) {
+  await requirePermission(input.actorId, "print.fulfil");
+  // Geen eigen transactie: twee leveringen tegelijk kiezen dan allebei
+  // hetzelfde nummer, en de sleutel in storePrintBatch laat de tweede netjes op
+  // de bestaande ronde uitkomen in plaats van op een databasefout.
+  const gekozen = input.batchNumber
+    ? { number: input.batchNumber, herhaald: false }
+    : await bestaandOfVolgendNummer(input.runDate, input.fingerprint);
+
+  const uitkomst = await storePrintBatch({
+    runDate: input.runDate,
+    batchNumber: gekozen.number,
+    fileName: input.source,
+    fingerprint: input.fingerprint,
+    rows: input.rows,
+    actorId: input.actorId,
+  });
+  return { ...uitkomst, batchNumber: gekozen.number, runDate: input.runDate };
 }
 
 /* ---------- afhandelen ---------- */
