@@ -3250,6 +3250,10 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 /* Bevestigd in een ingelezen ronde: dan weet de werkvloer dat het vel er
    werkelijk aan komt en niet alleen dat het zou moeten. */
 .in-batch { color: var(--ok) !important; font-weight: 700; }
+/* Waar een afgekeurde regel vandaan kwam. Op een eigen regel — tegen de taal
+   aangeplakt las het als één woord — en in gedekte kleur, want dit is geen
+   goed nieuws zoals het groene "stond in …" bij een vel dat wél komt. */
+.uit-ronde { display: block; margin-top: 3px; color: var(--text-3); font-size: 11.5px; font-weight: 600; }
 
 /* Voltooide rondes staan opzij, niet tussen het werk. Weggooien doen we niet:
    de regels zitten in de geschiedenis en de ronde is de herkomst daarvan. */

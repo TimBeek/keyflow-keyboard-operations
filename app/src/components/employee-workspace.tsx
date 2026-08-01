@@ -59,7 +59,7 @@ import {
 import { EnterShapeGlyph } from "@/components/enter-shape-glyph";
 import { TrackpointGlyph } from "@/components/trackpoint-glyph";
 import { nextPrintRun, type PrintRun } from "@/domain/print-runs";
-import { batchLabel, batchRowForOrder, type PrintBatch } from "@/domain/print-batch";
+import { batchLabel, batchRowForOrder, blockedBatchRows, type PrintBatch } from "@/domain/print-batch";
 import {
   groupRunWaitlist,
   type RunWaitlistEntry,
@@ -220,9 +220,41 @@ export function EmployeeWorkspace({
    * aanvragen op, en dus twee vellen voor één laptop.
    */
   const [bezig, setBezig] = useState(false);
+  /**
+   * Wat Noviply niet kon printen — uit de losse aanvragen én uit de rondes.
+   *
+   * Voor wie hier staat maakt het niet uit waar het vel vandaan had moeten
+   * komen: er ligt een laptop te wachten en die krijgt geen sticker. Dus één
+   * lijst, met erbij uit welke ronde het kwam als dat zo is.
+   */
+  const afgekeurd = useMemo(() => ([
+    ...requestGroups.blocked.map((request) => ({
+      id: `aanvraag-${request.id}`,
+      model: request.model,
+      layout: request.layout,
+      variant: request.variant,
+      orderReference: request.orderReference,
+      note: request.note,
+      herkomst: "",
+      vers: isFresh(request, now),
+    })),
+    ...blockedBatchRows(printBatches).map(({ batch, row }) => ({
+      id: `ronde-${row.id}`,
+      model: row.model,
+      layout: row.layout || row.languageCode,
+      variant: row.variant,
+      orderReference: row.orderReference,
+      note: row.note,
+      herkomst: batchLabel(batch),
+      vers: row.handledAt
+        ? now.getTime() - new Date(row.handledAt).getTime() < 12 * 60 * 60 * 1000
+        : false,
+    })),
+  ]), [requestGroups.blocked, printBatches, now]);
+
   const zichtbaar = useMemo(() => {
     const woorden = requestZoek.trim().toLowerCase().split(/\s+/).filter(Boolean);
-    if (woorden.length === 0) return requestGroups;
+    if (woorden.length === 0) return { ...requestGroups, afgekeurd };
     const past = (request: PrintRequestRecord) => {
       const tekst = `${request.model} ${request.layout} ${request.variant} ${request.orderReference} ${request.note}`.toLowerCase();
       return woorden.every((woord) => tekst.includes(woord));
@@ -232,8 +264,12 @@ export function EmployeeWorkspace({
       waiting: requestGroups.waiting.filter(past),
       blocked: requestGroups.blocked.filter(past),
       cancelled: requestGroups.cancelled.filter(past),
+      afgekeurd: afgekeurd.filter((item) => {
+        const tekst = `${item.model} ${item.layout} ${item.variant} ${item.orderReference} ${item.note} ${item.herkomst}`.toLowerCase();
+        return woorden.every((woord) => tekst.includes(woord));
+      }),
     };
-  }, [requestGroups, requestZoek]);
+  }, [requestGroups, requestZoek, afgekeurd]);
   // De eerstvolgende automatische ronde van vandaag; niets = beide geweest.
   const nextRun = nextPrintRun(now, policy.printRunTimes);
   const todayLabel = now.toLocaleDateString("nl-NL", { day: "numeric", month: "long" });
@@ -1607,19 +1643,24 @@ export function EmployeeWorkspace({
             </div>
           )}
 
-          {zichtbaar.blocked.length > 0 && (
+          {zichtbaar.afgekeurd.length > 0 && (
             <div className="request-group blocked">
-              <h3>Kan niet geprint worden<b>{zichtbaar.blocked.length}</b></h3>
-              {zichtbaar.blocked.map((request) => (
-                <article key={request.id} className={isFresh(request, now) ? "fresh" : ""}>
+              <h3>Kan niet geprint worden<b>{zichtbaar.afgekeurd.length}</b></h3>
+              {zichtbaar.afgekeurd.map((item) => (
+                <article key={item.id} className={item.vers ? "fresh" : ""}>
                   <div>
-                    <strong>{request.model}</strong>
-                    <span>{request.layout}{request.variant && ` · ${request.variant}`}</span>
+                    <strong>{item.model}</strong>
+                    <span>{item.layout}{item.variant && ` · ${item.variant}`}</span>
+                    {/* Kwam hij uit een ronde, dan hoort dat erbij: dan zoek je
+                        hem daar terug in plaats van bij de losse aanvragen.
+                        Bewust niet in het groen van "het vel komt eraan" — hier
+                        komt juist niets aan. */}
+                    {item.herkomst && <small className="uit-ronde">Uit {item.herkomst}</small>}
                   </div>
                   <div className="request-order">
-                    <b>{request.orderReference || "geen ordernummer"}</b>
+                    <b>{item.orderReference || "geen ordernummer"}</b>
                     {/* Zonder de reden weet niemand wat er dan wél moet gebeuren. */}
-                    <small>{request.note || "geen reden opgegeven"}</small>
+                    <small>{item.note || "geen reden opgegeven"}</small>
                   </div>
                 </article>
               ))}
@@ -1648,11 +1689,11 @@ export function EmployeeWorkspace({
             </div>
           )}
 
-          {requestZoek.trim() !== "" && zichtbaar.waiting.length + zichtbaar.blocked.length + zichtbaar.ready.length === 0 && (
+          {requestZoek.trim() !== "" && zichtbaar.waiting.length + zichtbaar.afgekeurd.length + zichtbaar.ready.length === 0 && (
             <p className="requests-empty">Niets gevonden voor “{requestZoek.trim()}”.</p>
           )}
 
-          {printRequests.length === 0 && (
+          {printRequests.length === 0 && afgekeurd.length === 0 && (
             <p className="requests-empty">
               Zodra je een sticker bij Noviply aanvraagt, kun je hier volgen wat ermee
               gebeurt.

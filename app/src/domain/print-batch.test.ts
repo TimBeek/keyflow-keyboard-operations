@@ -11,6 +11,7 @@ import {
   batchRunDate,
   batchRunName,
   batchSheetCount,
+  blockedBatchRows,
   completedBatches,
   layoutForBatchCode,
   listedBatches,
@@ -301,5 +302,58 @@ describe("welk rondenummer bij welk tijdstip", () => {
     // Dit was het probleem: een proeflevering 's ochtends pakte nummer 1, en
     // de echte ochtendronde erna heette daardoor "middagronde".
     expect(batchNumberForTime(9, 57)).toBe(batchNumberForTime(8, 15));
+  });
+});
+
+describe("wat Noviply niet kon printen", () => {
+  const geweigerd = (id: string, note: string, handledAt: string) => ({
+    id, lineNumber: 3, model: "HP EliteBook 840 G8", languageCode: "UK",
+    layout: "QWERTY UK", variant: "E1", quantity: 1, orderReference: "34000000024",
+    status: "not_printable" as const, note, handledAt, handledBy: "Noviply",
+  });
+
+  it("haalt alleen de afgekeurde regels op", () => {
+    const uit = blockedBatchRows([batch({ rows: [
+      ...batch().rows,
+      geweigerd("r9", "folie op", "2026-07-30T13:00:00.000Z"),
+    ] })]);
+    expect(uit).toHaveLength(1);
+    expect(uit[0].row.id).toBe("r9");
+    expect(uit[0].row.note).toBe("folie op");
+    // De ronde komt mee, zodat je op het scherm kunt zeggen waar hij vandaan kwam.
+    expect(uit[0].batch.batchNumber).toBe(2);
+  });
+
+  it("geeft de nieuwste eerst", () => {
+    // Wat vanochtend is afgekeurd ligt nu op tafel; wat van gisteren is heeft
+    // iemand al gezien.
+    const uit = blockedBatchRows([batch({ rows: [
+      geweigerd("oud", "gisteren", "2026-07-29T09:00:00.000Z"),
+      geweigerd("nieuw", "vandaag", "2026-07-30T13:00:00.000Z"),
+    ] })]);
+    expect(uit.map((x) => x.row.id)).toEqual(["nieuw", "oud"]);
+  });
+
+  it("telt een ronde die uit de lijst is gehaald niet mee", () => {
+    // Die is met opzet weggehaald; dan hoort hij ook niet op de werkbank terug
+    // te komen.
+    const uit = blockedBatchRows([batch({
+      deletedAt: "2026-07-30T14:00:00.000Z",
+      rows: [geweigerd("r9", "folie op", "2026-07-30T13:00:00.000Z")],
+    })]);
+    expect(uit).toEqual([]);
+  });
+
+  it("geeft niets terug als er niets is afgekeurd", () => {
+    expect(blockedBatchRows([batch()])).toEqual([]);
+    expect(blockedBatchRows([])).toEqual([]);
+  });
+
+  it("kijkt over meerdere rondes heen", () => {
+    const uit = blockedBatchRows([
+      batch({ id: "a", rows: [geweigerd("a1", "een", "2026-07-30T09:00:00.000Z")] }),
+      batch({ id: "b", batchNumber: 1, rows: [geweigerd("b1", "twee", "2026-07-30T11:00:00.000Z")] }),
+    ]);
+    expect(uit.map((x) => x.row.id)).toEqual(["b1", "a1"]);
   });
 });

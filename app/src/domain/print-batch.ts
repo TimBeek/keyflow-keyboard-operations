@@ -282,6 +282,28 @@ export function batchRowForOrder(batches: PrintBatch[], orderReference: string) 
   return null;
 }
 
+/**
+ * Rondesregels die Noviply niet kon printen.
+ *
+ * De werkvloer had hier geen zicht op. Een afgekeurde lósse aanvraag stond wel
+ * op hun scherm, maar een afgekeurde regel uit een ronde niet — die zit in een
+ * andere tabel en werd alleen op het beheerscherm getoond. Sinds het
+ * ordersysteem de rondes aanlevert is dat het merendeel van het werk, en dan is
+ * dat een gat: de werkvloer legt een laptop opzij tot het vel er is, Noviply
+ * meldt dat het niet gaat, en op de werkbank blijft het stil.
+ *
+ * Nieuwste eerst, want dat is wat er nu op tafel ligt. Verwijderde rondes tellen
+ * niet mee: die zijn met opzet uit de lijst gehaald.
+ */
+export function blockedBatchRows(batches: PrintBatch[]) {
+  return listedBatches(batches)
+    .flatMap((batch) => batch.rows
+      .filter((row) => row.status === "not_printable")
+      .map((row) => ({ batch, row })))
+    .sort((links, rechts) =>
+      (rechts.row.handledAt ?? "").localeCompare(links.row.handledAt ?? ""));
+}
+
 /** Regels waar de app geen bekende taal bij kon vinden; even naar kijken. */
 export function unknownLanguageRows(batch: PrintBatch) {
   return batch.rows.filter((row) => row.layout === "");
