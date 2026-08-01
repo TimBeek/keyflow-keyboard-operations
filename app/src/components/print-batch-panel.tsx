@@ -125,11 +125,10 @@ export function PrintBatchPanel({
       <div className="noviply-panel-head">
         <div>
           <h3>Print runs</h3>
-          <p>
-            The order system sends its list twice a day and it appears here by
-            itself — no mail, nothing to load. Use “Add a run” only if a list has
-            to be added by hand.
-          </p>
+          {/* Eén regel. Er stonden er drie, en die duwden de twee tabbladen —
+              waar je als eerste naar kijkt — een stuk naar beneden. Wat "Add a
+              run" doet staat in het handboek en op de knop zelf. */}
+          <p>The order system sends its list twice a day; it appears here by itself.</p>
         </div>
         <div className="batch-upload">
           <input

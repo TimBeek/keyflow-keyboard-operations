@@ -3262,27 +3262,35 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
    Bewust zwaarder dan de rondeknoppen eronder: dit is de hoofdindeling, die
    ernaast is de keuze binnen die indeling. */
 .batch-groepen {
-  display: inline-flex; gap: 3px; margin-bottom: 12px; padding: 3px;
-  border: 1px solid var(--line); border-radius: 13px; background: var(--surface-2);
+  display: inline-flex; gap: 4px; margin-bottom: 16px; padding: 4px;
+  border: 1px solid var(--line); border-radius: 16px; background: var(--surface-2);
 }
+/* Dit is de hoofdindeling van het scherm en hoorde er ook zo uit te zien. Op de
+   maat van de rondeknoppen eronder las hij als een detail, terwijl je hier als
+   eerste naar kijkt: heb ik nog werk, of kijk ik terug. */
 .batch-groepen button {
-  display: inline-flex; align-items: center; gap: 8px;
-  min-height: 38px; padding: 0 15px; border: 0; border-radius: 10px;
+  display: inline-flex; align-items: center; gap: 9px;
+  min-height: 46px; padding: 0 21px; border: 0; border-radius: 12px;
   background: transparent; color: var(--text-2);
-  font-size: 13.5px; font-weight: 700; cursor: pointer;
+  font-size: 15.5px; font-weight: 720; letter-spacing: -.01em; cursor: pointer;
 }
 .batch-groepen button span {
-  min-width: 21px; padding: 1px 6px; border-radius: 999px;
+  min-width: 25px; padding: 2px 8px; border-radius: 999px;
   background: var(--raised); color: var(--text-2);
-  font-size: 11.5px; font-weight: 800; text-align: center;
+  font-size: 12.5px; font-weight: 800; text-align: center;
 }
-.batch-groepen button.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+/* Het verschil tussen de twee moet je in één oogopslag zien: de open kant staat
+   op een eigen vlak met de signaalkleur, de andere blijft vlak en grijs. */
+.batch-groepen button.active {
+  background: var(--surface); color: var(--text);
+  box-shadow: 0 1px 3px rgb(4 8 13 / .1), 0 0 0 1px var(--signal-line);
+}
 .batch-groepen button.active span { background: var(--signal); color: var(--signal-ink); }
 .batch-groepen button:disabled { opacity: .45; cursor: default; }
 .batch-groepen button:hover:not(.active):not(:disabled) { color: var(--text); }
 /* Een nieuwe ronde die je nog niet hebt geopend, ook zichtbaar als je op het
    andere tabblad staat. */
-.batch-groep-nieuw { color: var(--signal); font-size: 19px; font-style: normal; line-height: 0; }
+.batch-groep-nieuw { color: var(--signal); font-size: 22px; font-style: normal; line-height: 0; }
 
 .batch-tabs .batch-af { color: var(--ok); font-size: 13px; }
 
@@ -3337,7 +3345,17 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 /* Het merk van Noviply boven hun eigen scherm. Rustig en aan de rand: het is
    een herkenningspunt, geen reclame. De hoogte staat vast zodat de rest van het
    scherm niet verspringt als hun bestand later een andere verhouding heeft. */
-.noviply-logo { display: flex; align-items: center; gap: 14px; }
+/* Het merk en het rolwoord horen bij elkaar, dus zitten ze in één blok. Ze
+   stonden als twee losse vormen naast elkaar — een wit kaartje en een pilletje,
+   elk met een eigen hoogte, rand en ronding — en met de printerknop erbij waren
+   dat drie verschillende dingen op één regel. Nu twee blokken van dezelfde
+   hoogte met dezelfde rand: wie je bent, en wat je kunt doen. */
+.noviply-logo {
+  display: flex; align-items: stretch; overflow: hidden;
+  min-height: 56px;
+  border: 1px solid var(--line); border-radius: 15px;
+  background: var(--surface);
+}
 
 /* ── De balk boven het Noviply-scherm ─────────────────────────────────────
    Links hun merk, rechts de printer. Die knop stond eerst alleen op het
@@ -3345,7 +3363,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
    bij een ronde uit het ordersysteem. Hier staat hij op elk tabblad, en zegt
    hij in één regel hoe het ervoor staat. */
 .noviply-brandbalk {
-  display: flex; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 18px;
+  display: flex; align-items: stretch; flex-wrap: wrap; gap: 12px; margin-bottom: 18px;
 }
 /* Naast het partnerlabel, niet aan de overkant van het scherm: het hoort bij
    het printen, niet bij de accountknoppen rechtsboven. */
@@ -3357,8 +3375,8 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
    een halve millimeter van de pagina tilt. */
 .printer-chip {
   display: flex; align-items: center; gap: 11px;
-  min-height: 56px; padding: 9px 18px 9px 13px; text-align: left;
-  border: 2px solid var(--signal-line); border-radius: 15px;
+  min-height: 56px; padding: 8px 18px 8px 13px; text-align: left;
+  border: 1px solid var(--signal-line); border-radius: 15px;
   background: linear-gradient(180deg, var(--surface), var(--signal-soft));
   box-shadow: 0 2px 10px color-mix(in srgb, var(--signal) 14%, transparent);
   color: var(--text);
@@ -3399,15 +3417,14 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
    eruit alsof het er hoort — en het werkt meteen ook in donkere modus, waar
    het paars anders wegvalt tegen de achtergrond. */
 .noviply-logo-kaart {
-  display: flex; align-items: center;
-  padding: 9px 14px; border-radius: 12px;
-  background: #FFFFFF; border: 1px solid var(--line);
+  display: flex; align-items: center; flex: none;
+  padding: 0 16px; background: #FFFFFF;
+  border-right: 1px solid var(--line);
 }
 .noviply-logo img { height: 26px; width: auto; max-width: 190px; object-fit: contain; display: block; }
-.noviply-logo-naam { color: var(--text); font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
+.noviply-logo-naam { display: flex; align-items: center; padding: 0 16px; color: var(--text); font-size: 21px; font-weight: 700; letter-spacing: -.02em; }
 .noviply-logo-rol {
-  padding: 4px 10px; border-radius: 999px;
-  border: 1px solid var(--line); background: var(--surface-2);
+  display: flex; align-items: center; padding: 0 16px;
   color: var(--text-2); font-size: 11px; font-weight: 700;
   letter-spacing: .06em; text-transform: uppercase;
 }
@@ -3612,7 +3629,6 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
   .row-action, .fault-list button, .noviply-panel-head > button,
   .noviply-actions .primary-button, .noviply-actions button, .noviply-blocked button,
   .batch-row-actions button, .batch-blocked button, .batch-tabs button,
-  .batch-groepen button,
   .sku-edit button, .catalog-result-line button,
   .secondary-button, .primary-button, .employee-primary,
   .settings-grid select, .policy-editor select,
