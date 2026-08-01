@@ -97,9 +97,9 @@ td, th, .tabular { font-variant-numeric: tabular-nums; }
    er een plaatje met een vaste kleur naast staat. */
 .brand svg { display: block; flex: 0 0 auto; }
 .brand-mark-bg { fill: var(--signal); }
-.brand-mark-key { fill: rgba(255, 255, 255, .22); }
-.brand-mark-keyface { fill: #FFFFFF; }
-.brand-mark-letter { fill: var(--signal); font-family: inherit; font-size: 15px; font-weight: 800; }
+/* De letter vult de toets. Klein blauw op wit binnen nog meer blauw viel in een
+   tabblad uiteen; wit op vol blauw houdt zijn vorm tot op zestien pixels. */
+.brand-mark-letter { fill: var(--signal-ink); font-family: inherit; font-size: 30px; font-weight: 800; }
 .brand strong, .brand span { display: block; }
 .brand strong { font-size: 18px; letter-spacing: -.2px; }
 .brand span { margin-top: 2px; font-size: 12.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .7px; }
@@ -1537,7 +1537,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
    antwoord op iets anders dan E1. */
 .worker-fields-advies .worker-variants > div { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
 .worker-fields-advies .worker-variants button { min-width: 0; padding: 12px 8px; }
-.worker-fields-advies .already-correct { grid-column: 2; align-self: end; }
+.worker-fields-advies .already-correct { grid-column: 1 / -1; }
 
 /* Vaste breedte voor de vragen, de rest voor het antwoord. Met percentages
    werden bij 1600 pixels állebei de kolommen te smal: de E1/E2-knoppen vielen
@@ -3755,28 +3755,30 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
    laptop in één klik af. Hij stond gestippeld en grijs en viel daardoor weg
    tegen de achtergrond. Nu leest hij als de andere keuzeknoppen op dit scherm,
    met de groene rand van "hier hoeft niets meer". */
-/* Deze knop stond als groen blok met een dubbele rand tussen knoppen met een
-   dunne lijn eromheen; hij las als een waarschuwing in plaats van als een keuze.
-   Nu dezelfde vorm als de E1/E2-knoppen ernaast — vinkje, vette regel, kleine
-   regel eronder — en groen alleen als accent. Het is een uitweg, geen alarm. */
-.already-correct { margin: -2px 0 6px; }
-.already-correct button {
-  display: flex; align-items: center; gap: 11px; text-align: left;
-  width: 100%; min-height: 56px; padding: 9px 14px;
-  border: 1px solid var(--line); border-radius: 14px;
-  background: var(--surface); color: var(--text);
-  cursor: pointer; transition: border-color .15s, background .15s;
+/* Stap 5: de afslag als er niets hoeft te gebeuren.
+   Hij stond eerst naast stap 3, even groot als de keuzeknoppen maar met een
+   andere kleur en een andere betekenis — en dan bots je. Onder de vragen, over
+   de volle breedte, leest hij als wat hij is: geen vijfde antwoord tussen de
+   andere, maar een afslag erna. Rustig van vorm, groen alleen als accent. */
+.already-correct { min-width: 0; margin: 0; padding: 0; border: 0; display: grid; gap: 8px; }
+.already-correct legend {
+  color: var(--muted); font-size: 12px; font-weight: 640;
+  letter-spacing: .04em; text-transform: uppercase;
 }
-.already-correct button > span:last-child { display: grid; gap: 1px; min-width: 0; }
-.already-correct button strong { color: var(--text); font-size: 15px; font-weight: 800; }
-.already-correct button small { color: var(--muted); font-size: 11.5px; }
+.already-correct > button {
+  display: flex; align-items: center; gap: 11px; text-align: left;
+  width: 100%; min-height: 52px; padding: 9px 16px;
+  border: 1px solid var(--line); border-radius: 12px;
+  background: var(--surface-2); color: var(--text);
+  font-size: 14.5px; font-weight: 620;
+  cursor: pointer; transition: border-color .15s, background .15s, color .15s;
+}
 .already-correct-vink {
-  display: grid; place-items: center; flex: none; width: 30px; height: 30px;
+  display: grid; place-items: center; flex: none; width: 28px; height: 28px;
   border-radius: 9px; background: var(--ok-soft); color: var(--ok);
 }
-.already-correct button:hover { border-color: var(--ok); background: var(--ok-soft); }
-.already-correct button:hover strong { color: var(--ok); }
-.already-correct button:focus-visible { outline: 2px solid var(--ok); outline-offset: 2px; }
+.already-correct > button:hover { border-color: var(--ok); background: var(--ok-soft); color: var(--ok); }
+.already-correct > button:focus-visible { outline: 2px solid var(--ok); outline-offset: 2px; }
 
 /* De stap erachter: eerst het ordernummer, dan pas afronden. Dezelfde volgorde
    als overal — wat je invult staat boven de knop die het gebruikt. */

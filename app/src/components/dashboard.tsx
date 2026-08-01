@@ -2149,7 +2149,7 @@ export function Dashboard({
           {role === "noviply" && (
             <a
               className="nav-item"
-              href={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/docs/keyflow-handbook-noviply.pdf`}
+              href={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/docs/rekey-handbook-noviply.pdf`}
               target="_blank"
               rel="noreferrer"
             >

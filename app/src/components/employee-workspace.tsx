@@ -901,12 +901,35 @@ export function EmployeeWorkspace({
               </div>
             </fieldset>
 
-            {/* Zit de gevraagde taal er al op, dan is de laptop hier klaar en
-                hoeft de prijs niet eens ingevuld te worden. De taal staat in de
-                knop, zodat je bevestigt wát er al goed is in plaats van alleen
-                "het is goed". */}
+            <fieldset className="worker-bands">
+              <legend>4 · Voor hoeveel wordt hij verkocht?</legend>
+              <div>
+                {saleValueBands.map((band) => (
+                  <button
+                    key={band.id}
+                    type="button"
+                    className={band.id === saleBandId ? "active" : ""}
+                    onClick={() => { setSaleBandId(band.id); }}
+                  >
+                    {band.shortLabel}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+
+            {/* Onder de vier vragen, als vijfde regel over de volle breedte.
+                Hij stond naast stap 3 en botste daar met de keuzeknoppen: even
+                groot, andere kleur, andere betekenis. Hier is hij wat hij is —
+                een afslag ná de vragen, niet een vijfde antwoord ertussen.
+
+                En het woord "al" is uit de knop. Dat stond er vet en kort als
+                "Al QWERTY NL", en in een schreefloze letter is een hoofdletter I
+                niet van een kleine l te onderscheiden: het werd gelezen als
+                "AI". Nu staat het in een hele zin, waar geen twijfel over kan
+                bestaan. */}
             {model !== "" && (
-              <div className="already-correct">
+              <fieldset className="already-correct">
+                <legend>5 · Of zit de taal er al op?</legend>
                 {alreadyOpen ? (
                   <div className="already-correct-step">
                     <p>Het toetsenbord is al {targetLayout}. Er hoeft geen sticker op.</p>
@@ -930,40 +953,17 @@ export function EmployeeWorkspace({
                     </div>
                   </div>
                 ) : (
-                  /* Dezelfde vorm als de knoppen ernaast: een vinkje, een
-                     vetgedrukte regel en een kleine eronder. Hij was een groen
-                     blok met een dubbele rand en sprong daardoor uit de rij —
-                     terwijl dit een uitweg is, niet de gewone weg. */
                   <button type="button" onClick={() => setAlreadyOpen(true)}>
                     <span className="already-correct-vink" aria-hidden="true">
                       <svg viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.6">
                         <path d="M4.5 10.5 8 14l7.5-8" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     </span>
-                    <span>
-                      <strong>Al {targetLayout}</strong>
-                      <small>Geen sticker nodig</small>
-                    </span>
+                    <span>Ja, het toetsenbord is al {targetLayout} — geen sticker nodig</span>
                   </button>
                 )}
-              </div>
+              </fieldset>
             )}
-
-            <fieldset className="worker-bands">
-              <legend>4 · Voor hoeveel wordt hij verkocht?</legend>
-              <div>
-                {saleValueBands.map((band) => (
-                  <button
-                    key={band.id}
-                    type="button"
-                    className={band.id === saleBandId ? "active" : ""}
-                    onClick={() => { setSaleBandId(band.id); }}
-                  >
-                    {band.shortLabel}
-                  </button>
-                ))}
-              </div>
-            </fieldset>
           </div>
           </div>
 

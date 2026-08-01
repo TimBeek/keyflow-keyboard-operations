@@ -1,15 +1,16 @@
 /**
- * Het beeldmerk: een toets met de R van ReKey erop.
+ * Het beeldmerk: een toets met de R van ReKey.
  *
- * Eerst stond hier een letter K in een blauw vierkant — dat had net zo goed van
- * een boekhoudpakket kunnen zijn. Daarna een vel dat op een toets landt: twee
- * lichte vlakken over elkaar. Dat werkte groot, maar in een browsertabblad zijn
- * dat zestien pixels, en dan blijven er twee vage vlekken over waar niemand
- * iets in herkent. Op dat formaat leest maar één ding: een letter.
+ * Eerst een letter K in een vierkant — dat had net zo goed van een
+ * boekhoudpakket kunnen zijn. Daarna een vel dat op een toets landt: twee lichte
+ * vlakken over elkaar, mooi groot en onherkenbaar klein. Toen een toetsdop met
+ * randje en daarin een blauwe R op wit; ook die viel in een tabblad uiteen,
+ * want daar is de letter nog maar zeven pixels.
  *
- * Nu een toetsdop met zijn rand, en daarop de R. Twee dingen tegelijk, allebei
- * meteen duidelijk: dit gaat over toetsenborden, en het heet ReKey. De kleuren
- * komen uit de stylesheet, dus het merk beweegt mee met licht en donker.
+ * Vijf varianten naast elkaar gezet op ware grootte, en dan wint er maar één:
+ * een grote witte R op een vol blauw vlak. Het afgeronde vierkant is zelf al de
+ * toetsdop; die vorm hoef je niet nog eens te tekenen. De kleuren komen uit de
+ * stylesheet, dus het merk beweegt mee met licht en donker.
  */
 export function BrandMark({ size = 38 }: { size?: number }) {
   return (
@@ -21,14 +22,10 @@ export function BrandMark({ size = 38 }: { size?: number }) {
       aria-label="ReKey"
       focusable="false"
     >
-      <rect width="40" height="40" rx="11" className="brand-mark-bg" />
-      {/* De rand van de toetsdop, zoals je hem van bovenaf ziet. */}
-      <rect x="7" y="7" width="26" height="26" rx="7" className="brand-mark-key" />
-      {/* Het vlak waar de letter op staat. */}
-      <rect x="10" y="10" width="20" height="20" rx="5" className="brand-mark-keyface" />
+      <rect width="40" height="40" rx="10" className="brand-mark-bg" />
       <text
         x="20"
-        y="26.5"
+        y="30.5"
         textAnchor="middle"
         className="brand-mark-letter"
       >
