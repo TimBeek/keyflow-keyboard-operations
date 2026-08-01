@@ -7,8 +7,8 @@ import { conversionMethods, type ConversionMethodId } from "./conversion-policy"
  * toetsenbordsprint" ook niet. Een foto wel: dít vel ligt in de hangmap, dát
  * komt uit een machine die hier niet staat. Bij één en twee sterren zie je
  * daarom de sticker zelf — die heb je zo in handen. Bij drie en vier de
- * machine, want die staat bij Noviply en in Roemenië; dan weet je tenminste
- * waar de laptop naartoe gaat en waarom het langer duurt.
+ * machine die hem maakt; die staat niet op je werkplek, en dat verklaart
+ * meteen waarom die twee niet meteen klaar zijn.
  */
 export type MethodPhoto = {
   /** Wat er op de foto staat, voor wie hem niet kan zien. */
@@ -25,29 +25,29 @@ export type MethodPhoto = {
 const perNiveau: Record<number, MethodPhoto> = {
   1: {
     alt: "Vel met losse zwarte toetsstickers, letter voor letter aan te brengen",
-    onderschrift: "Losse stickers die je toets voor toets opplakt.",
+    onderschrift: "Losse stickers, toets voor toets opplakken.",
     herkomst: "Voordelig en dun. Alleen voor laptops die niet veel opbrengen.",
     breedte: 1400,
     hoogte: 563,
   },
   2: {
     alt: "Voorgeprint stickervel met het hele toetsenbord, model en artikelnummer eronder",
-    onderschrift: "Het hele toetsenbord op één vel, model en artikelnummer eronder.",
+    onderschrift: "Eén vel voor het hele toetsenbord.",
     herkomst: "Dit ligt in de hangmappen. Verreweg het meeste werk gaat zo.",
     breedte: 1400,
     hoogte: 609,
   },
   3: {
     alt: "De printer bij Noviply met een rol folie erin",
-    onderschrift: "Noviply print dit vel voor je op folie met sterkere lijm.",
+    onderschrift: "Noviply print dit op folie met sterkere lijm.",
     herkomst: "Ligt niet in de kast — die vraag je aan en komt later binnen.",
     breedte: 1400,
     hoogte: 984,
   },
   4: {
     alt: "Vlakbedprinter die rechtstreeks op een toetsenbord drukt",
-    onderschrift: "Geen sticker maar inkt: de machine bedrukt het toetsenbord zelf.",
-    herkomst: "Permanent, en gaat naar Roemenië. Alleen voor de dure laptops.",
+    onderschrift: "Inkt op het toetsenbord zelf, geen sticker.",
+    herkomst: "Niet meer te verwijderen. Alleen voor laptops die genoeg opbrengen.",
     breedte: 1400,
     hoogte: 1328,
   },

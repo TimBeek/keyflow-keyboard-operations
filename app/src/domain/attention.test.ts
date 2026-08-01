@@ -162,7 +162,7 @@ describe("attentionItems", () => {
 
     expect(taal).toHaveLength(1);
     expect(taal[0].title).toContain("XX");
-    expect(taal[0].detail).toContain("Batch 2 · 30-07");
+    expect(taal[0].detail).toContain("Middagronde · 30 jul");
   });
 
   it("kijkt niet meer naar een ronde die uit de lijst is gehaald", () => {

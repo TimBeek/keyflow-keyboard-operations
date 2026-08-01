@@ -60,7 +60,7 @@ export function noviplyHistory(
     .map((row): NoviplyHistoryEntry => ({
       id: `run-${row.id}`,
       source: "run",
-      sourceLabel: batchLabel(batch),
+      sourceLabel: batchLabel(batch, "en"),
       brand: brandFromModel(row.model),
       model: row.model,
       layout: row.layout || row.languageCode,

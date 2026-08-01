@@ -808,8 +808,14 @@ export function EmployeeWorkspace({
       )}
 
       {tab === "advice" && (
-        <section className="worker-panel">
-          <div className="worker-fields">
+        /* Twee kolommen op een breed scherm: links wat je invult, rechts wat
+           eruit komt. Onder elkaar paste het niet op één scherm, en dan moet je
+           scrollen om te zien welk vel je moet pakken — precies het antwoord
+           waar je voor kwam. Onder de 1250 pixels valt het terug op onder
+           elkaar, want dan is er geen ruimte voor twee kolommen. */
+        <section className="worker-panel worker-split">
+          <div className="worker-vragen">
+          <div className="worker-fields worker-fields-advies">
             {/* De suggesties horen hier, tegen het veld waarin je typt. Ze
                 stonden onder alle vier de velden, dus je typte bovenaan en het
                 antwoord verscheen onder de prijsknoppen. */}
@@ -947,6 +953,7 @@ export function EmployeeWorkspace({
               </div>
             </fieldset>
           </div>
+          </div>
 
           {sterHelpOpen && (
             <MethodPhotoHelp
@@ -996,6 +1003,7 @@ export function EmployeeWorkspace({
             </div>
           )}
 
+          <div className="worker-uitkomst">
           {/* De bevestiging moet blijven staan nadat het model is leeggemaakt,
               anders verdwijnt met de laptop ook het bewijs dat het gelukt is. */}
           {!hasAnswer && adviceMessage && (
@@ -1407,6 +1415,7 @@ export function EmployeeWorkspace({
               )}
             </div>
           )}
+          </div>
         </section>
       )}
 

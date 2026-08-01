@@ -770,8 +770,16 @@ export function Dashboard({
    * Deze regel staat in de voet van elk scherm, dus ook in het hunne — en dan
    * hoort hij in hun taal te staan.
    */
+  /**
+   * Noviply werkt in het Engels. Dat gold al voor hun schermen, maar de korte
+   * meldingen na een handeling kwamen uit de gedeelde code en bleven Nederlands
+   * — dus stond er "Gevraagd aan de werkvloer…" onder een Engels scherm. Eén
+   * vlag hier, en elke melding die zij kunnen veroorzaken volgt hem.
+   */
+  const engelsScherm = role === "noviply";
+
   const syncLabel = (() => {
-    const engels = role === "noviply";
+    const engels = engelsScherm;
     if (!persistenceReady || sharedStatus === "loading") {
       return engels ? "Connecting to the database…" : "Verbinden met de database…";
     }
@@ -788,7 +796,12 @@ export function Dashboard({
     }
     if (waiting) return waiting;
     const moment = lastSyncedAt ? formatPersistenceTime(lastSyncedAt) : "";
-    if (engels) return `Shared with everyone${moment ? ` · updated ${moment}` : ""}`;
+    // Voor Noviply hoort hier te staan dát het scherm zichzelf bijhoudt. Zij
+    // wachten op werk dat van onze kant komt; zonder dat zinnetje gaan ze uit
+    // onzekerheid verversen, of erger: ze doen het niet en missen een ronde.
+    if (engels) {
+      return `Live — new runs and requests appear on their own${moment ? ` · last checked ${moment}` : ""}`;
+    }
     return `Gedeeld met iedereen${moment ? ` · bijgewerkt ${moment}` : ""}`;
   })();
 
@@ -1649,7 +1662,9 @@ export function Dashboard({
     try {
       const { settled } = await settleWholePrintBatch(batchId);
       await refreshSharedState();
-      setLastAction(`${settled} regels van de ronde op geprint gezet.`);
+      setLastAction(engelsScherm
+        ? `${settled} lines of the run marked as printed.`
+        : `${settled} regels van de ronde op geprint gezet.`);
     } catch (error) {
       setLastAction(error instanceof Error ? error.message : "Dat is niet gelukt.");
     }
@@ -1668,7 +1683,9 @@ export function Dashboard({
     try {
       await removePrintBatch(batchId);
       await refreshSharedState();
-      setLastAction("Ronde uit de lijst gehaald; de regels blijven in de geschiedenis staan.");
+      setLastAction(engelsScherm
+        ? "Run removed from the list. Anything already ticked off stays in the history."
+        : "Ronde uit de lijst gehaald; wat al is afgevinkt blijft in de geschiedenis staan.");
     } catch (error) {
       setLastAction(error instanceof Error ? error.message : "Dat is niet gelukt.");
     }
@@ -1688,10 +1705,16 @@ export function Dashboard({
       const { check, alreadyOpen } = await askPrinterCheck("");
       setPrinterChecks((current) => [check, ...current.filter((item) => item.id !== check.id)]);
       setLastAction(alreadyOpen
-        ? "Er stond al een vraag open bij de werkvloer."
-        : "Gevraagd aan de werkvloer of de printer klaarstaat.");
+        ? (engelsScherm
+          ? "A question was already open with the floor."
+          : "Er stond al een vraag open bij de werkvloer.")
+        : (engelsScherm
+          ? "Asked the floor whether the printer is ready."
+          : "Gevraagd aan de werkvloer of de printer klaarstaat."));
     } catch (error) {
-      setLastAction(error instanceof Error ? error.message : "De vraag kon niet worden gesteld.");
+      setLastAction(error instanceof Error
+        ? error.message
+        : (engelsScherm ? "The question could not be sent." : "De vraag kon niet worden gesteld."));
     }
   }
 
@@ -1718,7 +1741,9 @@ export function Dashboard({
     try {
       await closePrinterCheck(id);
       await refreshSharedState();
-      setLastAction("Doorgegeven dat Noviply is gaan printen.");
+      setLastAction(engelsScherm
+        ? "The floor has been told you are printing now."
+        : "Doorgegeven dat Noviply is gaan printen.");
     } catch (error) {
       setLastAction(error instanceof Error ? error.message : "Dat is niet gelukt.");
     }
@@ -2089,7 +2114,10 @@ export function Dashboard({
         </div>
       </aside>
 
-      <main className="main">
+      {/* De werkvloer krijgt een compactere kop: daar moet het hele scherm
+          zonder scrollen passen, en de titel hoeft niet even groot te zijn als
+          op een beheerscherm waar je toch al leest. */}
+      <main className={`main${role === "employee" ? " main-werkvloer" : ""}`}>
         <header className="topbar">
           <div>
             <p className="eyebrow">{headerDate}</p>

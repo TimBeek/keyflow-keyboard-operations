@@ -2,19 +2,22 @@ import { describe, expect, it } from "vitest";
 import {
   PrintBatchError,
   activeBatches,
+  batchDateLabel,
   batchIsDone,
-  completedBatches,
-  listedBatches,
+  batchLabel,
   batchNumberFromFileName,
   batchRowForOrder,
   batchRunDate,
+  batchRunName,
   batchSheetCount,
+  completedBatches,
   layoutForBatchCode,
+  listedBatches,
   openBatchRows,
   parsePrintBatch,
+  type PrintBatch,
   unknownLanguageRows,
   unseenBatches,
-  type PrintBatch,
 } from "./print-batch";
 
 /** Zoals het bestand er werkelijk uitkomt: datum, koprij, regels, lege staart. */
@@ -237,5 +240,45 @@ describe("batchRowForOrder", () => {
   it("geeft niets terug voor een order die er niet in staat", () => {
     expect(batchRowForOrder([batch()], "000012345")).toBeNull();
     expect(batchRowForOrder([batch()], "  ")).toBeNull();
+  });
+});
+
+describe("hoe een ronde heet", () => {
+  it("zegt ochtend en middag in plaats van een nummer", () => {
+    expect(batchRunName(1)).toBe("Ochtendronde");
+    expect(batchRunName(2)).toBe("Middagronde");
+    expect(batchRunName(1, "en")).toBe("Morning run");
+    expect(batchRunName(2, "en")).toBe("Afternoon run");
+  });
+
+  it("noemt een derde ronde een extra ronde", () => {
+    // Er komen er twee per dag. Een derde is een uitzondering en hoort niet
+    // "avondronde" te heten, want dat is hij niet.
+    expect(batchRunName(3)).toBe("Extra ronde 3");
+    expect(batchRunName(3, "en")).toBe("Extra run 3");
+  });
+
+  it("schrijft de maand uit", () => {
+    // 01-08 is hier 1 augustus en in een ander land 8 januari. Noviply zit in
+    // een ander land.
+    expect(batchDateLabel("2026-08-01", "nl")).toBe("1 aug");
+    expect(batchDateLabel("2026-08-01", "en")).toBe("1 Aug");
+    expect(batchDateLabel("2026-12-24", "en")).toBe("24 Dec");
+  });
+
+  it("hangt niet aan de klok", () => {
+    // Zonder jaartal blijft dit label hetzelfde, ook volgend jaar. Anders zou
+    // deze test op 1 januari omvallen zonder dat er iets veranderd is.
+    expect(batchDateLabel("2025-08-01", "en")).toBe("1 Aug");
+  });
+
+  it("zet naam en datum samen", () => {
+    const ronde = { runDate: "2026-08-01", batchNumber: 2 };
+    expect(batchLabel(ronde, "en")).toBe("Afternoon run · 1 Aug");
+    expect(batchLabel(ronde)).toBe("Middagronde · 1 aug");
+  });
+
+  it("valt terug op de ruwe datum als die niet te lezen is", () => {
+    expect(batchDateLabel("onzin", "en")).toBe("onzin");
   });
 });

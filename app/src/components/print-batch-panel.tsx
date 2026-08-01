@@ -67,7 +67,16 @@ export function PrintBatchPanel({
    * doen we niet: de regels zitten in de geschiedenis en de ronde is de herkomst
    * daarvan. Dus opzij, achter een mapje dat je open kunt klappen.
    */
-  const running = activeBatches(batches);
+  /**
+   * De rondes komen nieuwste-eerst uit de database, want dat is wat je wilt in
+   * een geschiedenis. Om te wérken klopt dat niet: de ochtendronde hoort vóór
+   * de middagronde, anders begin je standaard aan de jongste lijst terwijl de
+   * oudste nog openstaat. Hier dus oudste-eerst, en die staat ook meteen open.
+   */
+  const running = [...activeBatches(batches)].sort((links, rechts) =>
+    links.runDate === rechts.runDate
+      ? links.batchNumber - rechts.batchNumber
+      : links.runDate.localeCompare(rechts.runDate));
   const done = completedBatches(batches);
   const shown = batches.find((batch) => batch.id === openId)
     ?? running[0]
@@ -109,8 +118,9 @@ export function PrintBatchPanel({
         <div>
           <h3>Print runs</h3>
           <p>
-            The list from the order system, twice a day. Drop the file here and it
-            sits next to the extra requests — no more mail.
+            The order system sends its list twice a day and it appears here by
+            itself — no mail, nothing to load. Use “Add a run” only if a list has
+            to be added by hand.
           </p>
         </div>
         <div className="batch-upload">
@@ -132,8 +142,8 @@ export function PrintBatchPanel({
 
       {batches.length === 0 ? (
         <div className="empty">
-          No runs loaded yet. The file is called batch-1-… or batch-2-… and may be
-          .xlsx or .csv.
+          No runs yet today. The morning run arrives on its own; this page keeps
+          itself up to date, so there is no need to reload.
         </div>
       ) : (
         <>
@@ -154,13 +164,13 @@ export function PrintBatchPanel({
                   if (batch.seenAt === null) onSeen(batch.id);
                 }}
               >
-                {batchLabel(batch)}
+                {batchLabel(batch, "en")}
                 {batch.seenAt === null && <span className="batch-new" aria-label="New">•</span>}
               </button>
             ))}
             {running.length === 0 && (
               <span className="batch-none">
-                All done. Use “Add a run” to load the next one.
+                All done — nothing waiting. The next run appears here by itself.
               </span>
             )}
           </div>
@@ -179,7 +189,7 @@ export function PrintBatchPanel({
                       className={batch.id === shown?.id ? "active" : ""}
                       onClick={() => setOpenId(batch.id)}
                     >
-                      <b aria-hidden="true">✓</b> {batchLabel(batch)}
+                      <b aria-hidden="true">✓</b> {batchLabel(batch, "en")}
                       <small>{batchSheetCount(batch)} sheets</small>
                     </button>
                   ))}
@@ -213,13 +223,28 @@ export function PrintBatchPanel({
                       All {openBatchRows(shown)} printed
                     </button>
                   )}
-                  {/* Alleen als er niets meer openstaat: een ronde waar nog werk
-                      in zit hoort niet uit de lijst te kunnen verdwijnen. */}
-                  {batchIsDone(shown) && (
+                  {/* Ook een ronde met openstaande regels mag weg. Dat gebeurt
+                      echt: een proefronde, of een lijst die het ordersysteem
+                      dubbel of verkeerd heeft gestuurd. Zonder deze knop blijft
+                      die voor altijd bovenaan het werk staan. Wat je weggooit
+                      staat in de bevestiging, en de regels blijven in de
+                      geschiedenis. */}
+                  {(
                     confirmRemove === shown.id ? (
                       <span className="batch-confirm">
-                        <b>Remove this run from the list?</b>
-                        <small>The lines stay in the history.</small>
+                        <b>
+                          {openBatchRows(shown) > 0
+                            ? `Remove this run — ${openBatchRows(shown)} line(s) not printed?`
+                            : "Remove this run from the list?"}
+                        </b>
+                        <small>
+                          {/* De geschiedenis toont alleen wat is afgevinkt. Een
+                              regel die nooit is afgevinkt komt daar dus niet in
+                              terug, en dat hoort deze zin ook te zeggen. */}
+                          {openBatchRows(shown) > 0
+                            ? "Nobody will print them and they will not appear in the history. Anything already ticked off stays."
+                            : "The lines stay in the history."}
+                        </small>
                         <button
                           type="button"
                           className="danger-ghost-button"

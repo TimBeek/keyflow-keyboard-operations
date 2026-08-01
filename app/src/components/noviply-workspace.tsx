@@ -9,6 +9,7 @@ import {
 } from "@/domain/operations";
 import { dayKey } from "@/domain/reporting";
 import { NoviplyLogo } from "@/components/noviply-logo";
+import { RemotePrinterButton } from "@/components/remote-printer-button";
 import { trackpointLabel } from "@/domain/noviply-export";
 import {
   unavailableReasonEnglish,
@@ -40,6 +41,7 @@ import {
   searchNoviplyHistory,
 } from "@/domain/noviply-history";
 import {
+  activeBatches,
   batchLabel,
   batchSheetCount,
   unseenBatches,
@@ -134,6 +136,22 @@ export function NoviplyWorkspace({
   const [historyQuery, setHistoryQuery] = useState("");
 
   const totals = printRequestTotals(printRequests);
+  /**
+   * Wat er in de rondes zelf nog te doen is. Alleen de rondes die nog lopen:
+   * een afgeronde ronde telt niet mee in "nog te doen", en de regels ervan
+   * staan in de geschiedenis.
+   */
+  const runTotals = useMemo(() => {
+    const lopend = activeBatches(printBatches);
+    const regels = lopend.flatMap((batch) => batch.rows);
+    return {
+      open: regels.filter((row) => row.status === "open").length,
+      printed: regels.filter((row) => row.status === "printed").length,
+      sheets: regels
+        .filter((row) => row.status === "open")
+        .reduce((som, row) => som + row.quantity, 0),
+    };
+  }, [printBatches]);
   const open = printRequests
     .filter((request) => request.status === "requested")
     .sort((left, right) => left.requestedAt.localeCompare(right.requestedAt));
@@ -237,14 +255,47 @@ export function NoviplyWorkspace({
   return (
     <div className="noviply-workspace">
       {/* Hun eigen merk boven hun eigen scherm. Michael werkt hier de hele dag;
-          dan hoort het niet aan te voelen als een hoekje van onze app. */}
-      <NoviplyLogo />
+          dan hoort het niet aan te voelen als een hoekje van onze app.
+
+          De printerknop staat ernaast en niet op één tabblad: of je nu een
+          ronde uit het ordersysteem afwerkt of een losse aanvraag, de vraag
+          "staat de printer aan" komt op hetzelfde moment. */}
+      <div className="noviply-brandbalk">
+        <NoviplyLogo />
+        <RemotePrinterButton
+          printerChecks={printerChecks}
+          onAsk={onAskPrinterCheck}
+          onStartPrinting={onStartPrinting}
+        />
+      </div>
       {/* Vier kengetallen op elk scherm maakt van elk scherm een stapel. Ze
           horen bij het werk dat nog moet gebeuren, niet bij de kast of bij
           wat al is afgehandeld. */}
       {tab !== "history" && (
       <div className="noviply-totals">
-        {(tab === "runs" || tab === "orders") && (
+        {tab === "runs" && (
+        <>
+        {/* Op dit scherm gaan de getallen over de rondes en niet over de losse
+            aanvragen. Ze stonden op nul terwijl er drie regels open lagen, en
+            dan tellen ze iets anders dan waar je naar kijkt. */}
+        <article>
+          <span>TO DO</span>
+          <strong className={runTotals.open > 0 ? "attention" : ""}>{runTotals.open}</strong>
+          <small>lines waiting to be printed</small>
+        </article>
+        <article>
+          <span>SHEETS TODAY</span>
+          <strong>{runTotals.sheets}</strong>
+          <small>across the runs still open</small>
+        </article>
+        <article>
+          <span>PRINTED</span>
+          <strong>{runTotals.printed}</strong>
+          <small>lines ticked off in these runs</small>
+        </article>
+        </>
+        )}
+        {tab === "orders" && (
         <>
         <article>
           <span>TO DO</span>
@@ -287,7 +338,7 @@ export function NoviplyWorkspace({
           <span>
             <strong>
               {unseenBatches(printBatches).length === 1
-                ? `New print run: ${batchLabel(unseenBatches(printBatches)[0])}`
+                ? `New print run: ${batchLabel(unseenBatches(printBatches)[0], "en")}`
                 : `${unseenBatches(printBatches).length} new print runs`}
             </strong>
             <small>
@@ -310,7 +361,7 @@ export function NoviplyWorkspace({
               createPrintBatchCsv(batch.rows),
               noviplyExportFilename("run", new Date().toISOString()),
             );
-            setMessage(`Downloaded ${batchLabel(batch)}.`);
+            setMessage(`Downloaded ${batchLabel(batch, "en")}.`);
           }}
         />
       )}

@@ -166,9 +166,49 @@ export function parsePrintBatch(sheet: unknown[][]): ParsedBatch {
 
 /* ---------- wat de schermen ervan willen weten ---------- */
 
-export function batchLabel(batch: Pick<PrintBatch, "runDate" | "batchNumber">) {
-  const [, maand, dag] = batch.runDate.split("-");
-  return `Batch ${batch.batchNumber} · ${dag}-${maand}`;
+/**
+ * Hoe een ronde heet.
+ *
+ * "Batch 2" is een nummer waar je bij moet nadenken. Er komen er twee per dag —
+ * 's ochtends en rond half één — dus zeg dat gewoon: dan weet je meteen welke
+ * lijst voor je ligt zonder eerst de tijdstempel te zoeken. Komt er een keer een
+ * derde, dan is dat een extra ronde en heet hij ook zo.
+ */
+export function batchRunName(batchNumber: number, taal: Taal = "nl") {
+  if (batchNumber === 1) return taal === "en" ? "Morning run" : "Ochtendronde";
+  if (batchNumber === 2) return taal === "en" ? "Afternoon run" : "Middagronde";
+  return taal === "en" ? `Extra run ${batchNumber}` : `Extra ronde ${batchNumber}`;
+}
+
+export type Taal = "nl" | "en";
+
+const maandenKort: Record<Taal, string[]> = {
+  nl: ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"],
+  en: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+};
+
+/**
+ * De datum als "1 aug" in plaats van "01-08". Twee getallen met een streepje
+ * ertussen leest iedereen anders — 01-08 is hier 1 augustus en elders 8 januari
+ * — en Noviply zit in een ander land. Een maandnaam kan maar één ding
+ * betekenen.
+ */
+export function batchDateLabel(runDate: string, taal: Taal = "nl") {
+  // Zonder jaartal. Een ronde is een dagelijkse werklijst — je kijkt naar
+  // vandaag of hooguit een paar dagen terug — en in de geschiedenis staat bij
+  // elke regel al een volledige datum en tijd. Een jaartal in het tabblad is
+  // dan alleen maar langer.
+  const [, maand, dag] = runDate.split("-");
+  const naam = maandenKort[taal][Number(maand) - 1];
+  if (!naam) return runDate;
+  return `${Number(dag)} ${naam}`;
+}
+
+export function batchLabel(
+  batch: Pick<PrintBatch, "runDate" | "batchNumber">,
+  taal: Taal = "nl",
+) {
+  return `${batchRunName(batch.batchNumber, taal)} · ${batchDateLabel(batch.runDate, taal)}`;
 }
 
 export function openBatchRows(batch: PrintBatch) {

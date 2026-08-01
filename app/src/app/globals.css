@@ -120,6 +120,14 @@ td, th, .tabular { font-variant-numeric: tabular-nums; }
 .eyebrow { color: var(--text-2) !important; font-size: 12.5px !important; font-weight: 800; letter-spacing: 1.2px; }
 .topbar h1 { margin: 4px 0 6px; font-size: clamp(25px, 2.5vw, 34px); line-height: 1.1; letter-spacing: -.7px; }
 .topbar p { margin: 0; color: var(--muted); font-size: 15px; }
+
+/* Op de werkvloer telt elke pixel: alles moet zonder scrollen op één scherm.
+   De kop zegt daar wat het scherm is en verder niets, dus die mag kleiner. */
+.main-werkvloer { padding-top: 22px; }
+.main-werkvloer .topbar { margin-bottom: 16px; }
+.main-werkvloer .topbar h1 { margin: 2px 0 3px; font-size: clamp(21px, 1.7vw, 26px); }
+.main-werkvloer .topbar p { font-size: 13.5px; }
+.main-werkvloer .eyebrow { font-size: 11.5px !important; }
 .top-actions { display: flex; align-items: center; gap: 12px; }
 .role-switcher { display: grid; gap: 4px; }
 .role-switcher > span { color: var(--text-2); font-size: 11px; font-weight: 900; letter-spacing: .7px; }
@@ -1492,7 +1500,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 
 .worker-tabs { display: flex; gap: 8px; }
 .worker-tabs button {
-  min-height: 52px; padding: 0 26px; border: 1px solid var(--line);
+  min-height: 48px; padding: 0 24px; border: 1px solid var(--line);
   border-radius: 14px; background: var(--surface); color: var(--text-2);
   font-size: 16px; font-weight: 620;
 }
@@ -1502,12 +1510,50 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 }
 
 .worker-panel {
-  display: grid; gap: 18px; padding: 22px;
+  display: grid; gap: 18px; padding: 18px;
   background: var(--surface); border: 1px solid var(--line);
   border-radius: 18px; box-shadow: var(--shadow);
 }
 
 .worker-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; align-items: start; }
+
+/* ── Alles op één scherm ──────────────────────────────────────────────────
+   De vier vragen stonden boven het antwoord, en het antwoord viel daardoor
+   onder de vouw: je vulde iets in en moest scrollen om te lezen welk vel je
+   moest pakken. Nu staan de vragen links en de uitkomst rechts, zodat allebei
+   tegelijk in beeld staan.
+
+   Er was ook ruimte over: de vragen stonden in drie kolommen waarvan de derde
+   leeg bleef, en stap 3 en 4 liepen over de volle breedte terwijl hun knoppen
+   maar een kwart gebruikten. In twee kolommen vult dat zichzelf op, en de knop
+   "het toetsenbord is al goed" komt naast stap 2 te staan in plaats van op een
+   eigen regel. */
+.worker-vragen, .worker-uitkomst { display: grid; gap: 16px; min-width: 0; align-content: start; }
+
+.worker-fields-advies { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.worker-fields-advies .worker-variants { grid-column: 1; }
+/* Twee vaste vakken naast elkaar in plaats van naast elkaar passen. In een
+   kolom van 300 pixels vielen E1 en E2 onder elkaar, en dan lijkt E2 een
+   antwoord op iets anders dan E1. */
+.worker-fields-advies .worker-variants > div { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.worker-fields-advies .worker-variants button { min-width: 0; padding: 12px 8px; }
+.worker-fields-advies .already-correct { grid-column: 2; align-self: end; }
+
+/* Vaste breedte voor de vragen, de rest voor het antwoord. Met percentages
+   werden bij 1600 pixels állebei de kolommen te smal: de E1/E2-knoppen vielen
+   op twee regels en het hangmapnummer sprong onder de naam. Zo houden de vragen
+   altijd precies genoeg, en gaat elke pixel extra naar de kant waar het
+   antwoord staat.
+
+   De grens ligt op 1560 omdat hij daar gemeten is: daarboven wint twee kolommen
+   (1600 breed: 1075 pixels hoog tegen 1254 onder elkaar), daaronder verliest hij
+   omdat het antwoord dan zo smal wordt dat alles binnenin gaat wrappen. */
+@media (min-width: 1560px) {
+  .worker-split { grid-template-columns: minmax(0, 620px) minmax(0, 1fr); align-items: start; }
+  /* Vul je iets in onderaan de linkerkolom, dan blijft het antwoord staan waar
+     het stond in plaats van mee te schuiven. */
+  .worker-split > .worker-uitkomst { position: sticky; top: 12px; }
+}
 .worker-fields.receive { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr); }
 .worker-fields .wide { grid-column: span 1; }
 .worker-fields label { display: grid; gap: 8px; min-width: 0; }
@@ -1552,7 +1598,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 
 /* het antwoord */
 .answer {
-  display: grid; gap: 18px; padding: 24px; border-radius: 16px;
+  display: grid; gap: 14px; padding: 19px; border-radius: 16px;
   border: 2px solid var(--signal-line);
   background: linear-gradient(150deg, var(--signal-soft), transparent 60%);
 }
@@ -1561,22 +1607,22 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 .answer-head > div > span {
   display: block; color: var(--signal); font-size: 12px; font-weight: 700; letter-spacing: .09em;
 }
-.answer-head h2 { margin: 7px 0 4px; font-size: 30px; font-weight: 720; letter-spacing: -.03em; }
+.answer-head h2 { margin: 5px 0 3px; font-size: 27px; font-weight: 720; letter-spacing: -.03em; }
 .answer-head p { margin: 0; color: var(--text-2); font-size: 15px; }
 
-.answer-slot { flex: 0 0 auto; text-align: center; padding: 12px 24px; border-radius: 14px; background: var(--surface); border: 1px solid var(--signal-line); }
+.answer-slot { flex: 0 0 auto; text-align: center; padding: 10px 20px; border-radius: 14px; background: var(--surface); border: 1px solid var(--signal-line); }
 .answer-slot span { display: block; color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .1em; }
-.answer-slot strong { display: block; margin-top: 2px; color: var(--signal); font-size: 52px; font-weight: 760; letter-spacing: -.045em; line-height: 1; }
+.answer-slot strong { display: block; margin-top: 2px; color: var(--signal); font-size: 44px; font-weight: 760; letter-spacing: -.045em; line-height: 1; }
 
 /* E1/E2 telt zwaar: dit is de verwisseling die het vaakst misgaat */
 .answer-facts { display: flex; flex-wrap: wrap; gap: 10px; margin: 0; }
-.answer-facts > div { flex: 1 1 160px; padding: 13px 16px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); }
+.answer-facts > div { flex: 1 1 150px; padding: 10px 14px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); }
 .answer-facts dt { color: var(--muted); font-size: 11.5px; font-weight: 640; letter-spacing: .05em; text-transform: uppercase; }
-.answer-facts dd { margin: 6px 0 0; color: var(--text); font-size: 21px; font-weight: 700; letter-spacing: -.02em; }
-.answer-facts > div:nth-child(2) dd { color: var(--signal); font-size: 26px; }
+.answer-facts dd { margin: 4px 0 0; color: var(--text); font-size: 19px; font-weight: 700; letter-spacing: -.02em; }
+.answer-facts > div:nth-child(2) dd { color: var(--signal); font-size: 23px; }
 .answer-alternatives { margin: 9px 2px 0; color: var(--muted); font-size: 12.5px; }
 
-.answer-todo { padding: 17px 19px; border-radius: 12px; background: var(--surface); border-left: 4px solid var(--ok); }
+.answer-todo { padding: 13px 17px; border-radius: 12px; background: var(--surface); border-left: 4px solid var(--ok); }
 /* Was een kort kopje in hoofdletters. Er staat nu een hele vraag, en een zin
    in kapitalen leest twee keer zo langzaam. */
 /* De uitwegen: aanwezig maar niet even hard als de handeling zelf. */
@@ -1726,7 +1772,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
    wordt de ene tegel twee keer zo hoog als de andere en gaat de kop schuiven.
    Bijgesneden verliest niemand iets — de hele foto is één tik verderop. */
 .answer-photo {
-  flex: 0 0 auto; display: grid; width: 172px; padding: 0; overflow: hidden;
+  flex: 0 0 auto; display: grid; width: 156px; padding: 0; overflow: hidden;
   border: 1px solid var(--line); border-radius: 13px;
   background: var(--surface); cursor: pointer; text-align: left;
 }
@@ -1736,7 +1782,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 .answer.tone-stock .answer-photo { border-color: color-mix(in srgb, var(--tier-stock) 46%, transparent); }
 .answer.tone-premium .answer-photo { border-color: color-mix(in srgb, var(--tier-premium) 50%, transparent); }
 .answer.tone-professional .answer-photo { border-color: color-mix(in srgb, var(--tier-professional) 50%, transparent); }
-.answer-photo img { display: block; width: 100%; height: 104px; object-fit: cover; object-position: center; }
+.answer-photo img { display: block; width: 100%; height: 86px; object-fit: cover; object-position: center; }
 .answer-photo-hint {
   padding: 6px 10px; border-top: 1px solid var(--line-soft); background: var(--surface-2);
   color: var(--text-2); font-size: 11px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
@@ -3284,7 +3330,55 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 /* Het merk van Noviply boven hun eigen scherm. Rustig en aan de rand: het is
    een herkenningspunt, geen reclame. De hoogte staat vast zodat de rest van het
    scherm niet verspringt als hun bestand later een andere verhouding heeft. */
-.noviply-logo { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+.noviply-logo { display: flex; align-items: center; gap: 14px; }
+
+/* ── De balk boven het Noviply-scherm ─────────────────────────────────────
+   Links hun merk, rechts de printer. Die knop stond eerst alleen op het
+   aanvragenscherm, terwijl de vraag "staat de printer aan" net zo goed hoort
+   bij een ronde uit het ordersysteem. Hier staat hij op elk tabblad, en zegt
+   hij in één regel hoe het ervoor staat. */
+.noviply-brandbalk {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 14px; margin-bottom: 18px;
+}
+/* Naast het partnerlabel, niet aan de overkant van het scherm: het hoort bij
+   het printen, niet bij de accountknoppen rechtsboven. */
+.noviply-brandbalk .noviply-logo { flex: 0 0 auto; }
+
+.printer-chip {
+  display: flex; align-items: center; gap: 11px;
+  min-height: 52px; padding: 8px 16px; text-align: left;
+  border: 1px solid var(--line); border-radius: 14px;
+  background: var(--surface); color: var(--text);
+}
+.printer-chip-text { display: grid; gap: 1px; min-width: 0; }
+.printer-chip-text b { color: var(--text); font-size: 13.5px; font-weight: 700; line-height: 1.3; }
+.printer-chip-text small { color: var(--text-2); font-size: 11.5px; line-height: 1.3; }
+.printer-chip-icon { display: grid; place-items: center; flex: none; width: 34px; height: 34px; border-radius: 10px; background: var(--signal-soft); color: var(--signal); }
+
+/* Vragen is een handeling, dus dit is een knop en ziet er ook zo uit. */
+.printer-chip.is-action { cursor: pointer; border-color: var(--signal-line); }
+.printer-chip.is-action:hover { background: var(--signal-soft); }
+.printer-chip.is-action:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+.printer-chip.is-sending { opacity: .75; cursor: default; }
+
+/* Wachten en niet-klaar zijn geen fouten maar wel iets om te weten: amber, net
+   als elders in dit scherm iets dat op iemand anders wacht. */
+.printer-chip.is-waiting { border-color: color-mix(in srgb, var(--warn) 40%, transparent); background: var(--warn-soft); }
+.printer-chip.is-blocked { border-color: color-mix(in srgb, var(--warn) 45%, transparent); background: var(--warn-soft); }
+.printer-chip.is-blocked .printer-chip-icon { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+.printer-chip.is-blocked .printer-chip-text small { color: var(--text); }
+
+.printer-chip.is-ready { border-color: color-mix(in srgb, var(--ok) 42%, transparent); background: var(--ok-soft); }
+.printer-chip-go {
+  flex: none; min-height: 38px; padding: 0 15px; border: 1px solid transparent; border-radius: 11px;
+  background: var(--ok); color: #FFFFFF; font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.printer-chip-go:hover { filter: brightness(1.06); }
+
+@media (max-width: 700px) {
+  .noviply-brandbalk { align-items: stretch; }
+  .printer-chip { width: 100%; }
+}
 /* Hun logo is gemaakt voor een witte ondergrond en heeft die ook in het
    bestand. Zonder eigen vlak staat er dus een wit rechthoekje midden in een
    grijs scherm, alsof er iets is uitgeknipt. Op een eigen kaartje ziet het

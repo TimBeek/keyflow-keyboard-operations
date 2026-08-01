@@ -91,7 +91,7 @@ describe("noviplyHistory", () => {
   it("zegt uit welke ronde een regel komt", () => {
     const uitRonde = noviplyHistory([], [batch()]).find((e) => e.orderReference === "000099263");
 
-    expect(uitRonde?.sourceLabel).toBe("Batch 2 · 30-07");
+    expect(uitRonde?.sourceLabel).toBe("Afternoon run · 30 Jul");
     expect(uitRonde?.brand).toBe("HP");
     expect(uitRonde?.quantity).toBe(2);
   });
@@ -112,7 +112,7 @@ describe("noviplyHistory", () => {
     expect(geschiedenis).toHaveLength(2);
     expect(geschiedenis.map((entry) => entry.orderReference))
       .toEqual(["000099288", "000099263"]);
-    expect(geschiedenis[1].sourceLabel).toBe("Batch 2 · 30-07");
+    expect(geschiedenis[1].sourceLabel).toBe("Afternoon run · 30 Jul");
   });
 
   it("valt terug op de landcode als de taal onbekend is", () => {
