@@ -4,6 +4,7 @@ import readXlsxFile from "read-excel-file/node";
 import { z } from "zod";
 import {
   PrintBatchError,
+  batchNumberForTime,
   batchNumberFromFileName,
   parsePrintBatch,
   type ParsedBatch,
@@ -280,6 +281,15 @@ export async function storePrintBatch(input: {
  * krijgt de bestaande ronde terug, want twee keer dezelfde lijst betekent twee
  * keer printen.
  */
+/** De klok in Nederland; de server staat ergens anders. */
+function nederlandseTijd(nu = new Date()) {
+  const delen = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/Amsterdam", hour: "2-digit", minute: "2-digit", hour12: false,
+  }).formatToParts(nu);
+  const kies = (naam: string) => Number(delen.find((d) => d.type === naam)?.value ?? "0");
+  return { uur: kies("hour"), minuut: kies("minute") };
+}
+
 async function bestaandOfVolgendNummer(runDate: string, fingerprint: string) {
   const sql = database();
   const [zelfde] = await sql<{ batch_number: number }[]>`
@@ -289,11 +299,18 @@ async function bestaandOfVolgendNummer(runDate: string, fingerprint: string) {
   `;
   if (zelfde) return { number: zelfde.batch_number, herhaald: true };
 
-  const [laatste] = await sql<{ hoogste: number | null }[]>`
-    select max(batch_number) as hoogste from print_batches
+  const bezet = await sql<{ batch_number: number }[]>`
+    select batch_number from print_batches
     where run_date = ${runDate} and deleted_at is null
   `;
-  const volgende = (laatste?.hoogste ?? 0) + 1;
+  const genomen = new Set(bezet.map((rij) => rij.batch_number));
+
+  // Het uur van de dag bepaalt of dit de ochtend- of de middagronde is. Is dat
+  // nummer al bezet, dan schuift hij op naar het eerste vrije: dan is het een
+  // extra ronde, en dat is hij dan ook.
+  const nu = nederlandseTijd();
+  let volgende = batchNumberForTime(nu.uur, nu.minuut);
+  while (genomen.has(volgende) && volgende <= 9) volgende += 1;
   if (volgende > 9) {
     throw new PrintBatchError(
       `Er staan vandaag al negen rondes. Geef zelf een rondenummer op als dit er echt bij hoort.`,

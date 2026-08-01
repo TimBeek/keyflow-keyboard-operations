@@ -204,6 +204,27 @@ export function batchDateLabel(runDate: string, taal: Taal = "nl") {
   return `${Number(dag)} ${naam}`;
 }
 
+/**
+ * Welk rondenummer hoort bij dit tijdstip?
+ *
+ * Doortellen op wat er die dag al staat leek logisch, maar dan bepaalt de
+ * volgorde van binnenkomst de naam: één proeflevering 's ochtends en de echte
+ * ochtendronde erna heet "middagronde". Het uur van de dag weet het beter. Voor
+ * half één is het de ochtendronde, daarna de middagronde — precies de twee
+ * momenten waarop het ordersysteem zijn lijst maakt.
+ *
+ * Is dat nummer al bezet, dan pakt de aanroeper het eerstvolgende vrije; dan is
+ * het een extra ronde en heet hij ook zo.
+ */
+export const middagVanafUur = 12;
+export const middagVanafMinuut = 30;
+
+export function batchNumberForTime(uur: number, minuut: number) {
+  const naMiddag = uur > middagVanafUur
+    || (uur === middagVanafUur && minuut >= middagVanafMinuut);
+  return naMiddag ? 2 : 1;
+}
+
 export function batchLabel(
   batch: Pick<PrintBatch, "runDate" | "batchNumber">,
   taal: Taal = "nl",

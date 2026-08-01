@@ -70,9 +70,16 @@ zijn twee vellen; ontdubbelen zou de tweede laptop een vel tekortdoen.
 ### Datum en rondenummer
 
 Zonder verdere opgave wordt de ronde op vandaag geboekt (Nederlandse tijd) en
-krijgt hij het eerstvolgende nummer van die dag: de ochtendlevering wordt ronde
-1, de middaglevering ronde 2. Wil het ordersysteem het zelf bepalen — bijvoorbeeld
-om een ronde van gisteren na te sturen — dan kan de lijst in een omhulsel:
+bepaalt het tijdstip welke ronde het is: vóór 12:30 is het de ochtendronde
+(nummer 1), daarna de middagronde (nummer 2). Is dat nummer al bezet, dan schuift
+hij op naar het eerste vrije nummer en heet hij "extra ronde".
+
+Bewust de klok en niet een teller: met doortellen bepaalt de volgorde van
+binnenkomst de naam, en dan heet de echte ochtendronde "middagronde" omdat er
+eerder die ochtend een proeflevering langskwam.
+
+Wil het ordersysteem het zelf bepalen — bijvoorbeeld om een ronde van gisteren
+na te sturen — dan kan de lijst in een omhulsel:
 
 ```json
 {

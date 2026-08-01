@@ -5,6 +5,7 @@ import {
   batchDateLabel,
   batchIsDone,
   batchLabel,
+  batchNumberForTime,
   batchNumberFromFileName,
   batchRowForOrder,
   batchRunDate,
@@ -280,5 +281,25 @@ describe("hoe een ronde heet", () => {
 
   it("valt terug op de ruwe datum als die niet te lezen is", () => {
     expect(batchDateLabel("onzin", "en")).toBe("onzin");
+  });
+});
+
+describe("welk rondenummer bij welk tijdstip", () => {
+  it("noemt alles vóór half één de ochtendronde", () => {
+    expect(batchNumberForTime(7, 0)).toBe(1);
+    expect(batchNumberForTime(9, 57)).toBe(1);
+    expect(batchNumberForTime(12, 29)).toBe(1);
+  });
+
+  it("noemt vanaf half één de middagronde", () => {
+    expect(batchNumberForTime(12, 30)).toBe(2);
+    expect(batchNumberForTime(13, 5)).toBe(2);
+    expect(batchNumberForTime(17, 0)).toBe(2);
+  });
+
+  it("laat de klok beslissen en niet de volgorde van binnenkomst", () => {
+    // Dit was het probleem: een proeflevering 's ochtends pakte nummer 1, en
+    // de echte ochtendronde erna heette daardoor "middagronde".
+    expect(batchNumberForTime(9, 57)).toBe(batchNumberForTime(8, 15));
   });
 });
