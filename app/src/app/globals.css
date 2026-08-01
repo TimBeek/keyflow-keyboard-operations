@@ -3254,30 +3254,37 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 /* Voltooide rondes staan opzij, niet tussen het werk. Weggooien doen we niet:
    de regels zitten in de geschiedenis en de ronde is de herkomst daarvan. */
 .batch-none { color: var(--text-3); font-size: 13px; align-self: center; }
-.batch-archive { margin: -4px 0 14px; }
-.batch-archive > button {
-  padding: 6px 2px;
-  border: 0;
-  background: none;
-  color: var(--text-2);
-  font-size: 12.5px;
-  font-weight: 700;
+/* ── Openstaand of afgerond ───────────────────────────────────────────────
+   De afgeronde rondes zaten in een uitklapper onder de openstaande. Dan staan
+   er twee rijen met rondeknoppen door elkaar en moet je zien welke bij welke
+   hoort. Twee tabbladen: eerst zeggen waar je naar kijkt, dan één rij rondes.
+
+   Bewust zwaarder dan de rondeknoppen eronder: dit is de hoofdindeling, die
+   ernaast is de keuze binnen die indeling. */
+.batch-groepen {
+  display: inline-flex; gap: 3px; margin-bottom: 12px; padding: 3px;
+  border: 1px solid var(--line); border-radius: 13px; background: var(--surface-2);
 }
-.batch-archive-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
-.batch-archive-list button {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 7px;
-  padding: 8px 14px;
-  border: 1px solid var(--line-soft);
-  border-radius: 999px;
-  background: var(--surface-2);
-  color: var(--text-2);
-  font-size: 12.5px;
+.batch-groepen button {
+  display: inline-flex; align-items: center; gap: 8px;
+  min-height: 38px; padding: 0 15px; border: 0; border-radius: 10px;
+  background: transparent; color: var(--text-2);
+  font-size: 13.5px; font-weight: 700; cursor: pointer;
 }
-.batch-archive-list button.active { border-color: var(--signal); color: var(--text); }
-.batch-archive-list b { color: var(--ok); }
-.batch-archive-list small { color: var(--text-3); font-size: 11.5px; }
+.batch-groepen button span {
+  min-width: 21px; padding: 1px 6px; border-radius: 999px;
+  background: var(--raised); color: var(--text-2);
+  font-size: 11.5px; font-weight: 800; text-align: center;
+}
+.batch-groepen button.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+.batch-groepen button.active span { background: var(--signal); color: var(--signal-ink); }
+.batch-groepen button:disabled { opacity: .45; cursor: default; }
+.batch-groepen button:hover:not(.active):not(:disabled) { color: var(--text); }
+/* Een nieuwe ronde die je nog niet hebt geopend, ook zichtbaar als je op het
+   andere tabblad staat. */
+.batch-groep-nieuw { color: var(--signal); font-size: 19px; font-style: normal; line-height: 0; }
+
+.batch-tabs .batch-af { color: var(--ok); font-size: 13px; }
 
 /* Zoeken in de geschiedenis: één veld dat op ordernummer, model, taal en ronde
    kijkt. Meerdere woorden moeten allemaal voorkomen. */
@@ -3605,14 +3612,13 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
   .row-action, .fault-list button, .noviply-panel-head > button,
   .noviply-actions .primary-button, .noviply-actions button, .noviply-blocked button,
   .batch-row-actions button, .batch-blocked button, .batch-tabs button,
-  .batch-archive > button, .batch-archive-list button,
+  .batch-groepen button,
   .sku-edit button, .catalog-result-line button,
   .secondary-button, .primary-button, .employee-primary,
   .settings-grid select, .policy-editor select,
   .layout-rules select, .layout-rules input { min-height: 44px; height: auto; }
 
-  .row-action, .sku-edit button, .catalog-result-line button,
-  .batch-archive > button { padding: 0 14px; }
+  .row-action, .sku-edit button, .catalog-result-line button { padding: 0 14px; }
   .panel-heading button { min-height: 44px; padding: 0 12px; }
   .panel-heading .more-button { min-width: 44px; }
   .stepper { height: 48px; grid-template-columns: 48px 1fr 48px; }
@@ -3749,15 +3755,28 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
    laptop in één klik af. Hij stond gestippeld en grijs en viel daardoor weg
    tegen de achtergrond. Nu leest hij als de andere keuzeknoppen op dit scherm,
    met de groene rand van "hier hoeft niets meer". */
+/* Deze knop stond als groen blok met een dubbele rand tussen knoppen met een
+   dunne lijn eromheen; hij las als een waarschuwing in plaats van als een keuze.
+   Nu dezelfde vorm als de E1/E2-knoppen ernaast — vinkje, vette regel, kleine
+   regel eronder — en groen alleen als accent. Het is een uitweg, geen alarm. */
 .already-correct { margin: -2px 0 6px; }
 .already-correct button {
-  width: 100%; min-height: 56px; padding: 8px 18px;
-  border: 2px solid var(--ok); border-radius: 12px;
-  background: var(--ok-soft); color: var(--ok);
-  font-size: 15px; font-weight: 800; cursor: pointer;
-  transition: background .15s, color .15s;
+  display: flex; align-items: center; gap: 11px; text-align: left;
+  width: 100%; min-height: 56px; padding: 9px 14px;
+  border: 1px solid var(--line); border-radius: 14px;
+  background: var(--surface); color: var(--text);
+  cursor: pointer; transition: border-color .15s, background .15s;
 }
-.already-correct button:hover { background: var(--ok); color: #fff; }
+.already-correct button > span:last-child { display: grid; gap: 1px; min-width: 0; }
+.already-correct button strong { color: var(--text); font-size: 15px; font-weight: 800; }
+.already-correct button small { color: var(--muted); font-size: 11.5px; }
+.already-correct-vink {
+  display: grid; place-items: center; flex: none; width: 30px; height: 30px;
+  border-radius: 9px; background: var(--ok-soft); color: var(--ok);
+}
+.already-correct button:hover { border-color: var(--ok); background: var(--ok-soft); }
+.already-correct button:hover strong { color: var(--ok); }
+.already-correct button:focus-visible { outline: 2px solid var(--ok); outline-offset: 2px; }
 
 /* De stap erachter: eerst het ordernummer, dan pas afronden. Dezelfde volgorde
    als overal — wat je invult staat boven de knop die het gebruikt. */

@@ -57,7 +57,6 @@ export function PrintBatchPanel({
   const [blockedNote, setBlockedNote] = useState("");
   // Welke ronde openstaat. De nieuwste die nog loopt, tenzij iemand kiest.
   const [openId, setOpenId] = useState<string | null>(null);
-  const [archiveOpen, setArchiveOpen] = useState(false);
   // Uit de lijst halen vraagt een bevestiging: het is zelden wat je bedoelt, en
   // de knop staat naast knoppen die je wel vaak gebruikt.
   const [confirmRemove, setConfirmRemove] = useState("");
@@ -78,9 +77,18 @@ export function PrintBatchPanel({
       ? links.batchNumber - rechts.batchNumber
       : links.runDate.localeCompare(rechts.runDate));
   const done = completedBatches(batches);
-  const shown = batches.find((batch) => batch.id === openId)
-    ?? running[0]
-    ?? done[0]
+  /**
+   * Openstaand of afgerond — daar kijk je nooit tegelijk naar. Staat er niets
+   * meer open, dan begint hij bij de afgeronde; anders zou het scherm leeg zijn
+   * terwijl er wel iets te zien is.
+   */
+  const [groep, setGroep] = useState<"open" | "done">("open");
+  const effectieveGroep = groep === "open" && running.length === 0 && done.length > 0
+    ? "done"
+    : groep;
+  const inGroep = effectieveGroep === "open" ? running : done;
+  const shown = inGroep.find((batch) => batch.id === openId)
+    ?? inGroep[0]
     ?? null;
 
   async function pick(file: File | null | undefined) {
@@ -93,7 +101,7 @@ export function PrintBatchPanel({
         ? (result.sameFile
           ? "This run was already loaded — nothing was duplicated."
           : "A run with this number already exists for that day. It was not overwritten.")
-        : `${result.rows} lines loaded.`);
+        : `${result.rows} ${result.rows === 1 ? "line" : "lines"} loaded.`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Loading the file failed.");
     } finally {
@@ -147,12 +155,43 @@ export function PrintBatchPanel({
         </div>
       ) : (
         <>
+          {/* Twee groepen, twee tabbladen. Afgeronde rondes zaten in een
+              uitklapper ónder de openstaande, en dan staan er twee rijen met
+              rondeknoppen door elkaar en moet je zien welke bij welke hoort.
+              Zo is er één rij, en zeg je eerst waar je naar kijkt. */}
+          <div className="batch-groepen" role="tablist" aria-label="Which runs to show">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={effectieveGroep === "open"}
+              className={effectieveGroep === "open" ? "active" : ""}
+              onClick={() => { setGroep("open"); setOpenId(null); }}
+            >
+              To do
+              <span>{running.length}</span>
+              {running.some((batch) => batch.seenAt === null) && (
+                <em className="batch-groep-nieuw" aria-label="Includes a new run">•</em>
+              )}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={effectieveGroep === "done"}
+              className={effectieveGroep === "done" ? "active" : ""}
+              onClick={() => { setGroep("done"); setOpenId(null); }}
+              disabled={done.length === 0}
+            >
+              Completed
+              <span>{done.length}</span>
+            </button>
+          </div>
+
           <div className="batch-tabs" role="tablist">
             {/* Geen afkapping meer op zes. Michael werkt de rondes van boven
                 naar beneden af; staat er een zevende open, dan viel de oudste
                 stil uit de tabbladen en bleef die voor altijd onafgemaakt. De
                 strook schuift liever dan dat er werk verdwijnt. */}
-            {running.map((batch) => (
+            {inGroep.map((batch) => (
               <button
                 key={batch.id}
                 role="tab"
@@ -164,45 +203,28 @@ export function PrintBatchPanel({
                   if (batch.seenAt === null) onSeen(batch.id);
                 }}
               >
+                {effectieveGroep === "done" && <b className="batch-af" aria-hidden="true">✓</b>}
                 {batchLabel(batch, "en")}
                 {batch.seenAt === null && <span className="batch-new" aria-label="New">•</span>}
               </button>
             ))}
-            {running.length === 0 && (
+            {inGroep.length === 0 && (
               <span className="batch-none">
-                All done — nothing waiting. The next run appears here by itself.
+                {effectieveGroep === "open"
+                  ? "All done — nothing waiting. The next run appears here by itself."
+                  : "Nothing completed yet."}
               </span>
             )}
           </div>
-
-          {done.length > 0 && (
-            <div className="batch-archive">
-              <button type="button" onClick={() => setArchiveOpen((open) => !open)}>
-                {archiveOpen ? "▾" : "▸"} Completed runs ({done.length})
-              </button>
-              {archiveOpen && (
-                <div className="batch-archive-list">
-                  {done.map((batch) => (
-                    <button
-                      key={batch.id}
-                      type="button"
-                      className={batch.id === shown?.id ? "active" : ""}
-                      onClick={() => setOpenId(batch.id)}
-                    >
-                      <b aria-hidden="true">✓</b> {batchLabel(batch, "en")}
-                      <small>{batchSheetCount(batch)} sheets</small>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
 
           {shown && (
             <>
               <div className="batch-summary">
                 <span>
-                  <b>{batchSheetCount(shown)}</b> sheets · {shown.rows.length} lines ·{" "}
+                  {/* Eén vel is geen "1 sheets". Het valt op omdat het er
+                      altijd staat, boven elke ronde. */}
+                  <b>{batchSheetCount(shown)}</b> {batchSheetCount(shown) === 1 ? "sheet" : "sheets"} ·{" "}
+                  {shown.rows.length} {shown.rows.length === 1 ? "line" : "lines"} ·{" "}
                   {batchIsDone(shown)
                     ? "all done"
                     : `${openBatchRows(shown)} still open`}
@@ -234,7 +256,7 @@ export function PrintBatchPanel({
                       <span className="batch-confirm">
                         <b>
                           {openBatchRows(shown) > 0
-                            ? `Remove this run — ${openBatchRows(shown)} line(s) not printed?`
+                            ? `Remove this run — ${openBatchRows(shown)} ${openBatchRows(shown) === 1 ? "line" : "lines"} not printed?`
                             : "Remove this run from the list?"}
                         </b>
                         <small>
@@ -281,8 +303,9 @@ export function PrintBatchPanel({
                 /* Een onbekende landcode is geen reden om de regel te weigeren —
                    Noviply print hem toch — maar wel om ernaar te laten kijken. */
                 <div className="batch-warning">
-                  {unknownLanguageRows(shown).length} line(s) have a language code ReKey
-                  does not know:{" "}
+                  {unknownLanguageRows(shown).length}{" "}
+                  {unknownLanguageRows(shown).length === 1 ? "line has" : "lines have"} a language
+                  code ReKey does not know:{" "}
                   {[...new Set(unknownLanguageRows(shown).map((row) => row.languageCode))].join(", ")}
                 </div>
               )}

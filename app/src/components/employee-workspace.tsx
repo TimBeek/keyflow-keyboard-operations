@@ -930,8 +930,20 @@ export function EmployeeWorkspace({
                     </div>
                   </div>
                 ) : (
+                  /* Dezelfde vorm als de knoppen ernaast: een vinkje, een
+                     vetgedrukte regel en een kleine eronder. Hij was een groen
+                     blok met een dubbele rand en sprong daardoor uit de rij —
+                     terwijl dit een uitweg is, niet de gewone weg. */
                   <button type="button" onClick={() => setAlreadyOpen(true)}>
-                    Het toetsenbord is al {targetLayout} — geen sticker nodig
+                    <span className="already-correct-vink" aria-hidden="true">
+                      <svg viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2.6">
+                        <path d="M4.5 10.5 8 14l7.5-8" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
+                    </span>
+                    <span>
+                      <strong>Al {targetLayout}</strong>
+                      <small>Geen sticker nodig</small>
+                    </span>
                   </button>
                 )}
               </div>

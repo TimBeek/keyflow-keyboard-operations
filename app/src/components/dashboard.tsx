@@ -1690,8 +1690,8 @@ export function Dashboard({
       const { settled } = await settleWholePrintBatch(batchId);
       await refreshSharedState();
       setLastAction(engelsScherm
-        ? `${settled} lines of the run marked as printed.`
-        : `${settled} regels van de ronde op geprint gezet.`);
+        ? `${settled} ${settled === 1 ? "line" : "lines"} of the run marked as printed.`
+        : `${settled} ${settled === 1 ? "regel" : "regels"} van de ronde op geprint gezet.`);
     } catch (error) {
       setLastAction(error instanceof Error ? error.message : "Dat is niet gelukt.");
     }
