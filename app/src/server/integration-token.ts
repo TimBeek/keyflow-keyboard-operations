@@ -23,8 +23,14 @@ import { createHash, timingSafeEqual } from "node:crypto";
  *   cookie; wie hem heeft kan een printronde aanleveren en verder niets.
  */
 
-/** Minimaal dit, anders is het geen sleutel maar een wachtwoordje. */
-const minimaleLengte = 24;
+/**
+ * Minimaal dit, anders is het geen sleutel maar een wachtwoordje.
+ *
+ * Zestien willekeurige tekens is ruim genoeg om niet te raden te zijn; deze
+ * ondergrens is er tegen "geheim" en "test1234", niet tegen een sleutel die
+ * kort maar willekeurig is.
+ */
+const minimaleLengte = 16;
 
 export type TokenUitkomst =
   | { ok: true }

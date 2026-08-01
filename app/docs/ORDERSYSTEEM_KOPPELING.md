@@ -28,7 +28,7 @@ Authorization: Bearer <sleutel>
 al gebruiken.
 
 De sleutel staat op de server in de omgevingsvariabele **`REKEY_RESYNC_TOKEN`**
-en moet minstens 24 tekens zijn. Staat hij er niet, dan geeft de route `503` en
+en moet minstens 16 tekens zijn. Staat hij er niet, dan geeft de route `503` en
 doet hij niets — een koppeling die zonder sleutel iedereen binnenlaat is precies
 de fout die je pas merkt als het te laat is.
 

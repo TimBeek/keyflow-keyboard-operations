@@ -70,6 +70,15 @@ describe("de sleutel van de koppeling", () => {
     expect(uit.ok === false && uit.status).toBe(503);
   });
 
+  it("neemt een sleutel van zestien willekeurige tekens aan", () => {
+    // Kort maar willekeurig is geen zwakke sleutel; de ondergrens is er tegen
+    // een woord, niet tegen lengte op zich.
+    const zestien = "aZ3kQ9mN2pR7tV5x";
+    expect(checkIntegrationToken(verzoek({ authorization: `Bearer ${zestien}` }), {
+      REKEY_RESYNC_TOKEN: zestien,
+    })).toEqual({ ok: true });
+  });
+
   it("valt niet om over een sleutel van een andere lengte", () => {
     // timingSafeEqual gooit als de buffers verschillen in lengte; daarom wordt
     // er eerst gehasht. Zonder die hash zou dit een 500 geven.
