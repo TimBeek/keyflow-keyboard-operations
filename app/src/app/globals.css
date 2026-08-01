@@ -3261,6 +3261,16 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 
    Bewust zwaarder dan de rondeknoppen eronder: dit is de hoofdindeling, die
    ernaast is de keuze binnen die indeling. */
+/* De kop van dit paneel: links waar je naar kijkt, rechts in de hoek de
+   uitzondering. "Add a run" gebruik je alleen als het ordersysteem het laat
+   afweten, dus die hoort niet midden in beeld te staan. */
+.batch-kop { align-items: center; gap: 16px; margin-bottom: 14px; }
+/* De kop is een flexrij waarin elk kind standaard meegroeit; daardoor rekte de
+   tabstrook uit tot halverwege en stond "Add a run" er middenin geplakt. De
+   tabbladen houden hun eigen breedte, de knop wordt naar de hoek geduwd. */
+.batch-kop .batch-groepen { flex: 0 0 auto; margin-bottom: 0; }
+.batch-kop .batch-upload { flex: 0 0 auto; margin-left: auto; }
+
 .batch-groepen {
   display: inline-flex; gap: 4px; margin-bottom: 16px; padding: 4px;
   border: 1px solid var(--line); border-radius: 16px; background: var(--surface-2);

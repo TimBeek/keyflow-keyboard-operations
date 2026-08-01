@@ -62,11 +62,6 @@ export function PrintBatchPanel({
   const [confirmRemove, setConfirmRemove] = useState("");
 
   /**
-   * Een voltooide ronde hoort niet meer tussen het werk te staan. Weggooien
-   * doen we niet: de regels zitten in de geschiedenis en de ronde is de herkomst
-   * daarvan. Dus opzij, achter een mapje dat je open kunt klappen.
-   */
-  /**
    * De rondes komen nieuwste-eerst uit de database, want dat is wat je wilt in
    * een geschiedenis. Om te wérken klopt dat niet: de ochtendronde hoort vóór
    * de middagronde, anders begin je standaard aan de jongste lijst terwijl de
@@ -122,42 +117,17 @@ export function PrintBatchPanel({
 
   return (
     <section className="noviply-panel">
-      <div className="noviply-panel-head">
-        <div>
-          <h3>Print runs</h3>
-          {/* Eén regel. Er stonden er drie, en die duwden de twee tabbladen —
-              waar je als eerste naar kijkt — een stuk naar beneden. Wat "Add a
-              run" doet staat in het handboek en op de knop zelf. */}
-          <p>The order system sends its list twice a day; it appears here by itself.</p>
-        </div>
-        <div className="batch-upload">
-          <input
-            ref={fileRef}
-            type="file"
-            id="batch-file"
-            accept=".xlsx,.xlsm,.csv"
-            className="sr-only"
-            onChange={(event) => void pick(event.target.files?.[0])}
-          />
-          <label htmlFor="batch-file" className={`secondary-button${busy ? " busy" : ""}`}>
-            {busy ? "Reading…" : "Add a run"}
-          </label>
-        </div>
-      </div>
-
-      {message && <div className="policy-saved" role="status">{message}</div>}
-
-      {batches.length === 0 ? (
-        <div className="empty">
-          No runs yet today. The morning run arrives on its own; this page keeps
-          itself up to date, so there is no need to reload.
-        </div>
-      ) : (
-        <>
-          {/* Twee groepen, twee tabbladen. Afgeronde rondes zaten in een
-              uitklapper ónder de openstaande, en dan staan er twee rijen met
-              rondeknoppen door elkaar en moet je zien welke bij welke hoort.
-              Zo is er één rij, en zeg je eerst waar je naar kijkt. */}
+      {/* Bovenaan staat waar je naar kijkt, in de hoek staat de uitzondering.
+          Er stond hier eerst nog een kop "Print runs" met een uitleg eronder —
+          precies wat de pagina er twee centimeter hoger al zegt — en die duwde
+          de twee tabbladen naar beneden. Weg dus: de tabbladen zijn nu het
+          eerste wat je ziet, en "Add a run" zit rechtsboven waar je hem alleen
+          zoekt als het ordersysteem het laat afweten. */}
+      <div className="noviply-panel-head batch-kop">
+        {/* Twee groepen, twee tabbladen: eerst zeggen waar je naar kijkt, dan
+            pas welke ronde. Zonder rondes valt er niets te kiezen en staat de
+            knop alleen in de hoek. */}
+        {batches.length > 0 && (
           <div className="batch-groepen" role="tablist" aria-label="Which runs to show">
             <button
               type="button"
@@ -184,7 +154,31 @@ export function PrintBatchPanel({
               <span>{done.length}</span>
             </button>
           </div>
+        )}
+        <div className="batch-upload">
+          <input
+            ref={fileRef}
+            type="file"
+            id="batch-file"
+            accept=".xlsx,.xlsm,.csv"
+            className="sr-only"
+            onChange={(event) => void pick(event.target.files?.[0])}
+          />
+          <label htmlFor="batch-file" className={`secondary-button${busy ? " busy" : ""}`}>
+            {busy ? "Reading…" : "Add a run"}
+          </label>
+        </div>
+      </div>
 
+      {message && <div className="policy-saved" role="status">{message}</div>}
+
+      {batches.length === 0 ? (
+        <div className="empty">
+          No runs yet today. The morning run arrives on its own; this page keeps
+          itself up to date, so there is no need to reload.
+        </div>
+      ) : (
+        <>
           <div className="batch-tabs" role="tablist">
             {/* Geen afkapping meer op zes. Michael werkt de rondes van boven
                 naar beneden af; staat er een zevende open, dan viel de oudste
