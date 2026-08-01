@@ -3289,13 +3289,24 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
   background: var(--raised); color: var(--text-2);
   font-size: 12.5px; font-weight: 800; text-align: center;
 }
-/* Het verschil tussen de twee moet je in één oogopslag zien: de open kant staat
-   op een eigen vlak met de signaalkleur, de andere blijft vlak en grijs. */
+/* Het verschil moet je zien zonder te lezen. Amber betekent in dit scherm
+   overal "er wacht iets op jou", groen "klaar" — dus dat gebruiken we hier ook,
+   in plaats van twee keer hetzelfde blauw. Bij nul te printen rondes vervalt de
+   amber: dan wacht er niets. */
 .batch-groepen button.active {
   background: var(--surface); color: var(--text);
-  box-shadow: 0 1px 3px rgb(4 8 13 / .1), 0 0 0 1px var(--signal-line);
+  box-shadow: 0 1px 3px rgb(4 8 13 / .1), 0 0 0 1px var(--line);
 }
-.batch-groepen button.active span { background: var(--signal); color: var(--signal-ink); }
+.batch-groep-open.active { box-shadow: 0 1px 3px rgb(4 8 13 / .1), 0 0 0 2px color-mix(in srgb, var(--warn) 55%, transparent) !important; }
+.batch-groep-open.active span { background: var(--warn); color: #FFFFFF; }
+/* Niets te printen is geen waarschuwing. Dan geen amber, maar de rustige rand
+   die overal staat — anders roept het scherm om aandacht die er niet is. */
+.batch-groep-open.leeg.active { box-shadow: 0 1px 3px rgb(4 8 13 / .1), 0 0 0 1px var(--line) !important; }
+.batch-groep-open.leeg.active span { background: var(--raised); color: var(--text-2); }
+.batch-groep-af.active { box-shadow: 0 1px 3px rgb(4 8 13 / .1), 0 0 0 2px color-mix(in srgb, var(--ok) 55%, transparent) !important; }
+.batch-groep-af.active span { background: var(--ok); color: #FFFFFF; }
+.batch-groep-af b { color: var(--ok); font-size: 14px; }
+.batch-groep-af.active b { color: var(--ok); }
 .batch-groepen button:disabled { opacity: .45; cursor: default; }
 .batch-groepen button:hover:not(.active):not(:disabled) { color: var(--text); }
 /* Een nieuwe ronde die je nog niet hebt geopend, ook zichtbaar als je op het
@@ -3303,6 +3314,12 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 .batch-groep-nieuw { color: var(--signal); font-size: 22px; font-style: normal; line-height: 0; }
 
 .batch-tabs .batch-af { color: var(--ok); font-size: 13px; }
+/* In de afgeronde groep is groen de kleur van het scherm; een blauwe rand om de
+   ronde zou daar tegenin gaan. */
+.batch-tabs button.is-af.active {
+  border-color: var(--ok);
+  background: var(--ok-soft);
+}
 
 /* Zoeken in de geschiedenis: één veld dat op ordernummer, model, taal en ronde
    kijkt. Meerdere woorden moeten allemaal voorkomen. */
@@ -3937,3 +3954,23 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 @media (prefers-reduced-motion: reduce) {
   .run-alert, .run-alert-panel { animation: none; }
 }
+
+
+/* Boven een afgeronde ronde: niet nog een keer printen.
+   Dit is de duurste vergissing op dit scherm — dubbel printen kost vellen en
+   tijd, en je merkt het pas als de laptops dubbel op tafel liggen. Dus staat het
+   er met zoveel woorden in plaats van dat je het uit een vinkje moet afleiden. */
+.batch-afgerond {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 14px; padding: 12px 16px;
+  border: 1px solid color-mix(in srgb, var(--ok) 40%, transparent);
+  border-left: 4px solid var(--ok);
+  border-radius: 12px; background: var(--ok-soft);
+}
+.batch-afgerond > b {
+  display: grid; place-items: center; flex: none; width: 28px; height: 28px;
+  border-radius: 50%; background: var(--ok); color: #FFFFFF; font-size: 15px;
+}
+.batch-afgerond span { display: grid; gap: 1px; }
+.batch-afgerond strong { color: var(--text); font-size: 14.5px; font-weight: 750; }
+.batch-afgerond small { color: var(--text-2); font-size: 12.5px; }

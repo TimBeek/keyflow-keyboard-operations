@@ -129,14 +129,20 @@ export function PrintBatchPanel({
             knop alleen in de hoek. */}
         {batches.length > 0 && (
           <div className="batch-groepen" role="tablist" aria-label="Which runs to show">
+            {/* "To do" en "Completed" zeggen niet wat je ermee moet. "To print"
+                en "Already printed" wel, en dat is precies het verschil dat niet
+                misverstaan mag worden: aan de ene kant ligt werk, aan de andere
+                kant mag niets meer door de printer. Amber is in dit scherm altijd
+                "er wacht iets op jou" en groen "klaar" — dezelfde taal als de
+                rest, dus die hoeft niemand apart te leren. */}
             <button
               type="button"
               role="tab"
               aria-selected={effectieveGroep === "open"}
-              className={effectieveGroep === "open" ? "active" : ""}
+              className={`batch-groep-open${running.length === 0 ? " leeg" : ""}${effectieveGroep === "open" ? " active" : ""}`}
               onClick={() => { setGroep("open"); setOpenId(null); }}
             >
-              To do
+              To print
               <span>{running.length}</span>
               {running.some((batch) => batch.seenAt === null) && (
                 <em className="batch-groep-nieuw" aria-label="Includes a new run">•</em>
@@ -146,11 +152,12 @@ export function PrintBatchPanel({
               type="button"
               role="tab"
               aria-selected={effectieveGroep === "done"}
-              className={effectieveGroep === "done" ? "active" : ""}
+              className={`batch-groep-af${effectieveGroep === "done" ? " active" : ""}`}
               onClick={() => { setGroep("done"); setOpenId(null); }}
               disabled={done.length === 0}
             >
-              Completed
+              <b aria-hidden="true">✓</b>
+              Already printed
               <span>{done.length}</span>
             </button>
           </div>
@@ -189,7 +196,7 @@ export function PrintBatchPanel({
                 key={batch.id}
                 role="tab"
                 aria-selected={batch.id === shown?.id}
-                className={batch.id === shown?.id ? "active" : ""}
+                className={`${effectieveGroep === "done" ? "is-af " : ""}${batch.id === shown?.id ? "active" : ""}`}
                 onClick={() => {
                   setOpenId(batch.id);
                   // Openen is gezien; dan mag de melding weg.
@@ -198,7 +205,12 @@ export function PrintBatchPanel({
               >
                 {effectieveGroep === "done" && <b className="batch-af" aria-hidden="true">✓</b>}
                 {batchLabel(batch, "en")}
-                {batch.seenAt === null && <span className="batch-new" aria-label="New">•</span>}
+                {/* Het stipje betekent "nog niet geopend". Bij een afgeronde
+                    ronde zegt dat niets meer — er valt niets meer te doen — en
+                    het trekt de aandacht naar de verkeerde kant. */}
+                {effectieveGroep === "open" && batch.seenAt === null && (
+                  <span className="batch-new" aria-label="New">•</span>
+                )}
               </button>
             ))}
             {inGroep.length === 0 && (
@@ -209,6 +221,29 @@ export function PrintBatchPanel({
               </span>
             )}
           </div>
+
+          {shown && effectieveGroep === "done" && (
+            /* De grootste fout die hier gemaakt kan worden is een afgeronde
+               ronde nog een keer printen. Dat kost vellen en tijd, en je merkt
+               het pas als de laptops dubbel op tafel liggen. Dus staat het er,
+               boven de lijst, in plaats van dat je het uit een vinkje moet
+               afleiden. */
+            <div className="batch-afgerond" role="status">
+              <b aria-hidden="true">✓</b>
+              <span>
+                <strong>Finished — do not print this run again.</strong>
+                <small>
+                  {(() => {
+                    const geprint = shown.rows.filter((row) => row.status === "printed").length;
+                    const niet = shown.rows.filter((row) => row.status === "not_printable").length;
+                    return niet === 0
+                      ? `All ${geprint} ${geprint === 1 ? "line was" : "lines were"} printed.`
+                      : `${geprint} printed, ${niet} reported as not printable.`;
+                  })()}
+                </small>
+              </span>
+            </div>
+          )}
 
           {shown && (
             <>
