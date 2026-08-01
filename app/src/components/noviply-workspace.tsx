@@ -10,6 +10,7 @@ import {
 import { dayKey } from "@/domain/reporting";
 import { NoviplyLogo } from "@/components/noviply-logo";
 import { RemotePrinterButton } from "@/components/remote-printer-button";
+import { NewRunDialog } from "@/components/new-run-dialog";
 import { trackpointLabel } from "@/domain/noviply-export";
 import {
   unavailableReasonEnglish,
@@ -47,12 +48,7 @@ import {
   unseenBatches,
   type PrintBatch,
 } from "@/domain/print-batch";
-import {
-  latestAnswered,
-  openCheck,
-  readyToPrint,
-  type PrinterCheckRecord,
-} from "@/domain/printer-check";
+import type { PrinterCheckRecord } from "@/domain/printer-check";
 
 export type NoviplyTab = "orders" | "stock" | "runs" | "history";
 
@@ -64,6 +60,8 @@ type Props = {
   onSettleBatchRow: (rowId: string, status: "printed" | "not_printable", note: string) => Promise<void>;
   onSettleBatch: (batchId: string) => Promise<void>;
   onBatchSeen: (batchId: string) => void;
+  /** Naar het rondenscherm springen vanuit de melding van een nieuwe ronde. */
+  onOpenRuns: () => void;
   onRemoveBatch: (batchId: string) => Promise<void>;
   printRequests: PrintRequestRecord[];
   quantities: Record<string, number>;
@@ -110,6 +108,7 @@ export function NoviplyWorkspace({
   onSettleBatchRow,
   onSettleBatch,
   onBatchSeen,
+  onOpenRuns,
   onRemoveBatch,
   printRequests,
   quantities,
@@ -132,7 +131,6 @@ export function NoviplyWorkspace({
   const [message, setMessage] = useState("");
   // Kort na het indrukken laat de knop zien dat het seintje weg is. Zonder dat
   // moment gebeurt er in beeld niets tot de server antwoordt.
-  const [sending, setSending] = useState(false);
   const [historyQuery, setHistoryQuery] = useState("");
 
   const totals = printRequestTotals(printRequests);
@@ -260,6 +258,13 @@ export function NoviplyWorkspace({
           De printerknop staat ernaast en niet op één tabblad: of je nu een
           ronde uit het ordersysteem afwerkt of een losse aanvraag, de vraag
           "staat de printer aan" komt op hetzelfde moment. */}
+      {/* Een nieuwe ronde is werk dat klaarstaat; dat mag je niet missen omdat
+          je net op een ander tabblad keek. */}
+      <NewRunDialog
+        batches={printBatches}
+        onSeen={onBatchSeen}
+        onOpenRuns={onOpenRuns}
+      />
       <div className="noviply-brandbalk">
         <NoviplyLogo />
         <RemotePrinterButton
@@ -366,98 +371,9 @@ export function NoviplyWorkspace({
         />
       )}
 
-      {tab === "orders" && (
-        <section className="noviply-panel printer-panel">
-          <div className="printer-head">
-            <div>
-              <h3>Remote printer</h3>
-              <p>
-                The printer sits at ReMarkt. Only the floor can see whether it is
-                loaded and switched on.
-              </p>
-            </div>
-          </div>
-
-          {(() => {
-            const waiting = openCheck(printerChecks);
-            const ready = readyToPrint(printerChecks);
-            const answered = latestAnswered(printerChecks);
-
-            if (waiting) {
-              return (
-                <div className="printer-state waiting">
-                  <b>Waiting for the floor…</b>
-                  <span>They have been asked. Their answer appears here.</span>
-                </div>
-              );
-            }
-
-            if (ready) {
-              return (
-                <div className="printer-state ready">
-                  <div>
-                    <b>✓ The printer is ready</b>
-                    <span>{ready.answeredBy} · {formatMoment(ready.answeredAt ?? "")}</span>
-                  </div>
-                  {/* Zodra er geprint is vervalt het antwoord: laten staan zou
-                      suggereren dat de printer nog klaarstaat. */}
-                  <button
-                    type="button"
-                    className="printer-go"
-                    onClick={() => onStartPrinting(ready.id)}
-                  >
-                    We are printing now
-                  </button>
-                </div>
-              );
-            }
-
-            return (
-              <>
-                {answered && answered.status === "blocked" && (
-                  <div className="printer-state blocked">
-                    <div>
-                      <b>✕ Not ready</b>
-                      <span>{answered.answerNote}</span>
-                      <small>{answered.answeredBy} · {formatMoment(answered.answeredAt ?? "")}</small>
-                    </div>
-                  </div>
-                )}
-                {/* Dit is geen formulier maar een seintje naar een andere
-                    ruimte. Een vlakke knop laat niets zien van wat er gebeurt;
-                    deze zendt zichtbaar uit en blijft bij het indrukken even
-                    staan op "Sending…" zodat je weet dat het weg is. */}
-                <button
-                  type="button"
-                  className={`printer-ask${sending ? " sending" : ""}`}
-                  disabled={sending}
-                  onClick={() => {
-                    setSending(true);
-                    onAskPrinterCheck();
-                    window.setTimeout(() => setSending(false), 1400);
-                  }}
-                >
-                  <span className="printer-ask-icon" aria-hidden="true">
-                    <svg viewBox="0 0 32 32" width="30" height="30" fill="none" stroke="currentColor">
-                      <circle cx="16" cy="16" r="3" fill="currentColor" stroke="none" />
-                      <path d="M22 10a8.5 8.5 0 0 1 0 12" strokeWidth="2.2" strokeLinecap="round" className="wave wave-1" />
-                      <path d="M10 22a8.5 8.5 0 0 1 0-12" strokeWidth="2.2" strokeLinecap="round" className="wave wave-1" />
-                      <path d="M26 6a13 13 0 0 1 0 20" strokeWidth="2.2" strokeLinecap="round" className="wave wave-2" />
-                      <path d="M6 26a13 13 0 0 1 0-20" strokeWidth="2.2" strokeLinecap="round" className="wave wave-2" />
-                    </svg>
-                  </span>
-                  <span>
-                    <b>{sending ? "Sending to the floor…" : "Ask the floor if the printer is ready"}</b>
-                    <small>{sending ? "They are getting the message now" : "They get a message straight away"}</small>
-                  </span>
-                  <span className="printer-ask-go" aria-hidden="true">{sending ? "" : "Send"}</span>
-                </button>
-              </>
-            );
-          })()}
-        </section>
-      )}
-
+      {/* Het uitgebreide printerpaneel stond hier ook nog. Twee plekken voor
+          dezelfde handeling betekent twee keer kijken welke de actuele stand
+          toont; de knop in de kop staat op elk tabblad en zegt hetzelfde. */}
       {tab === "orders" && (
       <section className="noviply-panel">
         <div className="noviply-panel-head">

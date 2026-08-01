@@ -298,6 +298,33 @@ const methods = [
   { id: 4, name: "Professionele Toetsenbordsprint", detail: "Permanent · Notebook Service (Roemenië)", tone: "professional", status: "★★★★" },
 ];
 
+/** Welk scherm dit apparaat het laatst openhad; een voorkeur, geen recht. */
+const LAATSTE_SCHERM_KEY = "rekey.laatste-scherm.v1";
+
+const noviplyTabs: NoviplyTab[] = ["orders", "stock", "runs", "history"];
+function isNoviplyTab(waarde: string): waarde is NoviplyTab {
+  return (noviplyTabs as string[]).includes(waarde);
+}
+
+/**
+ * Wat er bewaard staat. Alles wat er raar uitziet wordt genegeerd: dit komt uit
+ * opslag die de gebruiker zelf kan aanpassen, dus het is een aanwijzing en
+ * nooit een reden om iets open te zetten.
+ */
+function leesLaatsteScherm(): { rol: UserRole; tabblad: string } | null {
+  try {
+    const ruw = window.localStorage.getItem(LAATSTE_SCHERM_KEY);
+    if (!ruw) return null;
+    const gelezen: unknown = JSON.parse(ruw);
+    if (typeof gelezen !== "object" || gelezen === null) return null;
+    const { rol, tabblad } = gelezen as { rol?: unknown; tabblad?: unknown };
+    if (rol !== "management" && rol !== "noviply" && rol !== "employee") return null;
+    return { rol, tabblad: typeof tabblad === "string" ? tabblad : "" };
+  } catch {
+    return null;
+  }
+}
+
 export function Dashboard({
   identity,
   onSignOut,
@@ -1881,7 +1908,20 @@ export function Dashboard({
     void fetchAccessRole()
       .then((access) => {
         setUnlockedRole(access.role);
-        setRole(access.role);
+        // Terug naar het scherm dat openstond, maar alleen als de server die
+        // rol ook toestaat — de voorkeur mag nooit meer openen dan het recht.
+        const bewaard = leesLaatsteScherm();
+        const magTerug = bewaard?.rol === "noviply"
+          ? access.role !== "employee"
+          : bewaard?.rol === "management"
+            ? access.role === "management"
+            : bewaard?.rol === "employee";
+        setRole(magTerug && bewaard ? bewaard.rol : access.role);
+        if (magTerug && bewaard?.tabblad) {
+          if (bewaard.rol === "noviply" && isNoviplyTab(bewaard.tabblad)) {
+            setNoviplyTab(bewaard.tabblad);
+          }
+        }
         setSignedInUserId(access.userId);
         setAccounts(access.accounts);
         setSignedInName(access.accounts.find((a) => a.id === access.userId)?.name ?? "");
@@ -1898,6 +1938,7 @@ export function Dashboard({
       const result = await signInWithPin(chosenAccount, unlockCode);
       setUnlockedRole(result.role);
       setRole(result.role);
+      onthoudScherm(result.role);
       setSignedInName(result.name);
       setSignedInUserId(result.userId);
       setActiveView("overview");
@@ -1942,8 +1983,30 @@ export function Dashboard({
     }
   }
 
+  /**
+   * Onthouden welk scherm iemand openhad.
+   *
+   * Michael staat bij Noviply de hele dag op zijn eigen scherm. Ververste hij
+   * de pagina, dan stond hij ineens weer in het beheerscherm van ReMarkt en
+   * moest hij zelf terugklikken — elke keer opnieuw. De rol staat in de
+   * sessie van de server, maar wélk van de toegestane schermen je open had is
+   * een voorkeur van dit apparaat, dus die hoort hier.
+   *
+   * Alleen een voorkeur: wat je mag blijft de server bepalen. Zet iemand hier
+   * met de hand "management" neer zonder de rechten, dan wint de controle
+   * hieronder en gebeurt er niets.
+   */
+  function onthoudScherm(rol: UserRole, tabblad?: string) {
+    try {
+      window.localStorage.setItem(LAATSTE_SCHERM_KEY, JSON.stringify({ rol, tabblad: tabblad ?? "" }));
+    } catch {
+      // Privémodus of een volle opslag; dan onthouden we het gewoon niet.
+    }
+  }
+
   async function lockOut() {
     await lockAccess().catch(() => undefined);
+    try { window.localStorage.removeItem(LAATSTE_SCHERM_KEY); } catch { /* zie boven */ }
     setUnlockedRole("employee");
     setRole("employee");
     setSignedInName("");
@@ -1959,6 +2022,7 @@ export function Dashboard({
     if (nextRole === "management" && unlockedRole !== "management") return;
     if (nextRole === "noviply" && unlockedRole === "employee") return;
     setRole(nextRole);
+    onthoudScherm(nextRole);
     setActiveView("overview");
     setQuery("");
     setMutation(null);
@@ -2043,7 +2107,7 @@ export function Dashboard({
             <button
               key={item.id}
               className={`nav-item ${noviplyTab === item.id ? "active" : ""}`}
-              onClick={() => setNoviplyTab(item.id)}
+              onClick={() => { setNoviplyTab(item.id); onthoudScherm("noviply", item.id); }}
             >
               <Icon name={item.icon} /><span>{item.label}</span>
             </button>
@@ -2227,6 +2291,7 @@ export function Dashboard({
             onSettleBatchRow={settleBatchRowRecord}
             onSettleBatch={settleBatch}
             onBatchSeen={batchSeen}
+            onOpenRuns={() => { setNoviplyTab("runs"); onthoudScherm("noviply", "runs"); }}
             onRemoveBatch={removeBatch}
           />
         )}
