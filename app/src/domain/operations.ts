@@ -33,7 +33,7 @@ export type LayoutRule = {
 
 export type OperationsPolicy = {
   thresholdEur: number;
-  workload: "normal" | "busy" | "critical";
+  workload: "quiet" | "normal" | "busy" | "critical";
   methodEnabled: Record<OperationalMethodId, boolean>;
   employeeCanReceive: boolean;
   employeeCanBookMismatch: boolean;

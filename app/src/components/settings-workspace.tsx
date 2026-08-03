@@ -316,7 +316,7 @@ export function SettingsWorkspace({
               value={draft.workload}
               onChange={(event) => setDraft({ ...draft, workload: event.target.value as OperationsPolicy["workload"] })}
             >
-              <option value="normal">Normaal</option>
+              <option value="quiet">Rustig</option><option value="normal">Normaal</option>
               <option value="busy">Druk</option>
               <option value="critical">Kritiek</option>
             </select>

@@ -35,6 +35,11 @@ import {
 import type { UserRole } from "@/domain/access-control";
 import type { ReKeyIdentity } from "@/domain/identity";
 import {
+  effectiveThreshold,
+  workloadLabel,
+  workloadThresholdShift,
+} from "@/domain/conversion-policy";
+import {
   createCompatibilityEvidenceRecord,
   emptyCompatibilityCheckpoints,
   latestCompatibilityEvidence,
@@ -2390,6 +2395,47 @@ export function Dashboard({
 
         {role === "management" && activeView === "overview" && (
           <>
+        {/* De werkdruk staat op het dashboard omdat je hem 's ochtends omzet als
+            je ziet hoe vol het is — niet op een instellingenscherm dat je twee
+            keer per maand opent. Wat hij doet staat erbij: de grens waarboven
+            een laptop de toetsenbordsprint krijgt schuift mee. Rustig is die
+            grens lager en gaan er meer door de printer; druk is hij hoger en
+            schuift het werk naar de kast en naar Noviply. */}
+        <section className="werkdruk-balk" aria-label="Werkdruk">
+          <div className="werkdruk-uitleg">
+            <span>WERKDRUK VANDAAG</span>
+            <strong>
+              Toetsenbordsprint vanaf €{effectiveThreshold(operationsPolicy.thresholdEur, operationsPolicy.workload)}
+            </strong>
+            <small>
+              {operationsPolicy.workload === "normal"
+                ? `De ingestelde grens van €${operationsPolicy.thresholdEur}.`
+                : `Ingesteld op €${operationsPolicy.thresholdEur}; de werkdruk schuift hem ${
+                  workloadThresholdShift[operationsPolicy.workload] > 0 ? "omhoog" : "omlaag"
+                }.`}
+            </small>
+          </div>
+          <div className="werkdruk-keuze" role="group" aria-label="Werkdruk kiezen">
+            {(["quiet", "normal", "busy", "critical"] as const).map((stand) => (
+              <button
+                key={stand}
+                type="button"
+                className={stand === operationsPolicy.workload ? "active" : ""}
+                aria-pressed={stand === operationsPolicy.workload}
+                onClick={() => {
+                  if (stand === operationsPolicy.workload) return;
+                  void savePolicy({ ...operationsPolicy, workload: stand });
+                }}
+              >
+                <b>{workloadLabel[stand]}</b>
+                <small>
+                  €{effectiveThreshold(operationsPolicy.thresholdEur, stand)}
+                </small>
+              </button>
+            ))}
+          </div>
+        </section>
+
         <section className="quick-actions" aria-label="Snelle acties">
           <button className="action-card issue" onClick={() => setMutation({ mode: "issue", item: defaultItem })}>
             <span className="action-icon"><Icon name="minus" size={26} /></span>

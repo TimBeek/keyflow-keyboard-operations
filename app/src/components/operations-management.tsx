@@ -1461,7 +1461,7 @@ export function OperationsManagement({
                 </select>
                 <small className="policy-field-help">De grens sluit zo altijd exact aan op de waardeklassen van werknemers.</small>
               </label>
-              <label><span>Actuele werkdruk</span><select value={draft.workload} onChange={(event) => setDraft({ ...draft, workload: event.target.value as OperationsPolicy["workload"] })}><option value="normal">Normaal</option><option value="busy">Druk</option><option value="critical">Kritiek</option></select></label>
+              <label><span>Actuele werkdruk</span><select value={draft.workload} onChange={(event) => setDraft({ ...draft, workload: event.target.value as OperationsPolicy["workload"] })}><option value="quiet">Rustig</option><option value="normal">Normaal</option><option value="busy">Druk</option><option value="critical">Kritiek</option></select></label>
               <h4>Beschikbare methoden</h4>
               <div className="method-toggles">
                 {(Object.keys(methodLabels) as OperationalMethodId[]).map((method) => (

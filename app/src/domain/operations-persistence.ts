@@ -71,7 +71,7 @@ const conversionLogEntrySchema = z.object({
 
 const policySchema = z.object({
   thresholdEur: z.number().positive(),
-  workload: z.enum(["normal", "busy", "critical"]),
+  workload: z.enum(["quiet", "normal", "busy", "critical"]),
   methodEnabled: z.object({
     loose_stickers: z.boolean(),
     noviply_sheet: z.boolean(),

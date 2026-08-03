@@ -17,7 +17,7 @@ export const conversionPolicyInputSchema = z.object({
   thresholdEur: z.number().positive().default(300),
   currentLayout: z.string().min(2),
   targetLayout: z.string().min(2),
-  workload: z.enum(["normal", "busy", "critical"]).default("normal"),
+  workload: z.enum(["quiet", "normal", "busy", "critical"]).default("normal"),
   available: z.object({
     loose_stickers: z.boolean(),
     noviply_sheet: z.boolean(),
@@ -60,6 +60,45 @@ export const conversionPolicyInputSchema = z.object({
     note: z.string().max(200).default(""),
   })).max(60).default([]),
 });
+
+/**
+ * Wat de werkdruk met de prijsgrens doet.
+ *
+ * De grens bepaalt vanaf welke verkoopwaarde een laptop de toetsenbordsprint
+ * krijgt. Die print is het mooiste resultaat maar kost de meeste tijd op één
+ * machine — dus of je hem kunt doen hangt af van hoe vol het is.
+ *
+ * Is het rustig, dan zakt de grens en gaan er meer laptops door de printer. Is
+ * het druk, dan gaat de grens omhoog en schuift het werk naar de andere
+ * methoden: een vel uit de kast of een aanvraag bij Noviply. Dat is precies het
+ * verdelen waar het om gaat — niet minder werk, maar werk dat ergens anders
+ * gedaan wordt.
+ *
+ * Bedragen in stappen van honderd euro, want dat is hoe de prijsklassen op de
+ * werkvloer ook lopen. De grens blijft altijd minstens honderd euro: helemaal
+ * naar nul zou betekenen dat elke laptop de duurste behandeling krijgt.
+ */
+export const workloadThresholdShift: Record<"quiet" | "normal" | "busy" | "critical", number> = {
+  quiet: -100,
+  normal: 0,
+  busy: 100,
+  critical: 200,
+};
+
+export const workloadLabel: Record<"quiet" | "normal" | "busy" | "critical", string> = {
+  quiet: "Rustig",
+  normal: "Normaal",
+  busy: "Druk",
+  critical: "Kritiek",
+};
+
+/** De grens zoals hij vandaag geldt, met de werkdruk erin verrekend. */
+export function effectiveThreshold(
+  thresholdEur: number,
+  workload: "quiet" | "normal" | "busy" | "critical",
+) {
+  return Math.max(100, thresholdEur + workloadThresholdShift[workload]);
+}
 
 export type ConversionPolicyInput = z.input<typeof conversionPolicyInputSchema>;
 
@@ -157,6 +196,10 @@ export function methodStars(method: ConversionMethodId) {
 export function recommendConversion(rawInput: ConversionPolicyInput): ConversionRecommendation {
   const input = conversionPolicyInputSchema.parse(rawInput);
   const warnings: string[] = [];
+  // De grens zoals hij vandaag geldt: de ingestelde waarde, verschoven met de
+  // werkdruk. Alles hieronder rekent daarmee, zodat één knop de verdeling over
+  // de methoden verschuift zonder dat er ergens een tweede regel bijkomt.
+  const drempel = effectiveThreshold(input.thresholdEur, input.workload);
 
   if (normalizeLayout(input.currentLayout) === normalizeLayout(input.targetLayout)) {
     return {
@@ -164,7 +207,7 @@ export function recommendConversion(rawInput: ConversionPolicyInput): Conversion
       alternatives: [],
       reason: "De aanwezige keyboardlayout komt al overeen met de gewenste klantlayout.",
       warnings,
-      policy: { thresholdEur: input.thresholdEur, rule: "layout_already_matches" },
+      policy: { thresholdEur: drempel, rule: "layout_already_matches" },
     };
   }
 
@@ -188,11 +231,11 @@ export function recommendConversion(rawInput: ConversionPolicyInput): Conversion
       alternatives: [],
       reason: "Geen conversiemethode is zowel beschikbaar als technisch geschikt.",
       warnings: ["Blokkeer de order en laat compatibiliteit, materiaal of printercapaciteit beoordelen."],
-      policy: { thresholdEur: input.thresholdEur, rule: "no_usable_method" },
+      policy: { thresholdEur: drempel, rule: "no_usable_method" },
     };
   }
 
-  const isPremium = input.saleValueEur >= input.thresholdEur;
+  const isPremium = input.saleValueEur >= drempel;
   const band = isPremium ? "above" : "below";
 
   /**
@@ -213,7 +256,7 @@ export function recommendConversion(rawInput: ConversionPolicyInput): Conversion
       reason: layoutRule.note.trim()
         || `Voor ${input.targetLayout} is ${methodLabel(layoutRule.method)} als vaste keuze ingesteld.`,
       warnings,
-      policy: { thresholdEur: input.thresholdEur, rule: "layout_rule" },
+      policy: { thresholdEur: drempel, rule: "layout_rule" },
     };
   }
   // Kan de eerste keuze niet, dan telt wat management daarvoor heeft opgegeven.
@@ -226,7 +269,7 @@ export function recommendConversion(rawInput: ConversionPolicyInput): Conversion
       reason: `${methodLabel(layoutRule.method)} kan nu niet voor ${input.targetLayout}; `
         + `daarvoor staat ${methodLabel(layoutRule.fallback)} ingesteld.`,
       warnings,
-      policy: { thresholdEur: input.thresholdEur, rule: "layout_rule_fallback" },
+      policy: { thresholdEur: drempel, rule: "layout_rule_fallback" },
     };
   }
   if (layoutRule) {
@@ -247,15 +290,15 @@ export function recommendConversion(rawInput: ConversionPolicyInput): Conversion
   if (isPremium) {
     preferred = ["direct_reprint", "printed_sticker", "noviply_sheet", "loose_stickers"];
     rule = "premium_value";
-    reason = `De verkoopwaarde ${saleValueClause} en ligt op of boven de beleidsgrens van €${formatAmount(input.thresholdEur)}. Directe keyboardprint heeft daarom de voorkeur.`;
+    reason = `De verkoopwaarde ${saleValueClause} en ligt op of boven de beleidsgrens van €${formatAmount(drempel)}. Directe keyboardprint heeft daarom de voorkeur.`;
   } else if (!isQwertyUs) {
     preferred = ["printed_sticker", "direct_reprint", "noviply_sheet", "loose_stickers"];
     rule = "foreign_layout_below_threshold";
-    reason = `De gewenste layout is ${input.targetLayout} en de verkoopwaarde ligt onder €${formatAmount(input.thresholdEur)}. De sterkere printsticker heeft volgens het huidige beleid de voorkeur.`;
+    reason = `De gewenste layout is ${input.targetLayout} en de verkoopwaarde ligt onder €${formatAmount(drempel)}. De sterkere printsticker heeft volgens het huidige beleid de voorkeur.`;
   } else {
     preferred = ["noviply_sheet", "direct_reprint", "printed_sticker", "loose_stickers"];
     rule = "qwerty_us_below_threshold";
-    reason = `De gewenste layout is ${input.targetLayout} en de verkoopwaarde ligt onder €${formatAmount(input.thresholdEur)}. Het bestaande Noviply-voorraadvel is de beschikbare standaardfallback.`;
+    reason = `De gewenste layout is ${input.targetLayout} en de verkoopwaarde ligt onder €${formatAmount(drempel)}. Het bestaande Noviply-voorraadvel is de beschikbare standaardfallback.`;
   }
 
   const ranked = preferred.filter(canUse);
@@ -283,7 +326,12 @@ export function recommendConversion(rawInput: ConversionPolicyInput): Conversion
     warnings.push("First-time-right-controle verplicht: verkeerd aanbrengen leidt waarschijnlijk tot herwerk of uitval.");
   }
   if (input.workload !== "normal") {
-    warnings.push(`De werkdruk is “${input.workload}”. Afwijken van het advies vereist een geregistreerde reden.`);
+    const verschil = workloadThresholdShift[input.workload];
+    warnings.push(
+      `De werkdruk staat op “${workloadLabel[input.workload]}”, dus de grens voor de `
+      + `toetsenbordsprint ligt ${verschil > 0 ? "€" + formatAmount(verschil) + " hoger" : "€" + formatAmount(-verschil) + " lager"} `
+      + `dan ingesteld: €${formatAmount(drempel)} in plaats van €${formatAmount(input.thresholdEur)}.`,
+    );
   }
 
   return {
@@ -293,7 +341,7 @@ export function recommendConversion(rawInput: ConversionPolicyInput): Conversion
       ? `${reason} Deze layout kan de toetsenbordsprinter echter niet aan, dus valt het advies terug op ${methodLabel(primary)}.`
       : reason,
     warnings,
-    policy: { thresholdEur: input.thresholdEur, rule: blockedByPrinter ? "direct_print_out_of_scope" : rule },
+    policy: { thresholdEur: drempel, rule: blockedByPrinter ? "direct_print_out_of_scope" : rule },
     ...(blockedByPrinter ? { fellBackFrom: "direct_reprint" as const } : {}),
   };
 }

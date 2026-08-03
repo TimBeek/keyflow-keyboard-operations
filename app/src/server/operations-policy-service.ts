@@ -16,7 +16,7 @@ const runTimePattern = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 const policySchema = z.object({
   thresholdEur: z.number().positive().max(100_000),
-  workload: z.enum(["normal", "busy", "critical"]),
+  workload: z.enum(["quiet", "normal", "busy", "critical"]),
   methodEnabled: z.object({
     loose_stickers: z.boolean(),
     noviply_sheet: z.boolean(),
@@ -68,7 +68,7 @@ export class OperationsPolicyConflictError extends Error {
 
 type PolicyRow = {
   threshold_eur: string;
-  workload: "normal" | "busy" | "critical";
+  workload: "quiet" | "normal" | "busy" | "critical";
   method_enabled: Record<string, boolean>;
   employee_permissions: Record<string, boolean>;
   abc_a_threshold: number;
