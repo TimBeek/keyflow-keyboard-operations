@@ -244,6 +244,14 @@ export function postCompatibilityEvidence(payload: Record<string, unknown>) {
   );
 }
 
+/** Een afkeuring intrekken; de melding van de werkvloer blijft staan. */
+export function withdrawCompatibilityRejection(catalogKey: string, model: string) {
+  return request<{ withdrawn: number }>(
+    "/api/compatibility/evidence",
+    { method: "DELETE", body: JSON.stringify({ catalogKey, model }) },
+  );
+}
+
 /* ---------- toegang ---------- */
 
 export type PilotAccount = { id: string; name: string; role: "management" | "noviply" };

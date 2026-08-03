@@ -131,6 +131,7 @@ import {
   postStockCount,
   postModelGroupReview,
   postCompatibilityEvidence,
+  withdrawCompatibilityRejection,
   KeyflowApiError,
   KeyflowOfflineError,
   type SharedOperationsState,
@@ -1366,6 +1367,27 @@ export function Dashboard({
     }
   }
 
+  /**
+   * De afkeuring weer intrekken.
+   *
+   * Bij "toetsvorm of positionering past niet" gaat het afkeuren vanzelf, want
+   * dat is een eigenschap van de combinatie en geen misgreep. Maar iemand kan
+   * de verkeerde reden hebben aangeklikt, en dan mag één melding een goede
+   * combinatie niet voorgoed op slot zetten. De melding zelf blijft staan — die
+   * is wat er gebeurd is; alleen de gevolgtrekking gaat weg.
+   */
+  async function trekAfkeuringIn(koppeling: { catalogKey: string; model: string; storageNumber: number }) {
+    try {
+      await withdrawCompatibilityRejection(koppeling.catalogKey, koppeling.model);
+      await refreshSharedState();
+      setLastAction(
+        `Hangmap ${koppeling.storageNumber} mag weer geadviseerd worden voor ${koppeling.model}.`,
+      );
+    } catch (error) {
+      setLastAction(error instanceof Error ? error.message : "Intrekken is niet gelukt.");
+    }
+  }
+
   function recordCompatibilityEvidence(input: CompatibilityEvidenceInput) {
     const record = createCompatibilityEvidenceRecord(
       inventoryCatalog,
@@ -2559,6 +2581,13 @@ export function Dashboard({
                                     Afgekeurd — de werkvloer krijgt hangmap{" "}
                                     {item.koppeling.storageNumber} niet meer voor dit model.
                                   </span>
+                                  <button
+                                    type="button"
+                                    className="secondary-button"
+                                    onClick={() => void trekAfkeuringIn(item.koppeling!)}
+                                  >
+                                    Toch weer toestaan
+                                  </button>
                                 </div>
                               ) : (
                                 <div className="attention-action">

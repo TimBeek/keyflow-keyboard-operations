@@ -230,3 +230,48 @@ function normalizeModel(value: string) {
     .replace(/[^a-z0-9]+/g, " ")
     .replace(/\s+/g, " ");
 }
+
+/**
+ * Een afkeuring intrekken.
+ *
+ * Een afkeuring die vanzelf ontstaat moet je ook vanzelf kunnen terugdraaien.
+ * Iemand kan de verkeerde reden hebben aangeklikt, of net die ene laptop had
+ * een afwijkend toetsenbord — en dan mag één melding niet betekenen dat een
+ * goede combinatie voorgoed op slot zit.
+ *
+ * De afkeuring gaat weg, de melding van de werkvloer blijft. Dat is met opzet:
+ * die melding is wat er werkelijk gebeurd is en hoort in de geschiedenis. De
+ * afkeuring is een gevolgtrekking daaruit, en die mag je herzien.
+ */
+export async function withdrawCompatibilityRejection(input: {
+  catalogKey: string;
+  model: string;
+  actorId: string;
+}) {
+  const gelezen = z.object({
+    catalogKey: z.string().min(1).max(100),
+    model: z.string().min(1).max(200),
+    actorId: databaseUuidSchema,
+  }).parse(input);
+
+  await requirePermission(gelezen.actorId, "models.manage");
+  const sql = database();
+
+  const verwijderd = await sql`
+    delete from compatibility_evidence
+    where catalog_key = ${gelezen.catalogKey}
+      and status = 'rejected'
+      and model_id in (
+        -- Dezelfde opzoeking als bij het vastleggen: op genormaliseerde naam en
+        -- op alias, want hetzelfde model wordt op meer dan één manier geschreven.
+        select model.id
+        from laptop_models model
+        left join model_aliases alias on alias.model_id = model.id
+        where model.normalized_name = ${normalizeModel(gelezen.model)}
+          or alias.normalized_alias = ${normalizeModel(gelezen.model)}
+      )
+    returning id
+  `;
+
+  return { withdrawn: verwijderd.length };
+}
