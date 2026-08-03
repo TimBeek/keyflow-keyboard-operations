@@ -134,6 +134,9 @@ export async function recordCompatibilityEvidence(
     }
 
     const [created] = await transaction<{ id: string; reviewed_at: string }[]>`
+      -- Niet gemeten is leeg, niet nul. Bij een afkeuring zijn de maten er niet
+      -- (zie migratie 0044); een nul in de kolom zou een meting suggereren die
+      -- nooit is gedaan.
       insert into compatibility_evidence (
         idempotency_key,
         catalog_key,
@@ -158,8 +161,8 @@ export async function recordCompatibilityEvidence(
         ${record.variant},
         ${record.manufacturerPartNumber},
         ${record.photoReference},
-        ${record.keyboardWidthMm},
-        ${record.keyboardHeightMm},
+        ${record.keyboardWidthMm > 0 ? record.keyboardWidthMm : null},
+        ${record.keyboardHeightMm > 0 ? record.keyboardHeightMm : null},
         ${JSON.stringify(record.checkpoints)}::jsonb,
         ${record.notes || null},
         ${input.actorId}::uuid

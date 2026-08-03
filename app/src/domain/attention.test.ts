@@ -185,6 +185,58 @@ describe("attentionItems", () => {
   });
 });
 
+describe("de koppeling bij een vel dat niet paste", () => {
+  const map75 = {
+    catalogKey: "hangmap-075",
+    storageNumber: 75,
+    sku: "NB10172E1NL",
+    model: "Dell Latitude 5420",
+    layout: "QWERTY US",
+    dataQuality: "ready",
+    stock: 12,
+  } as unknown as InventoryCatalogItem;
+
+  it("draagt hangmap en model mee, zodat de koppeling af te keuren is", () => {
+    // Zonder deze sleutels zou het scherm ze uit de titel moeten terugvissen —
+    // en dan breekt de knop zodra iemand die tekst aanpast.
+    const items = attentionItems({
+      ...leeg, catalog: [map75], verificationReports: [report()],
+    });
+    expect(items[0].koppeling).toEqual({
+      catalogKey: "hangmap-075",
+      model: "Dell Latitude 5420",
+      storageNumber: 75,
+      reden: "Layout wijkt af",
+    });
+  });
+
+  it("laat de koppeling weg als de hangmap niet meer in de catalogus staat", () => {
+    // Dan valt er niets af te keuren en blijft het een mededeling.
+    const items = attentionItems({ ...leeg, verificationReports: [report()] });
+    expect(items[0].koppeling).toBeUndefined();
+  });
+
+  it("laat de koppeling weg bij een geblokkeerde hangmap", () => {
+    const items = attentionItems({
+      ...leeg,
+      catalog: [{ ...map75, dataQuality: "blocked" } as unknown as InventoryCatalogItem],
+      verificationReports: [report()],
+    });
+    expect(items[0].koppeling).toBeUndefined();
+  });
+
+  it("kijkt naar hangmap én artikelnummer, niet naar één van beide", () => {
+    // Hetzelfde vel ligt in meer dan één map; de melding gaat over de map die
+    // de medewerker in handen had.
+    const items = attentionItems({
+      ...leeg,
+      catalog: [{ ...map75, storageNumber: 100, catalogKey: "hangmap-100" } as unknown as InventoryCatalogItem],
+      verificationReports: [report()],
+    });
+    expect(items[0].koppeling).toBeUndefined();
+  });
+});
+
 describe("attentionByKind", () => {
   it("groepeert zodat elk soort zijn eigen kopje krijgt", () => {
     const per = attentionByKind(attentionItems({

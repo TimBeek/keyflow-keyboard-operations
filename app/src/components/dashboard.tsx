@@ -36,6 +36,8 @@ import type { UserRole } from "@/domain/access-control";
 import type { ReKeyIdentity } from "@/domain/identity";
 import {
   createCompatibilityEvidenceRecord,
+  emptyCompatibilityCheckpoints,
+  latestCompatibilityEvidence,
   type CompatibilityEvidenceInput,
   type CompatibilityEvidenceRecord,
 } from "@/domain/compatibility-evidence";
@@ -1321,6 +1323,49 @@ export function Dashboard({
     return decision;
   }
 
+  /** Staat deze koppeling al afgekeurd? Dan hoeft de knop er niet meer te staan. */
+  function afgekeurdeKoppeling(koppeling: { catalogKey: string; model: string }) {
+    return latestCompatibilityEvidence(
+      compatibilityEvidenceRecords,
+      koppeling.catalogKey,
+      koppeling.model,
+    )?.status === "rejected";
+  }
+
+  /**
+   * De koppeling model↔hangmap afkeuren op grond van wat de werkvloer meldde.
+   *
+   * Geen foto en geen millimeters: die horen bij goedkeuren, waar je een
+   * uitspraak doet over alle volgende laptops van dit model. Hier is het bewijs
+   * al geleverd — iemand heeft het vel op de echte laptop gelegd. Wat we
+   * vastleggen is wat er niet klopte en wie dat besloot.
+   */
+  function keurKoppelingAf(koppeling: {
+    catalogKey: string;
+    model: string;
+    storageNumber: number;
+    reden: string;
+  }) {
+    try {
+      recordCompatibilityEvidence({
+        catalogKey: koppeling.catalogKey,
+        model: koppeling.model,
+        status: "rejected",
+        manufacturerPartNumber: "",
+        photoReference: "",
+        keyboardWidthMm: 0,
+        keyboardHeightMm: 0,
+        checkpoints: emptyCompatibilityCheckpoints,
+        notes: `${koppeling.reden} — gemeld door de werkvloer, bevestigd door ${actorName}.`,
+      });
+      setLastAction(
+        `Hangmap ${koppeling.storageNumber} wordt niet meer aangeraden voor ${koppeling.model}.`,
+      );
+    } catch (error) {
+      setLastAction(error instanceof Error ? error.message : "Afkeuren is niet gelukt.");
+    }
+  }
+
   function recordCompatibilityEvidence(input: CompatibilityEvidenceInput) {
     const record = createCompatibilityEvidenceRecord(
       inventoryCatalog,
@@ -2501,6 +2546,35 @@ export function Dashboard({
                                   Weer aanbieden
                                 </button>
                               </div>
+                            )}
+                            {/* Een melding die alleen vertelt dat het misging
+                                verandert niets: morgen wijst de app dezelfde
+                                hangmap weer aan en staat dezelfde regel hier
+                                opnieuw. Hiermee keur je de koppeling af, en dan
+                                slaat het advies die map over voor dit model. */}
+                            {item.koppeling && (
+                              afgekeurdeKoppeling(item.koppeling) ? (
+                                <div className="attention-action is-klaar">
+                                  <span>
+                                    Afgekeurd — de werkvloer krijgt hangmap{" "}
+                                    {item.koppeling.storageNumber} niet meer voor dit model.
+                                  </span>
+                                </div>
+                              ) : (
+                                <div className="attention-action">
+                                  <span>
+                                    Klopt het dat dit vel niet op dit model past? Dan stopt het
+                                    advies ermee.
+                                  </span>
+                                  <button
+                                    type="button"
+                                    className="secondary-button"
+                                    onClick={() => keurKoppelingAf(item.koppeling!)}
+                                  >
+                                    Koppeling afkeuren
+                                  </button>
+                                </div>
+                              )
                             )}
                           </li>
                         );

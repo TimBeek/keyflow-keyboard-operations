@@ -36,6 +36,21 @@ export type AttentionItem = {
   orderReference: string;
   /** Wanneer het speelde; leeg voor dingen die geen moment hebben, zoals een lege hangmap. */
   occurredAt: string;
+  /**
+   * Waar de melding over gaat, als de app er iets mee kan.
+   *
+   * Bij "vel paste niet" wil je vanaf hier de koppeling tussen dit model en
+   * deze hangmap kunnen afkeuren. Dat lukt alleen met de sleutels erbij — uit
+   * de titel terugvissen wat er stond is vragen om fouten zodra iemand de
+   * tekst aanpast.
+   */
+  koppeling?: {
+    catalogKey: string;
+    model: string;
+    storageNumber: number;
+    /** De reden die de werkvloer koos, als tekst voor in de vastlegging. */
+    reden: string;
+  };
 };
 
 export const attentionKindLabel: Record<AttentionKind, string> = {
@@ -60,6 +75,13 @@ export function attentionItems(input: AttentionInput): AttentionItem[] {
   //    niemand te zien; een mislukte wel, want dan klopt er iets niet in de bron.
   for (const report of input.verificationReports) {
     if (report.outcome === "passed") continue;
+    // De hangmap waar dit over ging, zodat de koppeling van hieruit afgekeurd
+    // kan worden. Staat hij niet meer in de catalogus, dan valt er ook niets
+    // meer af te keuren en blijft het een mededeling.
+    const item = input.catalog.find(
+      (kandidaat) => kandidaat.sku === report.sku
+        && kandidaat.storageNumber === report.storageNumber,
+    );
     items.push({
       id: `mismatch-${report.id}`,
       kind: "sheet_mismatch",
@@ -67,6 +89,14 @@ export function attentionItems(input: AttentionInput): AttentionItem[] {
       detail: stickerVerificationFailureLabel(report.failureReason ?? "other"),
       orderReference: report.orderReference ?? "",
       occurredAt: report.occurredAt,
+      koppeling: item && item.dataQuality === "ready"
+        ? {
+          catalogKey: item.catalogKey,
+          model: report.model,
+          storageNumber: report.storageNumber,
+          reden: stickerVerificationFailureLabel(report.failureReason ?? "other"),
+        }
+        : undefined,
     });
   }
 

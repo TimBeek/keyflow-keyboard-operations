@@ -69,34 +69,49 @@ export function createCompatibilityEvidenceRecord(
   const photoReference = input.photoReference.trim();
   const notes = input.notes.trim();
   const reviewer = metadata.reviewer.trim();
-  if (manufacturerPartNumber.length < 3) {
-    throw new CompatibilityEvidenceError(
-      "Vul het exacte fabrikantonderdeelnummer in.",
-    );
-  }
-  if (photoReference.length < 3) {
-    throw new CompatibilityEvidenceError(
-      "Vul een herleidbare bovenaanzichtfoto of documentreferentie in.",
-    );
-  }
-  if (!Number.isFinite(input.keyboardWidthMm)
-    || input.keyboardWidthMm < 150
-    || input.keyboardWidthMm > 500) {
-    throw new CompatibilityEvidenceError(
-      "Keyboardbreedte moet tussen 150 en 500 millimeter liggen.",
-    );
-  }
-  if (!Number.isFinite(input.keyboardHeightMm)
-    || input.keyboardHeightMm < 50
-    || input.keyboardHeightMm > 250) {
-    throw new CompatibilityEvidenceError(
-      "Keyboardhoogte moet tussen 50 en 250 millimeter liggen.",
-    );
-  }
   if (!reviewer) {
     throw new CompatibilityEvidenceError(
       "Een persoonlijke managementbeoordelaar is verplicht.",
     );
+  }
+
+  /*
+   * Onderdeelnummer, foto en millimeters horen bij goedkeuren. Die bewijzen dát
+   * iets past, en dat is een uitspraak over alle toekomstige laptops van dit
+   * model — daar hoort bewijs bij dat iemand na kan lopen.
+   *
+   * Bij afkeuren bewijzen ze niets. Er is al een sterker bewijs: iemand heeft
+   * het vel op de echte laptop gelegd en het paste niet. Dat afdwingen zou
+   * betekenen dat een afkeuring nooit wordt vastgelegd — en dan blijft de app
+   * dezelfde hangmap adviseren en komt dezelfde melding volgende week terug.
+   * Wat hier wél moet staan is wat er niet klopte; dat wordt hieronder
+   * afgedwongen.
+   */
+  if (input.status === "approved") {
+    if (manufacturerPartNumber.length < 3) {
+      throw new CompatibilityEvidenceError(
+        "Vul het exacte fabrikantonderdeelnummer in.",
+      );
+    }
+    if (photoReference.length < 3) {
+      throw new CompatibilityEvidenceError(
+        "Vul een herleidbare bovenaanzichtfoto of documentreferentie in.",
+      );
+    }
+    if (!Number.isFinite(input.keyboardWidthMm)
+      || input.keyboardWidthMm < 150
+      || input.keyboardWidthMm > 500) {
+      throw new CompatibilityEvidenceError(
+        "Keyboardbreedte moet tussen 150 en 500 millimeter liggen.",
+      );
+    }
+    if (!Number.isFinite(input.keyboardHeightMm)
+      || input.keyboardHeightMm < 50
+      || input.keyboardHeightMm > 250) {
+      throw new CompatibilityEvidenceError(
+        "Keyboardhoogte moet tussen 50 en 250 millimeter liggen.",
+      );
+    }
   }
 
   if (input.status === "approved") {
