@@ -4025,3 +4025,21 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
   .werkdruk-keuze { justify-content: space-between; }
   .werkdruk-keuze button { flex: 1 1 0; padding: 0 8px; justify-items: center; }
 }
+
+
+/* De korte samenvatting op het dashboard. De volledige lijst staat op een eigen
+   pagina; hier alleen hoeveel er ligt en wat er nu iemand ophoudt, zodat je in
+   één blik ziet of je erheen moet. */
+.attention-kort {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 18px; padding: 16px 20px;
+}
+.attention-kort > div { display: flex; align-items: center; gap: 16px; min-width: 0; }
+.attention-kort-getal {
+  display: grid; place-items: center; flex: none; width: 46px; height: 46px;
+  border-radius: 13px; background: var(--warn-soft); color: var(--warn);
+  font-size: 20px; font-weight: 800;
+}
+.attention-kort strong { display: block; color: var(--text); font-size: 15px; font-weight: 700; }
+.attention-kort small { display: block; margin-top: 1px; color: var(--text-2); font-size: 12.5px; }
+.attention-kort button { flex: 0 0 auto; }

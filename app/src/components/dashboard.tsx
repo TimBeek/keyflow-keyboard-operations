@@ -204,7 +204,7 @@ type IconName =
   | "book";
 
 type ViewName =
-  | "overview" | "movers" | "layoutgroups" | "reports" | "settings"
+  | "overview" | "attention" | "movers" | "layoutgroups" | "reports" | "settings"
   | "inventory" | "conversions" | "orders" | "models" | "operations";
 
 function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
@@ -242,6 +242,10 @@ function Icon({ name, size = 20 }: { name: IconName; size?: number }) {
  */
 const navItems: { id: ViewName; label: string; icon: IconName }[] = [
   { id: "overview", label: "Vandaag", icon: "home" },
+  // Aandacht nodig had een eigen plek verdiend. Op het dashboard groeide het
+  // tot een muur van meldingen die de rest wegdrukte, terwijl je er meestal
+  // alleen even doorheen wilt lopen en dan verder gaat.
+  { id: "attention", label: "Aandacht nodig", icon: "alert" },
   { id: "movers", label: "Hardlopers", icon: "stock" },
   { id: "layoutgroups", label: "Layoutgroepen", icon: "models" },
   { id: "reports", label: "Rapportage", icon: "reports" },
@@ -263,6 +267,7 @@ const parkedNavItems: { id: ViewName; label: string; icon: IconName }[] = [
 
 const viewHeadings: Record<ViewName, { title: string; subtitle: string }> = {
   overview: { title: "Vandaag", subtitle: "Wat er vandaag is omgezet en wat aandacht vraagt." },
+  attention: { title: "Aandacht nodig", subtitle: "Alles waar iemand iets mee moet, bij elkaar." },
   movers: { title: "Hardlopers", subtitle: "Welke stickervellen hard lopen en welke blijven liggen." },
   layoutgroups: { title: "Layoutgroepen", subtitle: "Laat ReKey modellen groeperen die dezelfde sticker delen." },
   reports: { title: "Rapportage", subtitle: "Verbruik, dekking en verloop over de tijd." },
@@ -585,6 +590,8 @@ export function Dashboard({
     }),
     [verificationReports, printRequests, printBatches, catalogQuantities],
   );
+  /** Waar nu iemand op staat te wachten; dat getal staat in het menu. */
+  const dringend = useMemo(() => splitAttention(attention).nu.length, [attention]);
   const awaitingPrintCount = printRequests.filter(
     (request) => request.status === "requested",
   ).length;
@@ -2188,6 +2195,11 @@ export function Dashboard({
             // Instellingen staat bewust apart onder de vier dagelijkse
             // tabbladen: het is waar je de regels zet, niet waar je werkt.
             ? [...navItems, settingsNavItem, ...(showParked ? parkedNavItems : [])]
+              // Het aantal dringende punten hoort in het menu: dan zie je vanaf
+              // elk scherm of er iemand op je staat te wachten.
+              .map((item) => (item.id === "attention" && dringend > 0
+                ? { ...item, label: `Aandacht nodig · ${dringend}` }
+                : item))
             : [{ id: "overview" as const, label: "Uitvoering", icon: "convert" as const }]
           ).map((item) => (
             <button
@@ -2393,6 +2405,147 @@ export function Dashboard({
           />
         )}
 
+        {role === "management" && activeView === "attention" && (
+          attention.length > 0 ? (
+            /* Geen eigen kop meer: de pagina heet al "Aandacht nodig" en zegt
+               er dezelfde zin bij. Het aantal staat nu in het menu, waar je het
+               ook ziet als je ergens anders bent. */
+            <section className="panel problems-panel attention-panel">
+              {/* Twee blokken in plaats van één lijst: bij het bovenste staat er
+                  nu iemand met een laptop stil, bij het onderste merk je het pas
+                  bij de volgende laptop van dat model. Een teamleider hoeft dan
+                  niet zelf te wegen wat zwaarder telt. */}
+              {splitAttention(attention).nu.length > 0 && (
+                <p className="attention-kop nu">
+                  Nu oppakken — hier staat iemand op te wachten
+                </p>
+              )}
+              <div className="attention-groups">
+                {[...attentionByKind(splitAttention(attention).nu).entries()].map(([kind, items]) => (
+                  <div key={kind} className={`attention-group ${kind}`}>
+                    <h3>
+                      {attentionKindLabel[kind]}
+                      <b>{items.length}</b>
+                    </h3>
+                    <ul>
+                      {items.slice(0, 6).map((item) => {
+                        /* Staat het model geblokkeerd omdat Noviply het niet
+                           had, dan hoort de knop om dat terug te draaien hier
+                           te staan — dit is de plek waar je het probleem ziet. */
+                        const blokkade = kind === "cannot_print"
+                          ? noviplyUnavailable.find((regel) => item.title.toLowerCase().startsWith(regel.model.toLowerCase()))
+                          : undefined;
+                        return (
+                          <li key={item.id}>
+                            <strong>{item.title}</strong>
+                            <span>{item.detail}</span>
+                            <small>
+                              {item.orderReference && `Order ${item.orderReference}`}
+                              {item.orderReference && item.occurredAt && " · "}
+                              {item.occurredAt && formatPersistenceTime(item.occurredAt)}
+                            </small>
+                            {blokkade && (
+                              <div className="attention-action">
+                                <span>
+                                  De werkvloer krijgt hiervoor geen premiumsticker meer aangeraden.
+                                </span>
+                                <button
+                                  type="button"
+                                  className="secondary-button"
+                                  onClick={() => allowNoviplyAgain(blokkade.id)}
+                                >
+                                  Weer aanbieden
+                                </button>
+                              </div>
+                            )}
+                            {/* Een melding die alleen vertelt dat het misging
+                                verandert niets: morgen wijst de app dezelfde
+                                hangmap weer aan en staat dezelfde regel hier
+                                opnieuw. Hiermee keur je de koppeling af, en dan
+                                slaat het advies die map over voor dit model. */}
+                            {item.koppeling && (
+                              afgekeurdeKoppeling(item.koppeling) ? (
+                                <div className="attention-action is-klaar">
+                                  <span>
+                                    Afgekeurd — de werkvloer krijgt hangmap{" "}
+                                    {item.koppeling.storageNumber} niet meer voor dit model.
+                                  </span>
+                                  <button
+                                    type="button"
+                                    className="secondary-button"
+                                    onClick={() => void trekAfkeuringIn(item.koppeling!)}
+                                  >
+                                    Toch weer toestaan
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="attention-action">
+                                  <span>
+                                    Klopt het dat dit vel niet op dit model past? Dan stopt het
+                                    advies ermee.
+                                  </span>
+                                  <button
+                                    type="button"
+                                    className="secondary-button"
+                                    onClick={() => keurKoppelingAf(item.koppeling!)}
+                                  >
+                                    Koppeling afkeuren
+                                  </button>
+                                </div>
+                              )
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    {items.length > 6 && (
+                      <p className="report-note">
+                        De zes meest recente staan hier; er zijn er {items.length}.
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {splitAttention(attention).later.length > 0 && (
+                <>
+                  <p className="attention-kop later">Zodra het uitkomt</p>
+                  <div className="attention-groups">
+                    {[...attentionByKind(splitAttention(attention).later).entries()].map(([kind, items]) => (
+                      <div key={kind} className={`attention-group ${kind}`}>
+                        <h3>
+                          {attentionKindLabel[kind]}
+                          <b>{items.length}</b>
+                        </h3>
+                        <ul>
+                          {items.slice(0, 6).map((item) => (
+                            <li key={item.id}>
+                              <strong>{item.title}</strong>
+                              <span>{item.detail}</span>
+                            </li>
+                          ))}
+                        </ul>
+                        {items.length > 6 && (
+                          <p className="report-note">
+                            De zes meest recente staan hier; er zijn er {items.length}.
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </section>
+          ) : (
+              <section className="panel">
+                <div className="empty">
+                  Niets dat aandacht vraagt. Zodra een vel niet past, Noviply iets niet
+                  kan printen of een hangmap leegloopt, staat het hier.
+                </div>
+              </section>
+            )
+        )}
+
         {role === "management" && activeView === "overview" && (
           <>
         {/* De werkdruk staat op het dashboard omdat je hem 's ochtends omzet als
@@ -2559,139 +2712,31 @@ export function Dashboard({
             </section>
           )}
 
-          {attention.length > 0 && (
-            <section className="panel problems-panel attention-panel">
-              <div className="panel-heading">
-                <div>
-                  <h2>Aandacht nodig</h2>
-                  <p>Alles waar iemand iets mee moet, bij elkaar.</p>
-                </div>
-                <span className="problems-count">{attention.length}</span>
-              </div>
-              {/* Twee blokken in plaats van één lijst: bij het bovenste staat er
-                  nu iemand met een laptop stil, bij het onderste merk je het pas
-                  bij de volgende laptop van dat model. Een teamleider hoeft dan
-                  niet zelf te wegen wat zwaarder telt. */}
-              {splitAttention(attention).nu.length > 0 && (
-                <p className="attention-kop nu">
-                  Nu oppakken — hier staat iemand op te wachten
-                </p>
-              )}
-              <div className="attention-groups">
-                {[...attentionByKind(splitAttention(attention).nu).entries()].map(([kind, items]) => (
-                  <div key={kind} className={`attention-group ${kind}`}>
-                    <h3>
-                      {attentionKindLabel[kind]}
-                      <b>{items.length}</b>
-                    </h3>
-                    <ul>
-                      {items.slice(0, 6).map((item) => {
-                        /* Staat het model geblokkeerd omdat Noviply het niet
-                           had, dan hoort de knop om dat terug te draaien hier
-                           te staan — dit is de plek waar je het probleem ziet. */
-                        const blokkade = kind === "cannot_print"
-                          ? noviplyUnavailable.find((regel) => item.title.toLowerCase().startsWith(regel.model.toLowerCase()))
-                          : undefined;
-                        return (
-                          <li key={item.id}>
-                            <strong>{item.title}</strong>
-                            <span>{item.detail}</span>
-                            <small>
-                              {item.orderReference && `Order ${item.orderReference}`}
-                              {item.orderReference && item.occurredAt && " · "}
-                              {item.occurredAt && formatPersistenceTime(item.occurredAt)}
-                            </small>
-                            {blokkade && (
-                              <div className="attention-action">
-                                <span>
-                                  De werkvloer krijgt hiervoor geen premiumsticker meer aangeraden.
-                                </span>
-                                <button
-                                  type="button"
-                                  className="secondary-button"
-                                  onClick={() => allowNoviplyAgain(blokkade.id)}
-                                >
-                                  Weer aanbieden
-                                </button>
-                              </div>
-                            )}
-                            {/* Een melding die alleen vertelt dat het misging
-                                verandert niets: morgen wijst de app dezelfde
-                                hangmap weer aan en staat dezelfde regel hier
-                                opnieuw. Hiermee keur je de koppeling af, en dan
-                                slaat het advies die map over voor dit model. */}
-                            {item.koppeling && (
-                              afgekeurdeKoppeling(item.koppeling) ? (
-                                <div className="attention-action is-klaar">
-                                  <span>
-                                    Afgekeurd — de werkvloer krijgt hangmap{" "}
-                                    {item.koppeling.storageNumber} niet meer voor dit model.
-                                  </span>
-                                  <button
-                                    type="button"
-                                    className="secondary-button"
-                                    onClick={() => void trekAfkeuringIn(item.koppeling!)}
-                                  >
-                                    Toch weer toestaan
-                                  </button>
-                                </div>
-                              ) : (
-                                <div className="attention-action">
-                                  <span>
-                                    Klopt het dat dit vel niet op dit model past? Dan stopt het
-                                    advies ermee.
-                                  </span>
-                                  <button
-                                    type="button"
-                                    className="secondary-button"
-                                    onClick={() => keurKoppelingAf(item.koppeling!)}
-                                  >
-                                    Koppeling afkeuren
-                                  </button>
-                                </div>
-                              )
-                            )}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                    {items.length > 6 && (
-                      <p className="report-note">
-                        De zes meest recente staan hier; er zijn er {items.length}.
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
 
-              {splitAttention(attention).later.length > 0 && (
-                <>
-                  <p className="attention-kop later">Zodra het uitkomt</p>
-                  <div className="attention-groups">
-                    {[...attentionByKind(splitAttention(attention).later).entries()].map(([kind, items]) => (
-                      <div key={kind} className={`attention-group ${kind}`}>
-                        <h3>
-                          {attentionKindLabel[kind]}
-                          <b>{items.length}</b>
-                        </h3>
-                        <ul>
-                          {items.slice(0, 6).map((item) => (
-                            <li key={item.id}>
-                              <strong>{item.title}</strong>
-                              <span>{item.detail}</span>
-                            </li>
-                          ))}
-                        </ul>
-                        {items.length > 6 && (
-                          <p className="report-note">
-                            De zes meest recente staan hier; er zijn er {items.length}.
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
+          {/* Op het dashboard alleen nog hoeveel er ligt en wat het zwaarste
+              is. De volledige lijst staat op een eigen pagina: hij groeide hier
+              uit tot een muur van meldingen die de rest wegdrukte, terwijl je
+              er meestal even doorheen loopt en dan verder gaat. */}
+          {attention.length > 0 && (
+            <section className="panel attention-kort">
+              <div>
+                <span className="attention-kort-getal">{attention.length}</span>
+                <div>
+                  <strong>
+                    {splitAttention(attention).nu.length > 0
+                      ? `${splitAttention(attention).nu.length} vragen er nu om`
+                      : "Niets dat nu iemand ophoudt"}
+                  </strong>
+                  <small>
+                    {splitAttention(attention).nu.length > 0
+                      ? splitAttention(attention).nu[0].title
+                      : `${attention.length} ${attention.length === 1 ? "punt" : "punten"} voor zodra het uitkomt`}
+                  </small>
+                </div>
+              </div>
+              <button type="button" className="secondary-button" onClick={() => setActiveView("attention")}>
+                Bekijken
+              </button>
             </section>
           )}
 
