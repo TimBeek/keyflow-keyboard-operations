@@ -38,8 +38,36 @@ export function validateAnswer(status: Exclude<PrinterCheckStatus, "pending">, n
   return trimmed;
 }
 
-export function openCheck(checks: PrinterCheckRecord[]) {
-  return checks.find((check) => check.status === "pending") ?? null;
+/**
+ * Hoe lang een antwoord van de werkvloer meegaat.
+ *
+ * "De printer staat klaar" is waar op het moment dat iemand ernaar keek. Die
+ * printer staat in een ruimte waar de hele dag mensen langslopen: hij kan
+ * uitgezet zijn, leeg zijn, of net gebruikt. Na een half uur is "hij stond
+ * klaar" geen mededeling meer maar een gok, en dan hoor je opnieuw te vragen in
+ * plaats van een groen vinkje te blijven zien.
+ */
+export const answerValidMinutes = 30;
+
+/**
+ * Hoe lang een onbeantwoorde vraag blijft staan. Korter, want dit gaat over
+ * iemand die nu op antwoord wacht. Komt er een kwartier niets, dan is de
+ * werkvloer ergens anders mee bezig en heeft opnieuw vragen meer zin dan blijven
+ * staan op "wachten".
+ */
+export const questionValidMinutes = 15;
+
+function binnen(moment: string | null | undefined, now: Date, minuten: number) {
+  if (!moment) return false;
+  const tijd = new Date(moment).getTime();
+  if (Number.isNaN(tijd)) return false;
+  return now.getTime() - tijd < minuten * 60_000;
+}
+
+export function openCheck(checks: PrinterCheckRecord[], now = new Date()) {
+  return checks.find(
+    (check) => check.status === "pending" && binnen(check.askedAt, now, questionValidMinutes),
+  ) ?? null;
 }
 
 /**
@@ -47,15 +75,19 @@ export function openCheck(checks: PrinterCheckRecord[]) {
  * staan zou suggereren dat de printer nog klaarstaat, terwijl er ondertussen
  * materiaal doorheen is gegaan.
  */
-export function latestAnswered(checks: PrinterCheckRecord[]) {
+export function latestAnswered(checks: PrinterCheckRecord[], now = new Date()) {
   return [...checks]
-    .filter((check) => check.status !== "pending" && check.answeredAt && !check.closedAt)
+    .filter((check) => check.status !== "pending"
+      && check.answeredAt
+      && !check.closedAt
+      // Een antwoord van een uur geleden zegt niets meer over nu.
+      && binnen(check.answeredAt, now, answerValidMinutes))
     .sort((left, right) => (right.answeredAt ?? "").localeCompare(left.answeredAt ?? ""))[0] ?? null;
 }
 
 /** Kan Noviply nu beginnen? Alleen als de werkvloer ja zei en er nog niet is geprint. */
-export function readyToPrint(checks: PrinterCheckRecord[]) {
-  const answer = latestAnswered(checks);
+export function readyToPrint(checks: PrinterCheckRecord[], now = new Date()) {
+  const answer = latestAnswered(checks, now);
   return answer && answer.status === "ready" ? answer : null;
 }
 

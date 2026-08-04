@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   latestAnswered,
   openCheck,
@@ -32,9 +32,21 @@ export function RemotePrinterButton({
   onStartPrinting: (id: string) => void;
 }) {
   const [sending, setSending] = useState(false);
-  const waiting = openCheck(printerChecks);
-  const ready = readyToPrint(printerChecks);
-  const answered = latestAnswered(printerChecks);
+  /*
+   * Een eigen klokje. De stand van deze knop verloopt met de tijd — een
+   * bevestiging van een half uur geleden zegt niets meer over nu — en zonder
+   * tikker zou hij pas omslaan als er toevallig iets anders verandert. Elke
+   * halve minuut is ruim genoeg; het gaat om minuten, niet om seconden.
+   */
+  const [nu, setNu] = useState(() => new Date());
+  useEffect(() => {
+    const klok = window.setInterval(() => setNu(new Date()), 30_000);
+    return () => window.clearInterval(klok);
+  }, []);
+
+  const waiting = openCheck(printerChecks, nu);
+  const ready = readyToPrint(printerChecks, nu);
+  const answered = latestAnswered(printerChecks, nu);
   const blocked = !ready && !waiting && answered?.status === "blocked" ? answered : null;
 
   function ask() {
@@ -48,7 +60,15 @@ export function RemotePrinterButton({
       <div className="printer-chip is-ready">
         <span className="printer-chip-text">
           <b>Printer is ready</b>
-          <small>Confirmed by {ready.answeredBy}</small>
+          {/* Met het tijdstip erbij, want dit is een momentopname: iemand keek
+              ernaar en het stond aan. Na een half uur vervalt hij vanzelf en
+              staat de knop weer op vragen. */}
+          <small>
+            Confirmed by {ready.answeredBy} at{" "}
+            {new Date(ready.answeredAt ?? "").toLocaleTimeString("en-GB", {
+              hour: "2-digit", minute: "2-digit",
+            })}
+          </small>
         </span>
         <button type="button" className="printer-chip-go" onClick={() => onStartPrinting(ready.id)}>
           We are printing now
