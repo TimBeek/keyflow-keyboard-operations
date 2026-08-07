@@ -1,4 +1,5 @@
 import type { InventoryCatalogItem } from "@/data/inventory-catalog";
+import { toCsv, type CsvValue } from "./csv";
 import { inventoryQuantity } from "./inventory-quantities";
 import { batchLabel, type PrintBatch } from "./print-batch";
 import type { PrintRequestRecord } from "./print-requests";
@@ -214,4 +215,39 @@ export function attentionByKind(items: AttentionItem[]) {
     if (!per.has(item.kind)) per.set(item.kind, items.filter((x) => x.kind === item.kind));
   }
   return per;
+}
+
+/**
+ * De lijst als bestand.
+ *
+ * Op het scherm loop je hem door en handel je af; in Excel wil je hem
+ * uitsplitsen, sorteren of doorsturen naar iemand die niet in ReKey werkt. De
+ * urgentie staat als kolom mee, want die zie je op het scherm aan de kop en die
+ * gaat verloren zodra je het bestand opent.
+ */
+const attentionHeaders = [
+  "Urgentie",
+  "Soort",
+  "Wat",
+  "Toelichting",
+  "Ordernummer",
+  "Wanneer",
+] as const;
+
+export function createAttentionCsv(items: AttentionItem[]) {
+  const { nu } = splitAttention(items);
+  const dringend = new Set(nu.map((item) => item.id));
+  return toCsv(attentionHeaders, items.map((item): CsvValue[] => [
+    dringend.has(item.id) ? "Nu oppakken" : "Zodra het uitkomt",
+    attentionKindLabel[item.kind],
+    item.title,
+    item.detail,
+    item.orderReference,
+    item.occurredAt,
+  ]));
+}
+
+/** Een bestandsnaam met de datum voorop, zodat sorteren op naam werkt. */
+export function attentionExportFilename(isoMoment: string) {
+  return `rekey-aandacht-${isoMoment.slice(0, 10)}.csv`;
 }

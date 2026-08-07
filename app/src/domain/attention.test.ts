@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { InventoryCatalogItem } from "@/data/inventory-catalog";
-import { attentionByKind, attentionItems, splitAttention, type AttentionInput } from "./attention";
+import {
+  attentionByKind,
+  attentionExportFilename,
+  attentionItems,
+  createAttentionCsv,
+  splitAttention,
+  type AttentionInput,
+} from "./attention";
 import type { PrintBatch } from "./print-batch";
 import type { PrintRequestRecord } from "./print-requests";
 import type { StickerVerificationReport } from "./sticker-verification";
@@ -272,5 +279,37 @@ describe("Wat houdt er nu iemand op", () => {
     expect(items).toBeDefined();
     expect(gesplitst.nu.map((i) => i.id)).toEqual(["2", "3"]);
     expect(gesplitst.later.map((i) => i.id)).toEqual(["1", "4"]);
+  });
+});
+
+describe("de lijst als bestand", () => {
+  it("zet elke regel erin, met de urgentie als kolom", () => {
+    // Op het scherm zie je aan de kop of iets nu moet; in een bestand is die
+    // kop weg, dus hoort het per regel te staan.
+    const items = attentionItems({
+      ...leeg,
+      verificationReports: [report()],
+      catalog: [hangmap],
+      quantities: {},
+    });
+    const csv = createAttentionCsv(items);
+    const regels = csv.trim().split("\n");
+    expect(regels[0]).toContain("Urgentie");
+    expect(regels).toHaveLength(items.length + 1);
+    expect(csv).toContain("Nu oppakken");
+    expect(csv).toContain("Dell Latitude 5420");
+  });
+
+  it("noemt wat later mag ook zo", () => {
+    const items = attentionItems({ ...leeg, catalog: [hangmap], quantities: {} });
+    expect(items.length).toBeGreaterThan(0);
+    const csv = createAttentionCsv(items);
+    expect(csv).toContain("Zodra het uitkomt");
+    expect(csv).not.toContain("Nu oppakken");
+  });
+
+  it("zet de datum voorop in de bestandsnaam, zodat sorteren werkt", () => {
+    expect(attentionExportFilename("2026-08-04T09:12:00.000Z"))
+      .toBe("rekey-aandacht-2026-08-04.csv");
   });
 });

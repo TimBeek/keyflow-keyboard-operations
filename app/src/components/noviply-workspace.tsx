@@ -8,6 +8,7 @@ import {
   type InventoryTransactionEntry,
 } from "@/domain/operations";
 import { dayKey } from "@/domain/reporting";
+import { downloadTekstbestand } from "@/lib/bestand-downloaden";
 import { NoviplyLogo } from "@/components/noviply-logo";
 import { RemotePrinterButton } from "@/components/remote-printer-button";
 import { NewRunDialog } from "@/components/new-run-dialog";
@@ -78,17 +79,6 @@ type Props = {
     unavailableReason: UnavailableReason,
   ) => Promise<void>;
 };
-
-/** Overtypen in een ander systeem is werk dat fouten maakt. */
-function downloadCsv(contents: string, filename: string) {
-  const blob = new Blob([contents], { type: "text/csv;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
-}
 
 function formatMoment(value: string) {
   const moment = new Date(value);
@@ -204,7 +194,7 @@ export function NoviplyWorkspace({
 
   function exportStock() {
     const moment = new Date().toISOString();
-    downloadCsv(
+    downloadTekstbestand(
       createNoviplyStockCsv(stockRows.map(({ item, stock, threshold, shortfall }) => ({
         storageNumber: item.storageNumber,
         model: item.model,
@@ -223,7 +213,7 @@ export function NoviplyWorkspace({
     const moment = new Date().toISOString();
     // Alles, niet alleen wat openstaat: hun eigen administratie wil de
     // afgehandelde regels er ook bij.
-    downloadCsv(
+    downloadTekstbestand(
       createNoviplyPrintRequestCsv([...printRequests].sort((left, right) =>
         left.requestedAt.localeCompare(right.requestedAt))),
       noviplyExportFilename("print-requests", moment),
@@ -362,7 +352,7 @@ export function NoviplyWorkspace({
           onSeen={onBatchSeen}
           onRemove={onRemoveBatch}
           onDownload={(batch) => {
-            downloadCsv(
+            downloadTekstbestand(
               createPrintBatchCsv(batch.rows),
               noviplyExportFilename("run", new Date().toISOString()),
             );

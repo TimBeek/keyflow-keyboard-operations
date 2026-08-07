@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ConversionAdvisor } from "@/components/conversion-advisor";
+import { downloadTekstbestand } from "@/lib/bestand-downloaden";
 import { AccessManagementDialog } from "@/components/access-management";
 import { EmployeeWorkspace } from "@/components/employee-workspace";
 import { MethodPhotoHelp } from "@/components/method-photo-help";
@@ -57,7 +58,9 @@ import { conversionMethods, type ConversionMethodId } from "@/domain/conversion-
 import { realUsageUnits } from "@/domain/real-usage";
 import {
   attentionByKind,
+  attentionExportFilename,
   attentionItems,
+  createAttentionCsv,
   splitAttention,
   attentionKindLabel,
 } from "@/domain/attention";
@@ -2411,6 +2414,34 @@ export function Dashboard({
                er dezelfde zin bij. Het aantal staat nu in het menu, waar je het
                ook ziet als je ergens anders bent. */
             <section className="panel problems-panel attention-panel">
+              {/* Een balk met wat er ligt en de knop om het mee te nemen. Deze
+                  lijst wordt ook buiten ReKey gebruikt — doorsturen naar iemand
+                  die er niet in werkt, of uitsplitsen in Excel — en overtypen is
+                  werk dat fouten maakt. */}
+              <div className="attention-balk">
+                <span>
+                  <b>{attention.length}</b> {attention.length === 1 ? "punt" : "punten"}
+                  {dringend > 0 && <em> · {dringend} nu oppakken</em>}
+                </span>
+                <div className="attention-balk-acties">
+                  <span className="attention-live">
+                    Werkt zichzelf bij — laatst gekeken {lastSyncedAt ? formatPersistenceTime(lastSyncedAt) : "zojuist"}
+                  </span>
+                  <button
+                    type="button"
+                    className="secondary-button"
+                    onClick={() => {
+                      downloadTekstbestand(
+                        createAttentionCsv(attention),
+                        attentionExportFilename(new Date().toISOString()),
+                      );
+                      setLastAction(`${attention.length} punten geëxporteerd.`);
+                    }}
+                  >
+                    Download voor Excel
+                  </button>
+                </div>
+              </div>
               {/* Twee blokken in plaats van één lijst: bij het bovenste staat er
                   nu iemand met een laptop stil, bij het onderste merk je het pas
                   bij de volgende laptop van dat model. Een teamleider hoeft dan
@@ -2428,7 +2459,12 @@ export function Dashboard({
                       <b>{items.length}</b>
                     </h3>
                     <ul>
-                      {items.slice(0, 6).map((item) => {
+                      {/* De hele lijst. Er stonden er zes met een regeltje
+                          eronder dat er meer waren — en dan moet je maar raden
+                          welke. Dit is de plek waar je alles wilt zien; die
+                          afkapping hoorde bij het dashboard, en daar staat nu
+                          alleen nog een samenvatting. */}
+                      {items.map((item) => {
                         /* Staat het model geblokkeerd omdat Noviply het niet
                            had, dan hoort de knop om dat terug te draaien hier
                            te staan — dit is de plek waar je het probleem ziet. */
@@ -2498,11 +2534,6 @@ export function Dashboard({
                         );
                       })}
                     </ul>
-                    {items.length > 6 && (
-                      <p className="report-note">
-                        De zes meest recente staan hier; er zijn er {items.length}.
-                      </p>
-                    )}
                   </div>
                 ))}
               </div>
@@ -2518,18 +2549,13 @@ export function Dashboard({
                           <b>{items.length}</b>
                         </h3>
                         <ul>
-                          {items.slice(0, 6).map((item) => (
+                          {items.map((item) => (
                             <li key={item.id}>
                               <strong>{item.title}</strong>
                               <span>{item.detail}</span>
                             </li>
                           ))}
                         </ul>
-                        {items.length > 6 && (
-                          <p className="report-note">
-                            De zes meest recente staan hier; er zijn er {items.length}.
-                          </p>
-                        )}
                       </div>
                     ))}
                   </div>
