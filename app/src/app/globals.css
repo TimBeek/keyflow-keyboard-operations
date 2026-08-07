@@ -182,8 +182,20 @@ td, th, .tabular { font-variant-numeric: tabular-nums; }
 .content-grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(310px, .8fr); gap: 18px; align-items: start; }
 /* "Aandacht nodig" is waar management op stuurt; dat verdient de volle breedte
    in plaats van een kolom naast de voorraadtabel. */
-.attention-panel { grid-column: 1 / -1; }
-.attention-panel .attention-groups { grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); align-items: start; }
+/*
+ * Elke soort de volle breedte, en de kaarten daarbinnen in kolommen.
+ *
+ * Hiervoor was elke soort zélf een kolom. Met vier "vel paste niet" naast
+ * dertig "Noviply kan niet printen" werd de rij dus dertig kaarten hoog, met
+ * een leeg vlak van dezelfde hoogte ernaast. Zo vullen dertig kaarten netjes
+ * acht rijen en staat er nergens gat.
+ */
+.attention-panel .attention-groups { grid-template-columns: minmax(0, 1fr); }
+.attention-group ul { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); align-items: start; }
+.attention-group li { display: flex; flex-direction: column; }
+/* De actiebalk onderaan, zodat de knoppen van kaarten naast elkaar op één lijn
+   staan in plaats van op de hoogte van hun eigen tekst. */
+.attention-group li .attention-action { margin-top: auto; }
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); overflow: hidden; }
 .panel-heading { min-height: 70px; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 16px 20px; border-bottom: 1px solid var(--surface-2); }
 .panel-heading h2 { margin: 0 0 4px; font-size: 16px; }
@@ -3509,14 +3521,18 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
   text-transform: uppercase;
   color: var(--text-2);
 }
-.attention-group h3 b {
-  min-width: 21px;
-  padding: 1px 7px;
-  border-radius: 999px;
-  background: var(--surface-2);
-  color: var(--text);
+/*
+ * De telling stond als pil in --surface-2, en dat is dónkerder dan het paneel
+ * eronder: je zag alleen een los cijfer naast een kop in kapitalen. Als gewone
+ * regel achteraan leest hij als wat hij is.
+ */
+.attention-group h3 .attention-telling {
+  margin-left: auto;
+  color: var(--text-2);
   font-size: 11.5px;
-  text-align: center;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
 }
 .attention-group ul { display: grid; gap: 9px; margin: 0; padding: 0; list-style: none; }
 .attention-group li {
@@ -4049,7 +4065,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
    de knop om hem mee te nemen. */
 .attention-balk {
   display: flex; align-items: center; justify-content: space-between;
-  flex-wrap: wrap; gap: 14px; margin-bottom: 16px; padding-bottom: 14px;
+  flex-wrap: wrap; gap: 14px; padding: 16px 20px 14px;
   border-bottom: 1px solid var(--line-soft);
 }
 .attention-balk > span { color: var(--text-2); font-size: 13.5px; }
@@ -4073,7 +4089,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 /* Bij een regel waar hetzelfde model eerder al niet lukte. Amber, want dat
    betekent in dit scherm overal "let hier even op" — en klein, want het is een
    aantekening bij het model en geen tweede regel. */
-.row-eerder {
+.operations-table td > .row-eerder, .row-eerder {
   display: block; margin-top: 3px;
   color: var(--warn); font-size: 11.5px; font-weight: 640;
 }
@@ -4109,3 +4125,44 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 .misfit-list strong { color: var(--text); font-size: 14px; }
 .misfit-list span { color: var(--text-2); font-size: 12.5px; }
 .misfit-list small { color: var(--muted); font-size: 11.5px; }
+
+/* Een regel die niets stilzet: het ging een keer mis, maar de werkvloer krijgt
+   het gewoon weer aangeboden. Vlakker dan een echte blokkade, zodat het verschil
+   in één blik te zien is. */
+.blocked-list li.is-history { border-left-color: var(--line); opacity: 0.86; }
+.blocked-open {
+  flex: 0 0 auto; color: var(--muted); font-size: 12px; font-weight: 650;
+  white-space: nowrap;
+}
+
+/* Een openstaande blokkade weegt zwaarder dan "het lukte vorige keer niet":
+   die eerste zegt iets over vandaag, de tweede over toen. */
+.operations-table td > .row-eerder.is-blocked { color: var(--crit); }
+
+/* De ordernummers die op één kaart samenkomen. Ze horen bij elkaar, dus als
+   rijtje chips en niet als een steeds langere zin. */
+.attention-orders { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+
+/* Het bestelsignaal op het scherm van Noviply. Van rood naar rustig, zodat je
+   in één blik ziet waar de haast zit. */
+.stock-signaal {
+  display: inline-block; padding: 2px 9px; border-radius: 999px;
+  font-size: 11.5px; font-weight: 750; white-space: nowrap;
+}
+.stock-signaal.is-out, .stock-signaal.is-order_now { background: var(--crit-soft); color: var(--crit); }
+.stock-signaal.is-order { background: var(--warn-soft); color: var(--warn); }
+.stock-signaal.is-watch { background: var(--signal-soft); color: var(--signal); }
+.stock-signaal.is-empty { background: var(--crit-soft); color: var(--crit); }
+/* "Nog niet gemeten" is geen probleem maar een mededeling: geen kleur. */
+.stock-signaal.is-unknown { background: var(--surface-2); color: var(--muted); }
+
+.bestel-aantal { color: var(--text); font-size: 15px; font-weight: 800; }
+/* Een nummer dat wij zelf hebben verzonnen kan Noviply niet leveren; dat hoort
+   op hun bestellijst te staan en niet pas bij de order te blijken. */
+.sku-eigen { color: var(--warn) !important; font-weight: 700; }
+.tabel-voet { margin: 10px 20px 0; color: var(--muted); font-size: 12.5px; }
+.noviply-panel-acties { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.zoekveld {
+  min-width: 220px; padding: 8px 12px; border: 1px solid var(--line);
+  border-radius: 10px; background: var(--surface-2); color: var(--text); font-size: 13px;
+}

@@ -38,7 +38,8 @@ export function modelKey(model: string) {
   return model.trim().toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 }
 
-function layoutKey(layout: string) {
+/** Voor het samenvoegen van alles wat over dezelfde taal gaat. */
+export function layoutKey(layout: string) {
   return layout.trim().toLowerCase().replace(/\s+/g, " ");
 }
 

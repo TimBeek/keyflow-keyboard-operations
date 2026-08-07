@@ -11,7 +11,12 @@ import {
   type PrintBatch,
   type PrintBatchRow,
 } from "@/domain/print-batch";
+import { unavailableReasons } from "@/domain/noviply-availability";
 import { markConversionsAwaitingPrint, markConversionsPrinted } from "./conversion-log-service";
+import {
+  recordNoviplyUnavailable,
+  withdrawBlockFromBatchRow,
+} from "./noviply-availability-service";
 import { requirePermission } from "./authorization-service";
 import { database } from "./database";
 import { databaseUuidSchema } from "./validation";
@@ -358,6 +363,15 @@ const settleSchema = z.object({
   rowId: databaseUuidSchema,
   status: z.enum(["printed", "not_printable"]),
   note: z.string().max(500).default(""),
+  /**
+   * Waarom het niet kan, in dezelfde termen als bij een losse aanvraag.
+   *
+   * Zonder dit was er alleen vrije tekst, en dan is "folie op" niet van "dit
+   * model hebben wij niet" te onderscheiden. Het eerste is morgen voorbij, het
+   * tweede geldt voor elke volgende laptop van dat model. Standaard "temporary":
+   * dat legt niets vast, dus een oude aanroep zonder reden verandert niets.
+   */
+  unavailableReason: z.enum(unavailableReasons).default("temporary"),
   actorId: databaseUuidSchema,
 });
 
@@ -372,17 +386,43 @@ export async function settleBatchRow(rawInput: z.input<typeof settleSchema>) {
   const sql = database();
 
   return sql.begin(async (transaction) => {
-    const [row] = await transaction<{ id: string; order_reference: string }[]>`
+    const [row] = await transaction<
+      {
+        id: string; order_reference: string;
+        model: string; layout: string; language_code: string;
+      }[]
+    >`
       update print_batch_rows
       set status = ${input.status}, note = ${note},
           handled_at = now(), handled_by = ${input.actorId}
       where id = ${input.rowId} and status = 'open'
-      returning id, order_reference
+      returning id, order_reference, model, layout, language_code
     `;
     if (!row) throw new PrintBatchError("Deze regel is al afgehandeld.");
     // Stond er een laptop op deze order te wachten, dan is die nu af.
     if (input.status === "printed") {
       await markConversionsPrinted(transaction, row.order_reference);
+    }
+    /*
+     * Kunnen ze het niet, dan geldt dat ook voor de volgende laptop van
+     * hetzelfde model — of het nu uit een ronde of uit een losse aanvraag komt.
+     * Dit is dezelfde vastlegging, zodat het aan beide kanten zichtbaar is en
+     * met één knop weer ingetrokken kan worden.
+     */
+    if (input.status === "not_printable") {
+      await recordNoviplyUnavailable(transaction, {
+        model: row.model,
+        /*
+         * De ruwe landcode als de app de taal niet kent. Anders is het bereik
+         * leeg, en "deze taal kunnen wij niet" wordt dan een uitspraak over het
+         * hele model — veel zwaarder dan wat er is gezegd.
+         */
+        layout: row.layout || row.language_code,
+        reason: input.unavailableReason,
+        note,
+        actorId: input.actorId,
+        sourceBatchRowId: row.id,
+      });
     }
     return { settled: true };
   });
@@ -428,7 +468,17 @@ export async function reopenBatchRow(rawInput: { rowId: string; actorId: string 
     // Stond de laptop op voltooid omdat dit vel geprint zou zijn, dan wacht hij
     // weer. Anders denkt de werkvloer dat er iets klaarligt.
     await markConversionsAwaitingPrint(transaction, row.order_reference);
-    return { reopened: true };
+    /*
+     * En de blokkade eraf die door precies deze klik is ontstaan. Anders draait
+     * Undo maar de helft terug: de regel staat weer open, maar het model blijft
+     * uitgesloten voor de werkvloer — en dat is alleen op een ander scherm te
+     * zien. Alleen wat deze regel zelf heeft aangemaakt; een blokkade die er al
+     * lag of die van iemand anders blijft staan.
+     */
+    const ingetrokken = await withdrawBlockFromBatchRow(
+      transaction, input.rowId, input.actorId,
+    );
+    return { reopened: true, ...ingetrokken };
   });
 }
 

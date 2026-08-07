@@ -373,10 +373,15 @@ export async function uploadPrintBatch(file: File, batchNumber?: number) {
   return body as { batchId: string; rows: number; duplicate: boolean; sameFile: boolean };
 }
 
-export function settleBatchRow(rowId: string, status: "printed" | "not_printable", note = "") {
+export function settleBatchRow(
+  rowId: string,
+  status: "printed" | "not_printable",
+  note = "",
+  unavailableReason?: UnavailableReason,
+) {
   return request<{ settled: true }>("/api/print-batches", {
     method: "PATCH",
-    body: JSON.stringify({ rowId, status, note }),
+    body: JSON.stringify({ rowId, status, note, unavailableReason }),
   });
 }
 

@@ -82,6 +82,7 @@ export async function PATCH(request: Request) {
       rowId: body.rowId,
       status: body.status,
       note: body.note ?? "",
+      unavailableReason: body.unavailableReason,
       actorId,
     }));
   } catch (error) {

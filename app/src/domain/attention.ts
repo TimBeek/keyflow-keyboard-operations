@@ -1,6 +1,7 @@
 import type { InventoryCatalogItem } from "@/data/inventory-catalog";
 import { toCsv, type CsvValue } from "./csv";
 import { inventoryQuantity } from "./inventory-quantities";
+import { layoutKey, modelKey } from "./noviply-availability";
 import { batchLabel, type PrintBatch } from "./print-batch";
 import type { PrintRequestRecord } from "./print-requests";
 import {
@@ -37,6 +38,16 @@ export type AttentionItem = {
   orderReference: string;
   /** Wanneer het speelde; leeg voor dingen die geen moment hebben, zoals een lege hangmap. */
   occurredAt: string;
+  /**
+   * Waar het over gaat, als losse velden.
+   *
+   * Stonden alleen samengeplakt in `title`, en dan valt er niet op te
+   * groeperen: vier keer dezelfde laptop in dezelfde taal werd vier keer
+   * dezelfde zin, waarbij alleen in de grijze onderregel stond wat er anders
+   * was. Leeg bij een lege hangmap; daar gaat het niet over een model.
+   */
+  model?: string;
+  layout?: string;
   /**
    * Waar de melding over gaat, als de app er iets mee kan.
    *
@@ -112,6 +123,8 @@ export function attentionItems(input: AttentionInput): AttentionItem[] {
       detail: request.note || "Geen reden opgegeven.",
       orderReference: request.orderReference,
       occurredAt: request.handledAt ?? request.requestedAt,
+      model: request.model,
+      layout: request.layout,
     });
   }
   for (const batch of input.printBatches) {
@@ -124,6 +137,8 @@ export function attentionItems(input: AttentionInput): AttentionItem[] {
         detail: `${row.note || "Geen reden opgegeven."} (${batchLabel(batch)})`,
         orderReference: row.orderReference,
         occurredAt: row.handledAt ?? "",
+        model: row.model,
+        layout: row.layout || row.languageCode,
       });
     }
   }
@@ -250,4 +265,67 @@ export function createAttentionCsv(items: AttentionItem[]) {
 /** Een bestandsnaam met de datum voorop, zodat sorteren op naam werkt. */
 export function attentionExportFilename(isoMoment: string) {
   return `rekey-aandacht-${isoMoment.slice(0, 10)}.csv`;
+}
+
+/**
+ * Eén kaart per zaak in plaats van per order.
+ *
+ * "Noviply kan niet printen" leverde dertig regels op waarvan er twaalf over
+ * dezelfde vier laptops gingen: dezelfde modelnaam, dezelfde taal, alleen een
+ * ander ordernummer. Dan lees je dezelfde zin steeds opnieuw en moet je in het
+ * grijze onderregeltje zoeken wat er anders is.
+ *
+ * Alleen bij "kan niet printen" valt er iets samen te voegen — daar gaat het
+ * over een model in een taal, en dat herhaalt zich. Een vel dat niet paste en
+ * een lege hangmap zijn elk hun eigen geval en blijven los staan.
+ *
+ * Het CSV-bestand blijft ongegroepeerd: in Excel wil je juist elke order apart.
+ */
+export type AttentionCase = {
+  key: string;
+  kind: AttentionKind;
+  title: string;
+  detail: string;
+  model: string;
+  layout: string;
+  /** Elke order die hierop is vastgelopen, nieuwste eerst. */
+  orders: string[];
+  /** Het meest recente moment binnen deze zaak. */
+  occurredAt: string;
+  /** Hoeveel losse punten hier samenkomen. */
+  aantal: number;
+  /** Het eerste onderliggende punt; daar hangt de actie aan. */
+  eerste: AttentionItem;
+};
+
+export function attentionCases(items: AttentionItem[]): AttentionCase[] {
+  const zaken = new Map<string, AttentionCase>();
+  for (const item of items) {
+    const groepeerbaar = item.kind === "cannot_print" && Boolean(item.model);
+    const key = groepeerbaar
+      ? `${item.kind}|${modelKey(item.model ?? "")}|${layoutKey(item.layout ?? "")}`
+      : item.id;
+    const bestaand = zaken.get(key);
+    if (bestaand) {
+      bestaand.aantal += 1;
+      if (item.orderReference && !bestaand.orders.includes(item.orderReference)) {
+        bestaand.orders.push(item.orderReference);
+      }
+      // De lijst komt op tijd binnen; het eerste item is dus het meest recente.
+      continue;
+    }
+    zaken.set(key, {
+      key,
+      kind: item.kind,
+      title: item.title,
+      detail: item.detail,
+      model: item.model ?? "",
+      layout: item.layout ?? "",
+      orders: item.orderReference ? [item.orderReference] : [],
+      occurredAt: item.occurredAt,
+      aantal: 1,
+      eerste: item,
+    });
+  }
+  return [...zaken.values()];
 }

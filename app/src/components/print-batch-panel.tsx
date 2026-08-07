@@ -1,13 +1,24 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import {
+  printVerdictFor,
+  printVerdictIndex,
+  printVerdicts,
+} from "@/domain/print-verdict";
+import type { PrintRequestRecord } from "@/domain/print-requests";
+import type { NoviplyUnavailableRecord } from "@/domain/noviply-availability";
+import {
+  unavailableReasonEnglish,
+  unavailableReasons,
+  type UnavailableReason,
+} from "@/domain/noviply-availability";
 import {
   activeBatches,
   batchIsDone,
   batchLabel,
   batchSheetCount,
   completedBatches,
-  eerderAfgekeurd,
   openBatchRows,
   unknownLanguageRows,
   type PrintBatch,
@@ -26,8 +37,16 @@ import {
 
 type Props = {
   batches: PrintBatch[];
+  /** Meegenomen in het oordeel: hier zit de helft van de kennis in. */
+  printRequests: PrintRequestRecord[];
+  unavailable: NoviplyUnavailableRecord[];
   onUpload: (file: File) => Promise<{ rows: number; duplicate: boolean; sameFile: boolean }>;
-  onSettleRow: (rowId: string, status: "printed" | "not_printable", note: string) => Promise<void>;
+  onSettleRow: (
+    rowId: string,
+    status: "printed" | "not_printable",
+    note: string,
+    reason: UnavailableReason,
+  ) => Promise<void>;
   onReopenRow: (rowId: string) => Promise<void>;
   onSettleBatch: (batchId: string) => Promise<void>;
   onSeen: (batchId: string) => void;
@@ -45,6 +64,8 @@ function formatMoment(value: string) {
 
 export function PrintBatchPanel({
   batches,
+  printRequests,
+  unavailable,
   onUpload,
   onSettleRow,
   onReopenRow,
@@ -58,6 +79,22 @@ export function PrintBatchPanel({
   const [message, setMessage] = useState("");
   const [blockedRow, setBlockedRow] = useState("");
   const [blockedNote, setBlockedNote] = useState("");
+  /*
+   * Standaard op "we hebben dit model niet". Dat is verreweg het vaakst de
+   * reden, en het is de reden die iets vastlegt — dus de standaard mag niet de
+   * vrijblijvende zijn, anders staat er straks weer niets in de lijst.
+   */
+  const [blockedReason, setBlockedReason] = useState<UnavailableReason>("model_unknown");
+
+  /*
+   * Eén keer opbouwen, daarna per regel opzoeken. Dit stond eerst per tabelrij
+   * in de opmaak: elke toetsaanslag in het redenveld liep dan de hele
+   * geschiedenis opnieuw door, één keer per zichtbare regel.
+   */
+  const oordelen = useMemo(
+    () => printVerdictIndex(printVerdicts(batches, printRequests, unavailable)),
+    [batches, printRequests, unavailable],
+  );
   // Welke ronde openstaat. De nieuwste die nog loopt, tenzij iemand kiest.
   const [openId, setOpenId] = useState<string | null>(null);
   // Uit de lijst halen vraagt een bevestiging: het is zelden wat je bedoelt, en
@@ -117,11 +154,17 @@ export function PrintBatchPanel({
     }
   }
 
-  async function settle(rowId: string, status: "printed" | "not_printable", note = "") {
+  async function settle(
+    rowId: string,
+    status: "printed" | "not_printable",
+    note = "",
+    reason: UnavailableReason = "temporary",
+  ) {
     try {
-      await onSettleRow(rowId, status, note);
+      await onSettleRow(rowId, status, note, reason);
       setBlockedRow("");
       setBlockedNote("");
+      setBlockedReason("model_unknown");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Saving failed.");
     }
@@ -367,24 +410,44 @@ export function PrintBatchPanel({
                     {shown.rows.map((row) => (
                       <tr key={row.id} className={row.status === "open" ? "" : "settled"}>
                         <td data-label="#">{row.lineNumber}</td>
-                        <td>
+                        <td data-label="Model">
                           <strong>{row.model}</strong>
                           {/* Michael werkt de lijst van boven naar beneden af en
                               liep vorige week op ditzelfde model vast. Dat hoort
-                              hij te zien vóórdat hij eraan begint. Alleen als de
-                              laatste uitkomst een afkeuring was — is het daarna
-                              wél gelukt, dan is het ruis. */}
+                              hij te zien vóórdat hij eraan begint.
+
+                              Dit keek eerst alleen naar andere regels in
+                              printrondes, en dan ook nog op de landcode in plaats
+                              van op de taal. Daardoor ging het vrijwel nooit af,
+                              terwijl de app het antwoord wel had — in de
+                              blokkades en in de afgehandelde aanvragen. Nu komt
+                              het uit alle bronnen, op model plus taal. */}
                           {(() => {
-                            const eerder = eerderAfgekeurd(batches, row.model, row.languageCode, row.id);
-                            if (!eerder) return null;
+                            /*
+                             * Alleen bij een regel die nog open staat. Daar gaat
+                             * het om: weten waar je tegenaan gaat lopen vóórdat
+                             * je begint. Bij een afgehandelde regel staat de
+                             * uitkomst al in de laatste kolom, en dan is dit
+                             * dezelfde mededeling twee keer.
+                             */
+                            if (row.status !== "open") return null;
+                            const oordeel = printVerdictFor(oordelen, row.model, row.layout);
+                            if (!oordeel) return null;
+                            const geblokkeerd = Boolean(oordeel.blockId);
                             return (
-                              <small className="row-eerder" title={eerder.ronde}>
-                                Not printed before
-                                {eerder.reden ? `: ${eerder.reden}` : ""}
-                                {eerder.wanneer
-                                  ? ` · ${new Date(eerder.wanneer).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`
+                              <span
+                                className={`row-eerder${geblokkeerd ? " is-blocked" : ""}`}
+                                title={[oordeel.note, oordeel.sourceLabel].filter(Boolean).join(" — ")}
+                              >
+                                {geblokkeerd
+                                  ? (oordeel.reason
+                                      ? unavailableReasonEnglish(oordeel.reason)
+                                      : "You marked this as not printable")
+                                  : "Did not work last time"}
+                                {oordeel.when
+                                  ? ` · ${new Date(oordeel.when).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`
                                   : ""}
-                              </small>
+                              </span>
                             );
                           })()}
                         </td>
@@ -400,22 +463,43 @@ export function PrintBatchPanel({
                           {row.status === "open" ? (
                             blockedRow === row.id ? (
                               <div className="batch-blocked">
+                                {/* Dezelfde keuze als bij een losse aanvraag. De
+                                    reden bepaalt of dit voor de volgende laptop
+                                    van hetzelfde model ook geldt; met alleen een
+                                    tekstveld was dat niet te zien. */}
+                                <select
+                                  value={blockedReason}
+                                  aria-label="Why can you not print this?"
+                                  onChange={(event) =>
+                                    setBlockedReason(event.target.value as UnavailableReason)}
+                                >
+                                  {unavailableReasons.map((reason) => (
+                                    <option key={reason} value={reason}>
+                                      {unavailableReasonEnglish(reason)}
+                                    </option>
+                                  ))}
+                                </select>
                                 <input
                                   value={blockedNote}
-                                  placeholder="Why not?"
+                                  placeholder="Anything to add?"
                                   onChange={(event) => setBlockedNote(event.target.value)}
                                 />
                                 <button
                                   type="button"
                                   className="danger-ghost-button"
-                                  onClick={() => void settle(row.id, "not_printable", blockedNote)}
+                                  onClick={() =>
+                                    void settle(row.id, "not_printable", blockedNote, blockedReason)}
                                 >
                                   Save
                                 </button>
                                 <button
                                   type="button"
                                   className="secondary-button"
-                                  onClick={() => { setBlockedRow(""); setBlockedNote(""); }}
+                                  onClick={() => {
+                                    setBlockedRow("");
+                                    setBlockedNote("");
+                                    setBlockedReason("model_unknown");
+                                  }}
                                 >
                                   Cancel
                                 </button>

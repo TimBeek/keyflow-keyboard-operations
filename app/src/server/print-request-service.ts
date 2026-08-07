@@ -1,13 +1,9 @@
 import "server-only";
 import { z } from "zod";
 import { brandFromModel, PrintRequestError } from "@/domain/print-requests";
-import {
-  modelKey,
-  reasonBlocksFuture,
-  scopeForReason,
-  unavailableReasons,
-} from "@/domain/noviply-availability";
+import { unavailableReasons } from "@/domain/noviply-availability";
 import { markConversionsPrinted } from "./conversion-log-service";
+import { recordNoviplyUnavailable } from "./noviply-availability-service";
 import { requirePermission } from "./authorization-service";
 import { database } from "./database";
 import { databaseUuidSchema } from "./validation";
@@ -272,27 +268,18 @@ export async function settlePrintRequestRecord(rawInput: SettlePrintRequestInput
      * hetzelfde model opnieuw de premiumsticker en komt precies dezelfde
      * afwijzing terug — met de laptop al die tijd apart.
      */
-    if (input.status === "not_printable" && reasonBlocksFuture(input.unavailableReason)) {
+    if (input.status === "not_printable") {
       const [aanvraag] = await transaction<{ model: string; layout: string }[]>`
         select model, layout from print_requests where id = ${input.id}
       `;
-      const bereik = scopeForReason(input.unavailableReason, aanvraag.layout);
-      await transaction`
-        insert into noviply_unavailable (
-          model, model_key, layout, reason, note, source_request_id, recorded_by
-        )
-        values (
-          ${aanvraag.model}, ${modelKey(aanvraag.model)}, ${bereik},
-          ${input.unavailableReason}, ${note}, ${input.id}, ${input.actorId}
-        )
-        on conflict (model_key, layout) where removed_at is null
-        do update set
-          reason = excluded.reason,
-          note = excluded.note,
-          source_request_id = excluded.source_request_id,
-          recorded_at = now(),
-          recorded_by = excluded.recorded_by
-      `;
+      await recordNoviplyUnavailable(transaction, {
+        model: aanvraag.model,
+        layout: aanvraag.layout,
+        reason: input.unavailableReason,
+        note,
+        actorId: input.actorId,
+        sourceRequestId: input.id,
+      });
     }
 
     // De conversie stond op "wacht op print" zodra de werkvloer hem aanvroeg.

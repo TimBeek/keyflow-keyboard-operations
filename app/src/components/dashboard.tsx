@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ConversionAdvisor } from "@/components/conversion-advisor";
+import { AttentionGroups } from "@/components/attention-groups";
 import { downloadTekstbestand } from "@/lib/bestand-downloaden";
 import { AccessManagementDialog } from "@/components/access-management";
 import { EmployeeWorkspace } from "@/components/employee-workspace";
@@ -1802,8 +1803,9 @@ export function Dashboard({
     rowId: string,
     status: "printed" | "not_printable",
     note: string,
+    reason: UnavailableReason,
   ) {
-    await settleBatchRow(rowId, status, note);
+    await settleBatchRow(rowId, status, note, reason);
     await refreshSharedState();
   }
 
@@ -2236,6 +2238,8 @@ export function Dashboard({
             // zelf weer kunnen vrijgeven.
             {
               id: "blocked" as const,
+              // Het getal telt wat het advies stilzet, niet wat er ooit een
+              // keer misging: dat laatste is geschiedenis en vraagt niets.
               label: noviplyUnavailable.length > 0
                 ? `Cannot print · ${noviplyUnavailable.length}`
                 : "Cannot print",
@@ -2510,114 +2514,25 @@ export function Dashboard({
                   Nu oppakken — hier staat iemand op te wachten
                 </p>
               )}
-              <div className="attention-groups">
-                {[...attentionByKind(splitAttention(attention).nu).entries()].map(([kind, items]) => (
-                  <div key={kind} className={`attention-group ${kind}`}>
-                    <h3>
-                      {attentionKindLabel[kind]}
-                      <b>{items.length}</b>
-                    </h3>
-                    <ul>
-                      {/* De hele lijst. Er stonden er zes met een regeltje
-                          eronder dat er meer waren — en dan moet je maar raden
-                          welke. Dit is de plek waar je alles wilt zien; die
-                          afkapping hoorde bij het dashboard, en daar staat nu
-                          alleen nog een samenvatting. */}
-                      {items.map((item) => {
-                        /* Staat het model geblokkeerd omdat Noviply het niet
-                           had, dan hoort de knop om dat terug te draaien hier
-                           te staan — dit is de plek waar je het probleem ziet. */
-                        const blokkade = kind === "cannot_print"
-                          ? noviplyUnavailable.find((regel) => item.title.toLowerCase().startsWith(regel.model.toLowerCase()))
-                          : undefined;
-                        return (
-                          <li key={item.id}>
-                            <strong>{item.title}</strong>
-                            <span>{item.detail}</span>
-                            <small>
-                              {item.orderReference && `Order ${item.orderReference}`}
-                              {item.orderReference && item.occurredAt && " · "}
-                              {item.occurredAt && formatPersistenceTime(item.occurredAt)}
-                            </small>
-                            {blokkade && (
-                              <div className="attention-action">
-                                <span>
-                                  De werkvloer krijgt hiervoor geen premiumsticker meer aangeraden.
-                                </span>
-                                <button
-                                  type="button"
-                                  className="secondary-button"
-                                  onClick={() => allowNoviplyAgain(blokkade.id)}
-                                >
-                                  Weer aanbieden
-                                </button>
-                              </div>
-                            )}
-                            {/* Een melding die alleen vertelt dat het misging
-                                verandert niets: morgen wijst de app dezelfde
-                                hangmap weer aan en staat dezelfde regel hier
-                                opnieuw. Hiermee keur je de koppeling af, en dan
-                                slaat het advies die map over voor dit model. */}
-                            {item.koppeling && (
-                              afgekeurdeKoppeling(item.koppeling) ? (
-                                <div className="attention-action is-klaar">
-                                  <span>
-                                    Afgekeurd — de werkvloer krijgt hangmap{" "}
-                                    {item.koppeling.storageNumber} niet meer voor dit model.
-                                  </span>
-                                  <button
-                                    type="button"
-                                    className="secondary-button"
-                                    onClick={() => void trekAfkeuringIn(item.koppeling!)}
-                                  >
-                                    Toch weer toestaan
-                                  </button>
-                                </div>
-                              ) : (
-                                <div className="attention-action">
-                                  <span>
-                                    Klopt het dat dit vel niet op dit model past? Dan stopt het
-                                    advies ermee.
-                                  </span>
-                                  <button
-                                    type="button"
-                                    className="secondary-button"
-                                    onClick={() => keurKoppelingAf(item.koppeling!)}
-                                  >
-                                    Koppeling afkeuren
-                                  </button>
-                                </div>
-                              )
-                            )}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                ))}
-              </div>
+              <AttentionGroups
+                items={splitAttention(attention).nu}
+                noviplyUnavailable={noviplyUnavailable}
+                metActies
+                onAllowAgain={allowNoviplyAgain}
+                onRejectPairing={keurKoppelingAf}
+                onWithdrawRejection={(koppeling) => void trekAfkeuringIn(koppeling)}
+                isRejected={afgekeurdeKoppeling}
+                formatMoment={formatPersistenceTime}
+              />
 
               {splitAttention(attention).later.length > 0 && (
                 <>
                   <p className="attention-kop later">Zodra het uitkomt</p>
-                  <div className="attention-groups">
-                    {[...attentionByKind(splitAttention(attention).later).entries()].map(([kind, items]) => (
-                      <div key={kind} className={`attention-group ${kind}`}>
-                        <h3>
-                          {attentionKindLabel[kind]}
-                          <b>{items.length}</b>
-                        </h3>
-                        <ul>
-                          {items.map((item) => (
-                            <li key={item.id}>
-                              <strong>{item.title}</strong>
-                              <span>{item.detail}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    ))}
-                  </div>
+                  <AttentionGroups
+                    items={splitAttention(attention).later}
+                    noviplyUnavailable={noviplyUnavailable}
+                    formatMoment={formatPersistenceTime}
+                  />
                 </>
               )}
             </section>
