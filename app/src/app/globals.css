@@ -4068,3 +4068,12 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
   font-size: 11.5px; font-weight: 700; cursor: pointer;
 }
 .row-undo:hover { border-color: var(--signal-line); color: var(--signal); }
+
+
+/* Bij een regel waar hetzelfde model eerder al niet lukte. Amber, want dat
+   betekent in dit scherm overal "let hier even op" — en klein, want het is een
+   aantekening bij het model en geen tweede regel. */
+.row-eerder {
+  display: block; margin-top: 3px;
+  color: var(--warn); font-size: 11.5px; font-weight: 640;
+}

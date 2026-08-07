@@ -304,6 +304,60 @@ export function blockedBatchRows(batches: PrintBatch[]) {
       (rechts.row.handledAt ?? "").localeCompare(links.row.handledAt ?? ""));
 }
 
+export type EerdereAfkeuring = {
+  /** Wat Noviply toen opgaf. */
+  reden: string;
+  /** Wanneer, als ISO-tijd; leeg als dat niet bekend is. */
+  wanneer: string;
+  /** Uit welke ronde het kwam, om het terug te kunnen zoeken. */
+  ronde: string;
+};
+
+/**
+ * Heeft Noviply dit model in deze taal eerder al niet kunnen printen?
+ *
+ * Michael werkt een lijst van boven naar beneden af en komt dan halverwege een
+ * model tegen waar hij vorige week ook al op vastliep. Dat hoort hij te zien
+ * voordat hij eraan begint, niet erna.
+ *
+ * Alleen als de láátste uitkomst een afkeuring was. Is hetzelfde model daarna
+ * wél geprint — nieuwe folie, ander vel, wat dan ook — dan is die oude melding
+ * geen waarschuwing meer maar ruis, en ruis leest niemand.
+ *
+ * De regel zelf telt niet mee: die gaat over nu.
+ */
+export function eerderAfgekeurd(
+  batches: PrintBatch[],
+  model: string,
+  languageCode: string,
+  negeerRowId = "",
+): EerdereAfkeuring | null {
+  const gezocht = sleutel(model, languageCode);
+  if (!gezocht) return null;
+
+  const eerder = listedBatches(batches)
+    .flatMap((batch) => batch.rows.map((row) => ({ batch, row })))
+    .filter(({ row }) => row.id !== negeerRowId
+      && row.status !== "open"
+      && sleutel(row.model, row.languageCode) === gezocht)
+    .sort((links, rechts) =>
+      (rechts.row.handledAt ?? "").localeCompare(links.row.handledAt ?? ""));
+
+  const laatste = eerder[0];
+  if (!laatste || laatste.row.status !== "not_printable") return null;
+  return {
+    reden: laatste.row.note,
+    wanneer: laatste.row.handledAt ?? "",
+    ronde: batchLabel(laatste.batch, "en"),
+  };
+}
+
+function sleutel(model: string, languageCode: string) {
+  const m = model.trim().toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  if (!m) return "";
+  return `${m}|${languageCode.trim().toUpperCase()}`;
+}
+
 /** Regels waar de app geen bekende taal bij kon vinden; even naar kijken. */
 export function unknownLanguageRows(batch: PrintBatch) {
   return batch.rows.filter((row) => row.layout === "");

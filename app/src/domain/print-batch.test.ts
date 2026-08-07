@@ -13,6 +13,7 @@ import {
   batchSheetCount,
   blockedBatchRows,
   completedBatches,
+  eerderAfgekeurd,
   layoutForBatchCode,
   listedBatches,
   openBatchRows,
@@ -355,5 +356,63 @@ describe("wat Noviply niet kon printen", () => {
       batch({ id: "b", batchNumber: 1, rows: [geweigerd("b1", "twee", "2026-07-30T11:00:00.000Z")] }),
     ]);
     expect(uit.map((x) => x.row.id)).toEqual(["b1", "a1"]);
+  });
+});
+
+describe("eerder al niet gelukt", () => {
+  const regel = (over: Record<string, unknown> = {}) => ({
+    id: "x1", lineNumber: 1, model: "HP EliteBook 840 G8", languageCode: "UK",
+    layout: "QWERTY UK", variant: "E1", quantity: 1, orderReference: "1",
+    status: "open" as const, note: "", handledAt: null, handledBy: null,
+    ...over,
+  });
+
+  it("waarschuwt als hetzelfde model in dezelfde taal is afgekeurd", () => {
+    const uit = eerderAfgekeurd(
+      [batch({ id: "oud", rows: [regel({ id: "a", status: "not_printable", note: "folie op", handledAt: "2026-07-30T09:00:00.000Z" })] })],
+      "HP EliteBook 840 G8", "UK",
+    );
+    expect(uit?.reden).toBe("folie op");
+    expect(uit?.ronde).toContain("Jul");
+  });
+
+  it("zwijgt als het daarna wél is geprint", () => {
+    // Nieuwe folie, ander vel — dan is die oude melding geen waarschuwing meer
+    // maar ruis, en ruis leest niemand.
+    const uit = eerderAfgekeurd([batch({ rows: [
+      regel({ id: "a", status: "not_printable", note: "folie op", handledAt: "2026-07-30T09:00:00.000Z" }),
+      regel({ id: "b", status: "printed", handledAt: "2026-07-31T09:00:00.000Z" }),
+    ] })], "HP EliteBook 840 G8", "UK");
+    expect(uit).toBeNull();
+  });
+
+  it("kijkt naar de taal, niet alleen naar het model", () => {
+    const uit = eerderAfgekeurd([batch({ rows: [
+      regel({ id: "a", languageCode: "BE", status: "not_printable", note: "nee", handledAt: "2026-07-30T09:00:00.000Z" }),
+    ] })], "HP EliteBook 840 G8", "UK");
+    expect(uit).toBeNull();
+  });
+
+  it("telt de regel zelf niet mee", () => {
+    // Anders waarschuwt een regel die je net hebt afgekeurd over zichzelf.
+    const uit = eerderAfgekeurd([batch({ rows: [
+      regel({ id: "zelf", status: "not_printable", note: "folie op", handledAt: "2026-07-30T09:00:00.000Z" }),
+    ] })], "HP EliteBook 840 G8", "UK", "zelf");
+    expect(uit).toBeNull();
+  });
+
+  it("negeert een ronde die uit de lijst is gehaald", () => {
+    const uit = eerderAfgekeurd([batch({
+      deletedAt: "2026-07-31T09:00:00.000Z",
+      rows: [regel({ id: "a", status: "not_printable", note: "folie op", handledAt: "2026-07-30T09:00:00.000Z" })],
+    })], "HP EliteBook 840 G8", "UK");
+    expect(uit).toBeNull();
+  });
+
+  it("trekt zich niets aan van hoofdletters of streepjes in de modelnaam", () => {
+    const uit = eerderAfgekeurd([batch({ rows: [
+      regel({ id: "a", model: "hp elitebook  840-g8", status: "not_printable", note: "nee", handledAt: "2026-07-30T09:00:00.000Z" }),
+    ] })], "HP EliteBook 840 G8", "UK");
+    expect(uit?.reden).toBe("nee");
   });
 });

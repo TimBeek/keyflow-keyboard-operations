@@ -7,6 +7,7 @@ import {
   batchLabel,
   batchSheetCount,
   completedBatches,
+  eerderAfgekeurd,
   openBatchRows,
   unknownLanguageRows,
   type PrintBatch,
@@ -366,7 +367,27 @@ export function PrintBatchPanel({
                     {shown.rows.map((row) => (
                       <tr key={row.id} className={row.status === "open" ? "" : "settled"}>
                         <td data-label="#">{row.lineNumber}</td>
-                        <td><strong>{row.model}</strong></td>
+                        <td>
+                          <strong>{row.model}</strong>
+                          {/* Michael werkt de lijst van boven naar beneden af en
+                              liep vorige week op ditzelfde model vast. Dat hoort
+                              hij te zien vóórdat hij eraan begint. Alleen als de
+                              laatste uitkomst een afkeuring was — is het daarna
+                              wél gelukt, dan is het ruis. */}
+                          {(() => {
+                            const eerder = eerderAfgekeurd(batches, row.model, row.languageCode, row.id);
+                            if (!eerder) return null;
+                            return (
+                              <small className="row-eerder" title={eerder.ronde}>
+                                Not printed before
+                                {eerder.reden ? `: ${eerder.reden}` : ""}
+                                {eerder.wanneer
+                                  ? ` · ${new Date(eerder.wanneer).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`
+                                  : ""}
+                              </small>
+                            );
+                          })()}
+                        </td>
                         <td data-label="Language">
                           {row.layout || <span className="batch-unknown">{row.languageCode}?</span>}
                         </td>
