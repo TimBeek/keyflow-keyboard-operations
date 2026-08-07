@@ -21,6 +21,7 @@ import { trackpointLabel } from "@/domain/noviply-export";
 import {
   unavailableReasonEnglish,
   unavailableReasons,
+  type NoviplyUnavailableRecord,
   type UnavailableReason,
 } from "@/domain/noviply-availability";
 import {
@@ -42,6 +43,10 @@ import {
   noviplyExportFilename,
 } from "@/domain/noviply-export";
 import { displayStickerSku } from "@/domain/sticker-sku";
+import {
+  stickerVerificationFailureEnglish,
+  type StickerVerificationReport,
+} from "@/domain/sticker-verification";
 import { PrintBatchPanel } from "@/components/print-batch-panel";
 import {
   historyTotals,
@@ -57,7 +62,7 @@ import {
 } from "@/domain/print-batch";
 import type { PrinterCheckRecord } from "@/domain/printer-check";
 
-export type NoviplyTab = "orders" | "stock" | "runs" | "history";
+export type NoviplyTab = "orders" | "stock" | "runs" | "blocked" | "history";
 
 type Props = {
   tab: NoviplyTab;
@@ -67,6 +72,12 @@ type Props = {
   onSettleBatchRow: (rowId: string, status: "printed" | "not_printable", note: string) => Promise<void>;
   /** Een verkeerde klik terugdraaien; de regel staat dan weer open. */
   onReopenBatchRow: (rowId: string) => Promise<void>;
+  /** Wat Noviply naar eigen zeggen niet kan printen. */
+  noviplyUnavailable: NoviplyUnavailableRecord[];
+  /** Zij melden zelf dat het weer kan; dan vervalt de blokkade. */
+  onAllowAgain: (id: string) => void;
+  /** Meldingen van de werkvloer dat een vel niet paste. Zij lezen mee, meer niet. */
+  verificationReports: StickerVerificationReport[];
   onSettleBatch: (batchId: string) => Promise<void>;
   onBatchSeen: (batchId: string) => void;
   /** Naar het rondenscherm springen vanuit de melding van een nieuwe ronde. */
@@ -105,6 +116,9 @@ export function NoviplyWorkspace({
   onUploadBatch,
   onSettleBatchRow,
   onReopenBatchRow,
+  noviplyUnavailable,
+  onAllowAgain,
+  verificationReports,
   onSettleBatch,
   onBatchSeen,
   onOpenRuns,
@@ -138,6 +152,22 @@ export function NoviplyWorkspace({
    * een afgeronde ronde telt niet mee in "nog te doen", en de regels ervan
    * staan in de geschiedenis.
    */
+  /**
+   * Vellen die bij ons niet pasten.
+   *
+   * Alleen "past niet": dat gaat over de print zelf. De andere afwijkingen —
+   * verkeerde hangmap, verkeerd artikelnummer — zijn grijpfouten hier op de
+   * vloer en zeggen niets over hun werk; die bij hen neerleggen is onterecht.
+   * De laatste dertig, want ouder dan dat helpt niemand meer.
+   */
+  const pastenNiet = useMemo(
+    () => verificationReports
+      .filter((report) => report.failureReason === "position_mismatch")
+      .sort((links, rechts) => rechts.occurredAt.localeCompare(links.occurredAt))
+      .slice(0, 30),
+    [verificationReports],
+  );
+
   /** Wat er het hardst doorheen gaat; hun eigen reden om iets voorradig te houden. */
   const hardlopers = useMemo(
     () => fastMovers(inventoryCatalog, transactions, quantities, new Date()),
@@ -509,6 +539,94 @@ export function NoviplyWorkspace({
           voor, maar die is op geld en op A/B/C — dat is een inkoopgesprek.
           Noviply wil iets anders weten: wat moet ik voorradig houden, en waar
           loop ik straks tegenaan. Dus verbruik en hoeveel weken dat nog meegaat. */}
+      {/* Wat zij zelf hebben gemeld als "kunnen wij niet". Dat stond alleen op
+          het scherm van ReMarkt, en dan moet iemand daar horen dat de folie
+          binnen is en het overtikken. Hier zien ze hun eigen meldingen staan en
+          kunnen ze zelf zeggen dat het weer kan. */}
+      {tab === "blocked" && (
+      <section className="noviply-panel">
+        <div className="noviply-panel-head">
+          <div>
+            <h3>What we cannot print</h3>
+            <p>
+              Everything you reported as not printable. The floor is not offered these
+              at all, so nothing will come your way for them — until you say it works
+              again.
+            </p>
+          </div>
+        </div>
+        {noviplyUnavailable.length === 0 ? (
+          <div className="empty">
+            Nothing blocked. Everything you have been asked for so far, you could print.
+          </div>
+        ) : (
+          <ul className="blocked-list">
+            {noviplyUnavailable.map((regel) => (
+              <li key={regel.id}>
+                <div>
+                  <strong>{regel.model}</strong>
+                  <span>
+                    {regel.layout ? regel.layout : "All languages"}
+                    {" · "}
+                    {unavailableReasonEnglish(regel.reason)}
+                  </span>
+                  {regel.note && <small className="blocked-note">“{regel.note}”</small>}
+                  <small>
+                    Reported {new Date(regel.recordedAt).toLocaleDateString("en-GB", {
+                      day: "numeric", month: "short",
+                    })}
+                  </small>
+                </div>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => {
+                    onAllowAgain(regel.id);
+                    setMessage(`${regel.model} is available again.`);
+                  }}
+                >
+                  We can print this again
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      )}
+
+      {tab === "blocked" && (
+      <section className="noviply-panel">
+        <h3>Sheets that did not fit</h3>
+        <p>
+          The floor reported these after applying: the shape or the position was
+          off. Nothing to do here — it is the other half of the same picture, so
+          you can see where a file needs another look.
+        </p>
+        {pastenNiet.length === 0 ? (
+          <p className="lege-lijst">Nothing reported. Every sheet fitted.</p>
+        ) : (
+          <ul className="misfit-list">
+            {pastenNiet.map((report) => (
+              <li key={report.id}>
+                <strong>{report.model}</strong>
+                <span>
+                  {report.targetLayout}
+                  {" · "}
+                  {stickerVerificationFailureEnglish(report.failureReason)}
+                </span>
+                <small>
+                  {new Date(report.occurredAt).toLocaleDateString("en-GB", {
+                    day: "numeric", month: "short",
+                  })}
+                  {report.orderReference ? ` · order ${report.orderReference}` : ""}
+                </small>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      )}
+
       {tab === "stock" && hardlopers.length > 0 && (
       <section className="noviply-panel">
         <div className="noviply-panel-head">

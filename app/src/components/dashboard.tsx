@@ -284,6 +284,45 @@ const viewHeadings: Record<ViewName, { title: string; subtitle: string }> = {
 };
 
 /**
+ * De kop boven het Noviply-scherm.
+ *
+ * Stond als vijf geneste ternaries in de opmaak zelf, en werd bij elk tabblad
+ * dat erbij kwam een regel langer en een niveau dieper. Als tabel is er niets
+ * te missen: elk tabblad zijn eigen zin, in het Engels want zij lezen mee.
+ */
+const noviplyHeadings: Record<NoviplyTab, { title: string; subtitle: string }> = {
+  orders: {
+    title: "Print request list",
+    subtitle: "Extra sticker sheets to print for today.",
+  },
+  runs: {
+    title: "Print runs",
+    subtitle: "The two daily lists from the order system.",
+  },
+  blocked: {
+    title: "Cannot print",
+    subtitle: "What you told us you cannot do, and where a sheet did not fit.",
+  },
+  history: {
+    title: "History",
+    subtitle: "Everything ticked off, with the time and who handled it.",
+  },
+  stock: {
+    title: "Stock",
+    subtitle: "Everything in the cabinet, emptiest first.",
+  },
+};
+
+function noviplyHeading(tab: NoviplyTab, resupplyStarted: boolean) {
+  // De voorraadkop is de enige die met de situatie meebeweegt: staat er iets
+  // onder het minimum, dan is dat het eerste wat je moet weten.
+  if (tab === "stock" && resupplyStarted) {
+    return { title: "Stock running low", subtitle: "Folders that need resupplying." };
+  }
+  return noviplyHeadings[tab];
+}
+
+/**
  * Stond hier als vier verzonnen regels met een verzonnen minimum van tien. De
  * echte hangmappen met de laagste voorraad zeggen hetzelfde, en zijn waar.
  */
@@ -2193,6 +2232,15 @@ export function Dashboard({
               icon: "upload" as const,
             },
             { id: "orders" as const, label: "Print requests", icon: "orders" as const },
+            // Wat zij zelf hebben gemeld als "kunnen wij niet", zodat ze het ook
+            // zelf weer kunnen vrijgeven.
+            {
+              id: "blocked" as const,
+              label: noviplyUnavailable.length > 0
+                ? `Cannot print · ${noviplyUnavailable.length}`
+                : "Cannot print",
+              icon: "alert" as const,
+            },
             { id: "history" as const, label: "History", icon: "reports" as const },
             {
               id: "stock" as const,
@@ -2289,26 +2337,12 @@ export function Dashboard({
             <h1>{role === "employee"
               ? "Uitvoering keyboardconversies"
               : role === "noviply"
-                ? (noviplyTab === "orders"
-                    ? "Print request list"
-                    : noviplyTab === "runs"
-                      ? "Print runs"
-                      : noviplyTab === "history"
-                        ? "History"
-                        : resupplyStarted ? "Stock running low" : "Stock")
+                ? noviplyHeading(noviplyTab, resupplyStarted).title
                 : viewHeadings[activeView].title}</h1>
             <p>{role === "employee"
               ? "Eén duidelijke taak tegelijk, met automatisch methodeadvies."
               : role === "noviply"
-                ? (noviplyTab === "orders"
-                    ? "Extra sticker sheets to print for today."
-                    : noviplyTab === "runs"
-                      ? "The two daily lists from the order system."
-                      : noviplyTab === "history"
-                        ? "Everything ticked off, with the time and who handled it."
-                        : resupplyStarted
-                          ? "Folders that need resupplying."
-                          : "Everything in the cabinet, emptiest first.")
+                ? noviplyHeading(noviplyTab, resupplyStarted).subtitle
                 : viewHeadings[activeView].subtitle}</p>
           </div>
           <div className="top-actions">
@@ -2340,8 +2374,15 @@ export function Dashboard({
                       <strong>{signedInName || roleLabel(unlockedRole)}</strong>
                       <small>{roleLabel(unlockedRole)}</small>
                     </span>
-                    <button onClick={() => void lockOut()} title="Afmelden" aria-label="Afmelden">
-                      Afmelden
+                    {/* Noviply leest Engels. Eén Nederlands woord in een verder
+                        Engels scherm is precies het soort ding waar iemand op
+                        blijft haken. */}
+                    <button
+                      onClick={() => void lockOut()}
+                      title={role === "noviply" ? "Sign out" : "Afmelden"}
+                      aria-label={role === "noviply" ? "Sign out" : "Afmelden"}
+                    >
+                      {role === "noviply" ? "Sign out" : "Afmelden"}
                     </button>
                   </div>
                 </div>
@@ -2391,6 +2432,9 @@ export function Dashboard({
             onUploadBatch={uploadBatch}
             onSettleBatchRow={settleBatchRowRecord}
             onReopenBatchRow={reopenBatchRowRecord}
+            noviplyUnavailable={noviplyUnavailable}
+            onAllowAgain={allowNoviplyAgain}
+            verificationReports={verificationReports}
             onSettleBatch={settleBatch}
             onBatchSeen={batchSeen}
             onOpenRuns={() => { setNoviplyTab("runs"); onthoudScherm("noviply", "runs"); }}

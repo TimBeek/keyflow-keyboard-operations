@@ -4083,3 +4083,29 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
    dekking onder de twee weken is waar zij iets mee moeten. */
 .mover-used { color: var(--signal); font-size: 15px; font-weight: 800; }
 .mover-kort { color: var(--warn); font-weight: 700; }
+
+
+/* Wat Noviply zelf heeft gemeld als "kunnen wij niet". Een lijst met per regel
+   één knop: zij weten als eerste dat de folie binnen is. */
+.blocked-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.blocked-list li {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 13px 16px; border: 1px solid var(--line); border-left: 4px solid var(--warn);
+  border-radius: 12px; background: var(--surface-2);
+}
+.blocked-list li > div { display: grid; gap: 2px; min-width: 0; }
+.blocked-list strong { color: var(--text); font-size: 14.5px; }
+.blocked-list span { color: var(--text-2); font-size: 12.5px; }
+.blocked-list small { color: var(--muted); font-size: 11.5px; }
+.blocked-note { color: var(--text-2) !important; font-style: italic; }
+.blocked-list button { flex: 0 0 auto; white-space: nowrap; }
+
+/* Wat bij ons niet paste. Alleen lezen, dus vlakker dan de lijst erboven. */
+.misfit-list { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.misfit-list li {
+  display: grid; gap: 1px; padding: 10px 14px;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2);
+}
+.misfit-list strong { color: var(--text); font-size: 14px; }
+.misfit-list span { color: var(--text-2); font-size: 12.5px; }
+.misfit-list small { color: var(--muted); font-size: 11.5px; }

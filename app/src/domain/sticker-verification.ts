@@ -61,3 +61,21 @@ export function stickerVerificationFailureLabel(reason?: StickerVerificationFail
     other: "Andere afwijking",
   }[reason ?? "other"];
 }
+
+/**
+ * Dezelfde reden, maar dan voor Noviply.
+ *
+ * Zij lezen mee op hun eigen scherm en dat is Engels. Alleen "past niet" komt
+ * daar terecht: de andere redenen gaan over grijpen bij ons in het magazijn en
+ * zeggen niets over hun print.
+ */
+export function stickerVerificationFailureEnglish(reason?: StickerVerificationFailureReason) {
+  return {
+    wrong_storage: "Wrong folder picked here",
+    wrong_sku: "Article number differs",
+    wrong_layout: "Layout differs",
+    wrong_variant: "E1/E2 variant differs",
+    position_mismatch: "Key shape or positioning does not fit",
+    other: "Something else",
+  }[reason ?? "other"];
+}

@@ -55,7 +55,13 @@ const removeSchema = z.object({
  */
 export async function removeNoviplyUnavailable(rawInput: z.input<typeof removeSchema>) {
   const input = removeSchema.parse(rawInput);
-  await requirePermission(input.actorId, "policies.manage");
+  /*
+   * Wie zegt dat het niet kan, mag ook zeggen dat het weer kan. Dit stond op
+   * `policies.manage` en dat heeft Noviply niet — terwijl zij het zijn die de
+   * blokkade hebben gemeld en als eerste weten dat de folie binnen is. Dan moet
+   * er nu iemand van ReMarkt tussen die het van hen hoort en het overtikt.
+   */
+  await requirePermission(input.actorId, "print.fulfil");
   const sql = database();
   const [row] = await sql<{ id: string }[]>`
     update noviply_unavailable
