@@ -124,6 +124,7 @@ import {
   sendPrintReminder,
   addToRunWaitlist,
   uploadPrintBatch,
+  reopenBatchRow,
   settleBatchRow,
   settleWholePrintBatch,
   markPrintBatchSeen,
@@ -1767,6 +1768,19 @@ export function Dashboard({
     await refreshSharedState();
   }
 
+  /** Een verkeerde klik terugdraaien: de regel staat weer open. */
+  async function reopenBatchRowRecord(rowId: string) {
+    try {
+      await reopenBatchRow(rowId);
+      await refreshSharedState();
+      setLastAction(engelsScherm
+        ? "The line is open again."
+        : "De regel staat weer open.");
+    } catch (error) {
+      setLastAction(error instanceof Error ? error.message : "Terugdraaien is niet gelukt.");
+    }
+  }
+
   async function settleBatch(batchId: string) {
     try {
       const { settled } = await settleWholePrintBatch(batchId);
@@ -2376,6 +2390,7 @@ export function Dashboard({
             printBatches={printBatches}
             onUploadBatch={uploadBatch}
             onSettleBatchRow={settleBatchRowRecord}
+            onReopenBatchRow={reopenBatchRowRecord}
             onSettleBatch={settleBatch}
             onBatchSeen={batchSeen}
             onOpenRuns={() => { setNoviplyTab("runs"); onthoudScherm("noviply", "runs"); }}

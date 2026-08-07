@@ -59,6 +59,8 @@ type Props = {
   printBatches: PrintBatch[];
   onUploadBatch: (file: File) => Promise<{ rows: number; duplicate: boolean; sameFile: boolean }>;
   onSettleBatchRow: (rowId: string, status: "printed" | "not_printable", note: string) => Promise<void>;
+  /** Een verkeerde klik terugdraaien; de regel staat dan weer open. */
+  onReopenBatchRow: (rowId: string) => Promise<void>;
   onSettleBatch: (batchId: string) => Promise<void>;
   onBatchSeen: (batchId: string) => void;
   /** Naar het rondenscherm springen vanuit de melding van een nieuwe ronde. */
@@ -96,6 +98,7 @@ export function NoviplyWorkspace({
   printBatches,
   onUploadBatch,
   onSettleBatchRow,
+  onReopenBatchRow,
   onSettleBatch,
   onBatchSeen,
   onOpenRuns,
@@ -348,6 +351,7 @@ export function NoviplyWorkspace({
           batches={printBatches}
           onUpload={onUploadBatch}
           onSettleRow={onSettleBatchRow}
+          onReopenRow={onReopenBatchRow}
           onSettleBatch={onSettleBatch}
           onSeen={onBatchSeen}
           onRemove={onRemoveBatch}

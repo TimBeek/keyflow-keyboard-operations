@@ -27,6 +27,7 @@ type Props = {
   batches: PrintBatch[];
   onUpload: (file: File) => Promise<{ rows: number; duplicate: boolean; sameFile: boolean }>;
   onSettleRow: (rowId: string, status: "printed" | "not_printable", note: string) => Promise<void>;
+  onReopenRow: (rowId: string) => Promise<void>;
   onSettleBatch: (batchId: string) => Promise<void>;
   onSeen: (batchId: string) => void;
   onRemove: (batchId: string) => Promise<void>;
@@ -45,6 +46,7 @@ export function PrintBatchPanel({
   batches,
   onUpload,
   onSettleRow,
+  onReopenRow,
   onSettleBatch,
   onSeen,
   onRemove,
@@ -102,6 +104,15 @@ export function PrintBatchPanel({
     } finally {
       setBusy(false);
       if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  async function reopen(rowId: string) {
+    try {
+      await onReopenRow(rowId);
+      setMessage("The line is open again.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Undo failed.");
     }
   }
 
@@ -407,9 +418,27 @@ export function PrintBatchPanel({
                               </div>
                             )
                           ) : (
-                            <span className={`print-status ${row.status}`}>
-                              {row.status === "printed" ? "✓ Printed" : "✕ Cannot print"}
-                              {row.note && ` · ${row.note}`}
+                            /* Er wordt met een handschoen aan op een klein
+                               scherm geklikt, en "All … printed" zit vlak bij de
+                               knop van één regel. Een verkeerde klik was tot nu
+                               toe definitief — dan wacht er een laptop op een vel
+                               dat nooit komt, of krijgt de werkvloer een melding
+                               die nergens over gaat. Terugdraaien mag, en het
+                               staat er bescheiden bij: het is een uitzondering,
+                               geen tweede hoofdknop. */
+                            <span className="print-status-cel">
+                              <span className={`print-status ${row.status}`}>
+                                {row.status === "printed" ? "✓ Printed" : "✕ Cannot print"}
+                                {row.note && ` · ${row.note}`}
+                              </span>
+                              <button
+                                type="button"
+                                className="row-undo"
+                                onClick={() => void reopen(row.id)}
+                                title="Put this line back to open"
+                              >
+                                Undo
+                              </button>
                             </span>
                           )}
                         </td>

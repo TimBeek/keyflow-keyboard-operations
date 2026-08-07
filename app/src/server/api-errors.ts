@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { ConversionLogError } from "@/domain/conversion-log";
+import { PrintBatchError } from "@/domain/print-batch";
 import { PrintRequestError } from "@/domain/print-requests";
 import { StickerSkuError } from "@/domain/sticker-sku";
 import { PrinterCheckError } from "@/domain/printer-check";
@@ -36,6 +37,11 @@ export function apiErrorResponse(error: unknown, origin = "") {
     return { status: 403, body: { error: "FORBIDDEN", message: error.message } };
   }
   if (error instanceof PrintRequestError
+    // Stond er niet bij, waardoor elke regelfout bij een printronde als
+    // "Er ging iets mis" op het scherm kwam — terwijl de melding zelf precies
+    // zegt wat er aan de hand is: al afgehandeld, geen reden ingevuld, ronde
+    // uit de lijst gehaald.
+    || error instanceof PrintBatchError
     || error instanceof ConversionLogError
     || error instanceof StickerSkuError
     || error instanceof AccessCodeError

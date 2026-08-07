@@ -117,6 +117,30 @@ export async function markConversionsPrinted(
   return rows.length;
 }
 
+/**
+ * Het omgekeerde: een order die per ongeluk op geprint stond, staat weer te
+ * wachten.
+ *
+ * Alleen wat door deze weg op "voltooid" is gezet — een conversie die de
+ * werkvloer zelf heeft afgerond hoort hier niet door geraakt te worden. Daarom
+ * de omgekeerde voorwaarde: van voltooid terug naar wachten-op-print, en niets
+ * anders.
+ */
+export async function markConversionsAwaitingPrint(
+  transaction: TransactionSql,
+  orderReference: string,
+) {
+  const reference = orderReference.trim();
+  if (!reference) return 0;
+  const rows = await transaction<{ id: string }[]>`
+    update conversion_log
+    set status = 'awaiting_print'
+    where order_reference = ${reference} and status = 'completed'
+    returning id
+  `;
+  return rows.length;
+}
+
 export async function logConversion(rawInput: LogConversionInput) {
   const input = logSchema.parse(rawInput);
   await requirePermission(input.actorId, "conversion.execute");

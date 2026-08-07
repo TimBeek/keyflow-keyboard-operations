@@ -380,6 +380,14 @@ export function settleBatchRow(rowId: string, status: "printed" | "not_printable
   });
 }
 
+/** Een afgehandelde rondesregel weer openzetten na een verkeerde klik. */
+export function reopenBatchRow(rowId: string) {
+  return request<{ reopened: boolean }>(
+    "/api/print-batches",
+    { method: "PATCH", body: JSON.stringify({ action: "reopenRow", rowId }) },
+  );
+}
+
 export function settleWholePrintBatch(batchId: string) {
   return request<{ settled: number }>("/api/print-batches", {
     method: "PATCH",

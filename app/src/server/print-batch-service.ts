@@ -11,7 +11,7 @@ import {
   type PrintBatch,
   type PrintBatchRow,
 } from "@/domain/print-batch";
-import { markConversionsPrinted } from "./conversion-log-service";
+import { markConversionsAwaitingPrint, markConversionsPrinted } from "./conversion-log-service";
 import { requirePermission } from "./authorization-service";
 import { database } from "./database";
 import { databaseUuidSchema } from "./validation";
@@ -389,6 +389,49 @@ export async function settleBatchRow(rawInput: z.input<typeof settleSchema>) {
 }
 
 /** Alles wat nog openstaat in één keer op geprint; dat is het normale geval. */
+/**
+ * Een afgehandelde regel weer openzetten.
+ *
+ * Er wordt met een handschoen aan op een klein scherm geklikt, en "All 12
+ * printed" zit naast de knop van één regel. Een verkeerde klik was tot nu toe
+ * definitief: de regel stond op geprint of op kan-niet, en er was geen weg
+ * terug. Dan gaat er ofwel een laptop wachten op een vel dat nooit komt, ofwel
+ * krijgt de werkvloer een melding die nergens over gaat.
+ *
+ * Wat er gebeurt is precies het omgekeerde van afhandelen: de regel staat weer
+ * open, de reden verdwijnt, en stond die order op voltooid dan wacht hij weer
+ * op zijn print. Alleen bij een ronde die nog in de lijst staat — een ronde die
+ * eruit gehaald is, is met opzet weg.
+ */
+export async function reopenBatchRow(rawInput: { rowId: string; actorId: string }) {
+  const input = z.object({
+    rowId: databaseUuidSchema,
+    actorId: databaseUuidSchema,
+  }).parse(rawInput);
+  await requirePermission(input.actorId, "print.fulfil");
+  const sql = database();
+
+  return sql.begin(async (transaction) => {
+    const [row] = await transaction<{ id: string; order_reference: string; status: string }[]>`
+      update print_batch_rows r
+      set status = 'open', note = '', handled_at = null, handled_by = null
+      from print_batches b
+      where r.id = ${input.rowId}
+        and b.id = r.batch_id
+        and b.deleted_at is null
+        and r.status <> 'open'
+      returning r.id, r.order_reference, r.status
+    `;
+    if (!row) {
+      throw new PrintBatchError("Deze regel staat al open, of hoort bij een ronde die uit de lijst is gehaald.");
+    }
+    // Stond de laptop op voltooid omdat dit vel geprint zou zijn, dan wacht hij
+    // weer. Anders denkt de werkvloer dat er iets klaarligt.
+    await markConversionsAwaitingPrint(transaction, row.order_reference);
+    return { reopened: true };
+  });
+}
+
 export async function settleWholeBatch(batchId: string, actorId: string) {
   await requirePermission(actorId, "print.fulfil");
   const sql = database();

@@ -6,6 +6,7 @@ import {
   listPrintBatches,
   markBatchSeen,
   removePrintBatch,
+  reopenBatchRow,
   settleBatchRow,
   settleWholeBatch,
 } from "@/server/print-batch-service";
@@ -72,6 +73,10 @@ export async function PATCH(request: Request) {
     }
     if (body.action === "settleBatch") {
       return Response.json(await settleWholeBatch(String(body.batchId ?? ""), actorId));
+    }
+    // Een verkeerde klik terugdraaien: de regel staat weer open.
+    if (body.action === "reopenRow") {
+      return Response.json(await reopenBatchRow({ rowId: body.rowId, actorId }));
     }
     return Response.json(await settleBatchRow({
       rowId: body.rowId,
