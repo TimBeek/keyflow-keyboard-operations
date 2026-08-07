@@ -7,6 +7,7 @@
 import { toCsv, type CsvValue } from "./csv";
 import { printRequestStatusLabel, type PrintRequestRecord } from "./print-requests";
 import { displayStickerSku } from "./sticker-sku";
+import { weeksOfCover, type FastMover } from "./fast-movers";
 
 /** Wat Noviply in het bestand leest; hun kant is Engelstalig. */
 export function trackpointLabel(answer: PrintRequestRecord["trackpoint"]) {
@@ -135,6 +136,39 @@ export function createPrintBatchCsv(rows: {
 }
 
 /** Een bestandsnaam waarin de datum voorop staat, zodat sorteren op naam werkt. */
-export function noviplyExportFilename(kind: "stock" | "print-requests" | "run", isoMoment: string) {
+export function noviplyExportFilename(
+  kind: "stock" | "print-requests" | "run" | "fast-movers",
+  isoMoment: string,
+) {
   return `noviply-${kind}-${isoMoment.slice(0, 10)}.csv`;
+}
+
+/**
+ * De hardlopers als bestand. Voor een leverancier is dit de lijst waarop hij
+ * zijn eigen voorraad plant, dus staat de dekking er in weken bij en niet
+ * alleen het aantal.
+ */
+const moverHeaders = [
+  "Folder",
+  "Part number",
+  "Model",
+  "Language",
+  "Used",
+  "In stock",
+  "Weeks of cover",
+] as const;
+
+export function createFastMoversCsv(rows: FastMover[]) {
+  return toCsv(moverHeaders, rows.map((row): CsvValue[] => {
+    const weken = weeksOfCover(row);
+    return [
+      row.storageNumber,
+      displayStickerSku(row.sku),
+      row.model,
+      row.layout,
+      row.used,
+      row.stock,
+      weken === null ? "" : Math.round(weken * 10) / 10,
+    ];
+  }));
 }

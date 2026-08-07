@@ -1,13 +1,18 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { inventoryCatalog } from "@/data/inventory-catalog";
 import { inventoryQuantity } from "@/domain/inventory-quantities";
 import {
   layoutWithCountry,
   type InventoryTransactionEntry,
 } from "@/domain/operations";
 import { dayKey } from "@/domain/reporting";
+import { inventoryCatalog } from "@/data/inventory-catalog";
+import {
+  defaultMoverWindowDays,
+  fastMovers,
+  weeksOfCover,
+} from "@/domain/fast-movers";
 import { downloadTekstbestand } from "@/lib/bestand-downloaden";
 import { NoviplyLogo } from "@/components/noviply-logo";
 import { RemotePrinterButton } from "@/components/remote-printer-button";
@@ -32,6 +37,7 @@ import {
 import {
   createNoviplyPrintRequestCsv,
   createPrintBatchCsv,
+  createFastMoversCsv,
   createNoviplyStockCsv,
   noviplyExportFilename,
 } from "@/domain/noviply-export";
@@ -132,6 +138,12 @@ export function NoviplyWorkspace({
    * een afgeronde ronde telt niet mee in "nog te doen", en de regels ervan
    * staan in de geschiedenis.
    */
+  /** Wat er het hardst doorheen gaat; hun eigen reden om iets voorradig te houden. */
+  const hardlopers = useMemo(
+    () => fastMovers(inventoryCatalog, transactions, quantities, new Date()),
+    [transactions, quantities],
+  );
+
   const runTotals = useMemo(() => {
     const lopend = activeBatches(printBatches);
     const regels = lopend.flatMap((batch) => batch.rows);
@@ -490,6 +502,77 @@ export function NoviplyWorkspace({
           )}
         </div>
         {message && <div className="policy-saved" role="status">{message}</div>}
+      </section>
+      )}
+
+      {/* Wat er het hardst doorheen gaat. ReMarkt heeft hier een eigen analyse
+          voor, maar die is op geld en op A/B/C — dat is een inkoopgesprek.
+          Noviply wil iets anders weten: wat moet ik voorradig houden, en waar
+          loop ik straks tegenaan. Dus verbruik en hoeveel weken dat nog meegaat. */}
+      {tab === "stock" && hardlopers.length > 0 && (
+      <section className="noviply-panel">
+        <div className="noviply-panel-head">
+          <div>
+            <h3>Fastest moving sheets</h3>
+            <p>
+              Used most over the last {defaultMoverWindowDays} days. <b>Cover</b> is how long
+              the current stock lasts at that pace — the ones at the top are where
+              ReMarkt runs out first.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={() => {
+              downloadTekstbestand(
+                createFastMoversCsv(hardlopers),
+                noviplyExportFilename("fast-movers", new Date().toISOString()),
+              );
+              setMessage(`Downloaded ${hardlopers.length} fast movers.`);
+            }}
+          >
+            Download for Excel
+          </button>
+        </div>
+        <div className="table-wrap">
+          <table className="operations-table">
+            <thead>
+              <tr>
+                <th>Folder</th>
+                <th>Model</th>
+                <th>Part number</th>
+                <th>Language</th>
+                <th>Used</th>
+                <th>In stock</th>
+                <th>Cover</th>
+              </tr>
+            </thead>
+            <tbody>
+              {hardlopers.map((rij) => {
+                const weken = weeksOfCover(rij);
+                return (
+                  <tr key={rij.catalogKey}>
+                    <td data-label="Folder"><b>{rij.storageNumber}</b></td>
+                    <td data-label="Model"><strong>{rij.model}</strong></td>
+                    <td data-label="Part number">{displayStickerSku(rij.sku)}</td>
+                    <td data-label="Language">{rij.layout}</td>
+                    <td data-label="Used"><b className="mover-used">{rij.used}×</b></td>
+                    <td data-label="In stock">{rij.stock}</td>
+                    <td data-label="Cover">
+                      {weken === null
+                        ? "—"
+                        : (
+                          <span className={weken < 2 ? "mover-kort" : ""}>
+                            {weken < 1 ? "under a week" : `${Math.round(weken)} weeks`}
+                          </span>
+                        )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </section>
       )}
 

@@ -4077,3 +4077,9 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
   display: block; margin-top: 3px;
   color: var(--warn); font-size: 11.5px; font-weight: 640;
 }
+
+
+/* Hardlopers op het scherm van Noviply: het aantal springt eruit, en een
+   dekking onder de twee weken is waar zij iets mee moeten. */
+.mover-used { color: var(--signal); font-size: 15px; font-weight: 800; }
+.mover-kort { color: var(--warn); font-weight: 700; }
