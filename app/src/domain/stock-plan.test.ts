@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   byMovement,
+  canRideAlong,
   nextSort,
   sortRows,
   confidenceFor,
@@ -189,12 +190,28 @@ describe("wanneer er besteld moet worden", () => {
     expect(uit.reorderPoint).toBeLessThan(zonderMarge * 2);
   });
 
-  it("houdt het bestelniveau in verhouding tot het weekverbruik", () => {
-    // Zeven vellen per week hoort geen voorraad van drie maanden op te leveren.
+  it("houdt het bestelniveau in verhouding tot de bestelronde", () => {
+    // De dekking hoort de levertijd, de bestelronde en de marge te overbruggen
+    // plus een beetje. Meer is voorraad om niets; minder betekent dat je vóór
+    // de volgende ronde al leeg staat.
     const uit = rij(50, reeks(14, 1));
     const wekenDekking = (uit.orderUpTo ?? 0) / (uit.perWeek ?? 1);
-    expect(wekenDekking).toBeGreaterThan(3);
-    expect(wekenDekking).toBeLessThan(7);
+    const overbruggen = (defaultStockPolicy.leadTimeDays
+      + defaultStockPolicy.orderCycleDays + defaultStockPolicy.safetyDays) / 7;
+    expect(wekenDekking).toBeGreaterThan(overbruggen);
+    expect(wekenDekking).toBeLessThan(overbruggen * 1.5);
+  });
+
+  it("maakt de order groter zodra er minder vaak besteld wordt", () => {
+    // Dit is de enige knop die de batchgrootte echt beweegt: wachten tot er
+    // genoeg regels op de lijst staan levert alleen service-verlies op.
+    const wekelijks = stockPlan([vel()], reeks(14, 1), { NB10052E1NL: 5 }, nu,
+      { ...defaultStockPolicy, orderCycleDays: 7 })[0];
+    const maandelijks = stockPlan([vel()], reeks(14, 1), { NB10052E1NL: 5 }, nu,
+      { ...defaultStockPolicy, orderCycleDays: 28 })[0];
+    // Vier keer zo lang wachten geeft geen vier keer zo grote order: de
+    // levertijd en de marge zitten er allebei ook in. Wel fors meer.
+    expect(maandelijks.suggested).toBeGreaterThan(wekelijks.suggested * 1.5);
   });
 
   it("vult aan tot boven het bestelpunt, niet tot precies het bestelpunt", () => {
@@ -215,6 +232,58 @@ describe("wanneer er besteld moet worden", () => {
   it("geeft een negatieve besteltermijn als het al te laat is", () => {
     const uit = rij(5, reeks(14, 2));
     expect(uit.orderWithinDays).toBeLessThanOrEqual(0);
+  });
+});
+
+describe("meeliften op een bestelling", () => {
+  it("neemt alleen mee wat binnen de termijn toch aan de beurt komt", () => {
+    const beleid = { ...defaultStockPolicy, canOrderDays: 10 };
+    const dichtbij = { catalogKey: "a", used: 20, suggested: 6, status: "watch", orderWithinDays: 4 };
+    const verweg = { catalogKey: "b", used: 20, suggested: 6, status: "ok", orderWithinDays: 40 };
+    const lijst = canRideAlong([dichtbij, verweg] as StockPlanRow[], beleid);
+    expect(lijst.map((r) => r.catalogKey)).toEqual(["a"]);
+  });
+
+  it("laat wat stilstaat en wat te weinig gemeten is er buiten", () => {
+    // Anders wordt "er gaat toch een order uit" een knop om overal voorraad
+    // bij te leggen, en dat is precies hoe dode voorraad ontstaat.
+    const beleid = { ...defaultStockPolicy, canOrderDays: 10 };
+    const stil = { catalogKey: "s", used: 0, suggested: 8, status: "idle", orderWithinDays: 2 };
+    const dun = { catalogKey: "d", used: 1, suggested: 8, status: "watch", orderWithinDays: 2 };
+    expect(canRideAlong([stil, dun] as StockPlanRow[], beleid)).toHaveLength(0);
+  });
+
+  it("zet wat het eerst aan de beurt is bovenaan", () => {
+    const beleid = { ...defaultStockPolicy, canOrderDays: 20 };
+    const laat = { catalogKey: "l", used: 20, suggested: 5, status: "watch", orderWithinDays: 15 };
+    const vroeg = { catalogKey: "v", used: 20, suggested: 5, status: "watch", orderWithinDays: 3 };
+    expect(canRideAlong([laat, vroeg] as StockPlanRow[], beleid).map((r) => r.catalogKey))
+      .toEqual(["v", "l"]);
+  });
+});
+
+describe("de ondergrens per regel", () => {
+  it("tilt een klein tekort op tot de ondergrens", () => {
+    // Drie velletjes laten drukken is zonde van de opstelling.
+    const uit = stockPlan([vel()], reeks(14, 1), { NB10052E1NL: 60 }, nu,
+      { ...defaultStockPolicy, minLineQuantity: 10 })[0];
+    if (uit.suggested > 0) expect(uit.suggested).toBeGreaterThanOrEqual(10);
+  });
+
+  it("laat een hangmap met te weinig verbruik met rust", () => {
+    // Eén vel in zeven weken. Tien vellen is daar meer dan een jaar voorraad,
+    // en dat is geen batch maar dode voorraad.
+    const uit = stockPlan([vel()], [verbruik(50)], { NB10052E1NL: 0 }, nu,
+      { ...defaultStockPolicy, minLineQuantity: 10 })[0];
+    expect(uit.used).toBe(1);
+    expect(uit.suggested).toBeLessThan(10);
+  });
+
+  it("tilt niet op als de hangmap er maanden mee vooruit zou kunnen", () => {
+    const traag = [verbruik(2), verbruik(20), verbruik(40)];
+    const uit = stockPlan([vel()], traag, { NB10052E1NL: 30 }, nu,
+      { ...defaultStockPolicy, minLineQuantity: 25 })[0];
+    expect(uit.suggested).toBeLessThan(25);
   });
 });
 

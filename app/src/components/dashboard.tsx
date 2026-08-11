@@ -2427,6 +2427,9 @@ export function Dashboard({
             resupplySafetyWeeks={operationsPolicy.resupplySafetyWeeks}
             abcAThreshold={operationsPolicy.abcAThreshold}
             abcBThreshold={operationsPolicy.abcBThreshold}
+            orderCycleDays={operationsPolicy.orderCycleDays}
+            canOrderDays={operationsPolicy.canOrderDays}
+            minLineQuantity={operationsPolicy.minLineQuantity}
             onAskPrinterCheck={() => void requestPrinterCheck()}
             onStartPrinting={(id: string) => void startPrinting(id)}
             onSettlePrintRequest={settlePrintRequestRecord}
@@ -2811,8 +2814,10 @@ export function Dashboard({
               quantities={catalogQuantities}
               policy={{
                 leadTimeDays: operationsPolicy.resupplyLeadTimeDays,
-                reviewDays: 7,
+                orderCycleDays: operationsPolicy.orderCycleDays,
                 safetyDays: operationsPolicy.resupplySafetyWeeks * 7,
+                canOrderDays: operationsPolicy.canOrderDays,
+                minLineQuantity: operationsPolicy.minLineQuantity,
               }}
               abcA={operationsPolicy.abcAThreshold}
               abcB={operationsPolicy.abcBThreshold}

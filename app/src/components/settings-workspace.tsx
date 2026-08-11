@@ -425,6 +425,70 @@ export function SettingsWorkspace({
             </small>
           </label>
           <label>
+            <span>Hoe vaak bestellen bij Noviply</span>
+            {/* Dit is de knop voor de batchgrootte, en de enige die echt werkt.
+                Doorgerekend op ons eigen verbruik: elke week geeft 52 orders
+                per jaar van 95 vellen, elke vier weken 13 orders van 385, elke
+                zes weken 9 van 577. Het aandeel vraag dat misgrijpt blijft in
+                alle gevallen rond een half procent. */}
+            <select
+              value={draft.orderCycleDays}
+              onChange={(event) => setDraft({
+                ...draft, orderCycleDays: Number(event.target.value),
+              })}
+            >
+              {[7, 14, 21, 28, 42, 56].map((dagen) => (
+                <option key={dagen} value={dagen}>
+                  Elke {dagen / 7} {dagen === 7 ? "week" : "weken"} ({dagen} dagen)
+                </option>
+              ))}
+            </select>
+            <small>
+              Bepaalt hoe groot een bestelling wordt. Minder vaak bestellen
+              betekent grotere oplages en meer voorraad; het servicepeil
+              verandert er nauwelijks van.
+            </small>
+          </label>
+          <label>
+            <span>Laat meeliften wat binnenkort toch moet</span>
+            <select
+              value={draft.canOrderDays}
+              onChange={(event) => setDraft({
+                ...draft, canOrderDays: Number(event.target.value),
+              })}
+            >
+              {[0, 5, 10, 15, 20].map((dagen) => (
+                <option key={dagen} value={dagen}>
+                  {dagen === 0 ? "Niets meesturen" : `${dagen} werkdagen vooruit`}
+                </option>
+              ))}
+            </select>
+            <small>
+              Er gaat toch een order uit. Houd dit onder de bestelronde, anders
+              tel je dezelfde vooruitblik twee keer.
+            </small>
+          </label>
+          <label>
+            <span>Niet minder bestellen dan</span>
+            <select
+              value={draft.minLineQuantity}
+              onChange={(event) => setDraft({
+                ...draft, minLineQuantity: Number(event.target.value),
+              })}
+            >
+              {[0, 5, 10, 25, 50].map((aantal) => (
+                <option key={aantal} value={aantal}>
+                  {aantal === 0 ? "Geen ondergrens" : `${aantal} vellen per artikel`}
+                </option>
+              ))}
+            </select>
+            <small>
+              Drie velletjes laten drukken is zonde van de opstelling. Geldt
+              alleen waar genoeg verbruik onder zit, en nooit als het de
+              hangmap boven drie maanden voorraad tilt.
+            </small>
+          </label>
+          <label>
             <span>Reserve bovenop de levertijd</span>
             <select
               value={draft.resupplySafetyWeeks}

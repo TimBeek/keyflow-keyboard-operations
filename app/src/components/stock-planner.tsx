@@ -6,6 +6,7 @@ import { downloadTekstbestand } from "@/lib/bestand-downloaden";
 import type { InventoryTransactionEntry } from "@/domain/operations";
 import {
   byMovement,
+  canRideAlong,
   fastMovers,
   idleRows,
   measuredDays,
@@ -157,6 +158,17 @@ export function StockPlanner({
   const gemeten = useMemo(() => measuredDays(transactions, nu), [transactions, nu]);
   const samen = useMemo(() => stockSummary(rijen, gemeten), [rijen, gemeten]);
   const bestellen = useMemo(() => toOrder(rijen), [rijen]);
+  const kanMee = useMemo(() => canRideAlong(rijen, policy), [rijen, policy]);
+  /*
+   * Wat er in de order gaat. Alles wat moet staat standaard aan; wat mee kán
+   * staat standaard uit — dat is een keuze en geen automatisme.
+   */
+  const [meegenomen, setMeegenomen] = useState<Set<string>>(new Set());
+  const inOrder = useMemo(
+    () => [...bestellen, ...kanMee.filter((rij) => meegenomen.has(rij.catalogKey))],
+    [bestellen, kanMee, meegenomen],
+  );
+  const totaalVellen = inOrder.reduce((som, rij) => som + rij.suggested, 0);
   const hardlopers = useMemo(() => fastMovers(rijen, abcA, abcB), [rijen, abcA, abcB]);
   const stilstaand = useMemo(() => idleRows(rijen), [rijen]);
   const alles = useMemo(() => searchRows(byMovement(rijen), query), [rijen, query]);
@@ -206,7 +218,7 @@ export function StockPlanner({
   const venster = Math.min(usageWindowDays, Math.max(1, Math.round(gemeten)));
 
   const tabs: { id: Tab; label: string; aantal: number }[] = [
-    { id: "order", label: w.orderNow, aantal: bestellen.length },
+    { id: "order", label: w.orderNow, aantal: inOrder.length },
     { id: "fast", label: w.fastMovers, aantal: hardlopers.length },
     { id: "slow", label: w.slow, aantal: stilstaand.length },
     { id: "all", label: w.all, aantal: rijen.length },
@@ -222,10 +234,13 @@ export function StockPlanner({
       */}
       <div className="plan-kop">
         <div className="plan-kengetallen">
-          <div className={bestellen.length > 0 ? "plan-kengetal is-actie" : "plan-kengetal"}>
-            <strong>{samen.linesToOrder}</strong>
+          {/* Wat er in de order zit, inclusief wat er is meegenomen. Zou hier
+              alleen het verplichte deel staan, dan spreekt deze teller het
+              tabblad eronder tegen zodra je iets aanvinkt. */}
+          <div className={inOrder.length > 0 ? "plan-kengetal is-actie" : "plan-kengetal"}>
+            <strong>{inOrder.length}</strong>
             <span>{taal === "en" ? "to order" : "te bestellen"}</span>
-            <small>{samen.sheetsToOrder} {w.sheets}</small>
+            <small>{totaalVellen} {w.sheets}</small>
           </div>
           <div className={samen.out + samen.critical > 0 ? "plan-kengetal is-erg" : "plan-kengetal"}>
             <strong>{samen.out + samen.critical}</strong>
@@ -253,8 +268,8 @@ export function StockPlanner({
             stelt het bij zodra de eerste leveringen zijn doorgemeten. */}
         <p className="plan-basis">
           {taal === "en"
-            ? `Measured over ${venster} days · ${samen.usedInWindow} sheets used · lead time ${levertijdWeken} weeks (${policy.leadTimeDays} days, as Noviply gives it) · assumes ordering every ${policy.reviewDays} days.`
-            : `Gemeten over ${venster} dagen · ${samen.usedInWindow} vellen gebruikt · levertijd ${levertijdWeken} weken (${policy.leadTimeDays} dagen, zoals Noviply hem opgeeft — aan te passen bij Instellingen) · gaat uit van elke ${policy.reviewDays} dagen bestellen.`}
+            ? `Measured over ${venster} days · ${samen.usedInWindow} sheets used · lead time ${levertijdWeken} weeks (${policy.leadTimeDays} days, as Noviply gives it) · assumes ordering every ${policy.orderCycleDays} days.`
+            : `Gemeten over ${venster} dagen · ${samen.usedInWindow} vellen gebruikt · levertijd ${levertijdWeken} weken (${policy.leadTimeDays} dagen, zoals Noviply hem opgeeft — aan te passen bij Instellingen) · gaat uit van elke ${policy.orderCycleDays} dagen bestellen.`}
           {/* Alleen zeggen dat de recente weging meetelt als hij dat ook doet.
               Valt de hele meetperiode binnen die twee weken, dan krijgt elke
               boeking hetzelfde gewicht en verandert er niets. */}
@@ -285,25 +300,44 @@ export function StockPlanner({
           <div className="plan-inhoud-kop">
             <p>
               {taal === "en"
-                ? "Everything that will run out before a replacement can arrive, most urgent first. “Order at” is the level where a new batch has to be on its way; “top up to” is where it should be after delivery."
-                : "Alles wat opraakt voordat er iets nieuws binnen kan zijn, met de meeste haast bovenaan. “Bestelpunt” is de stand waarop er iets onderweg moet zijn; “aanvullen tot” is waar het na levering hoort te staan."}
+                ? `Everything that will run out before a replacement can arrive, most urgent first. Topped up to cover the lead time plus one ordering cycle of ${policy.orderCycleDays} days — that cycle is what makes an order big enough to be worth printing.`
+                : `Alles wat opraakt voordat er iets nieuws binnen kan zijn, met de meeste haast bovenaan. Aangevuld tot de levertijd plus één bestelronde van ${policy.orderCycleDays} dagen — die ronde bepaalt of een order groot genoeg is om te laten drukken.`}
             </p>
-            {bestellen.length > 0 && (
+            {inOrder.length > 0 && (
               <button
                 type="button"
                 className="secondary-button"
                 onClick={() => {
                   downloadTekstbestand(
-                    createOrderCsv(bestellen, taal),
+                    createOrderCsv(inOrder, taal),
                     `rekey-order-${new Date().toISOString().slice(0, 10)}.csv`,
                   );
-                  setBericht(`${bestellen.length} ${w.lines}.`);
+                  setBericht(`${inOrder.length} ${w.lines}.`);
                 }}
               >
                 {w.download}
               </button>
             )}
           </div>
+          {/* Wat er nu in de order zit. Eén regel, want dit is het getal waar
+              het gesprek met Noviply over gaat. */}
+          {inOrder.length > 0 && (
+            <div className="plan-mandje">
+              <strong>{totaalVellen}</strong>
+              <span>
+                {taal === "en"
+                  ? `sheets over ${inOrder.length} lines`
+                  : `vellen over ${inOrder.length} regels`}
+              </span>
+              {meegenomen.size > 0 && (
+                <small>
+                  {taal === "en"
+                    ? `${meegenomen.size} riding along`
+                    : `waarvan ${meegenomen.size} meeliftend`}
+                </small>
+              )}
+            </div>
+          )}
           {bestellen.length === 0 ? (
             <div className="empty">{w.nothing}</div>
           ) : (
@@ -373,6 +407,85 @@ export function StockPlanner({
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* Wat er niet móét, maar wel mee kan. Er gaat toch een order uit;
+              een tweede drukgang voor een handjevol vellen is zonde. Standaard
+              uit — meenemen is een keuze, geen automatisme. */}
+          {kanMee.length > 0 && (
+            <div className="plan-meelift">
+              <div className="plan-inhoud-kop">
+                <p>
+                  <strong>
+                    {taal === "en"
+                      ? `${kanMee.length} more could ride along`
+                      : `${kanMee.length} kunnen mee`}
+                  </strong>
+                  {" "}
+                  {taal === "en"
+                    ? `These are not urgent, but they are due within ${policy.canOrderDays} working days. Taking them now saves a second print run for a handful of sheets.`
+                    : `Deze hoeven nog niet, maar zijn binnen ${policy.canOrderDays} werkdagen toch aan de beurt. Nu meesturen scheelt een tweede drukgang voor een handjevol vellen.`}
+                </p>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() => setMeegenomen((vorige) =>
+                    vorige.size === kanMee.length
+                      ? new Set()
+                      : new Set(kanMee.map((rij) => rij.catalogKey)))}
+                >
+                  {meegenomen.size === kanMee.length
+                    ? (taal === "en" ? "Take none" : "Geen enkele")
+                    : (taal === "en" ? "Take all" : "Allemaal mee")}
+                </button>
+              </div>
+              <div className="table-wrap">
+                <table className="operations-table">
+                  <thead>
+                    <tr>
+                      <th aria-label={taal === "en" ? "Take along" : "Meenemen"} />
+                      <th>{w.folder}</th>
+                      <th>{w.partNumber}</th>
+                      <th>{w.layout}</th>
+                      <th>{w.inStock}</th>
+                      <th>{w.perWeek}</th>
+                      <th>{w.orderBy}</th>
+                      <th>{w.send}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {kanMee.map((rij) => (
+                      <tr key={rij.catalogKey}
+                        className={meegenomen.has(rij.catalogKey) ? "plan-mee" : ""}>
+                        <td data-label={taal === "en" ? "Take along" : "Meenemen"}>
+                          <input
+                            type="checkbox"
+                            checked={meegenomen.has(rij.catalogKey)}
+                            aria-label={`${rij.model} — ${rij.suggested}`}
+                            onChange={() => setMeegenomen((vorige) => {
+                              const volgende = new Set(vorige);
+                              if (volgende.has(rij.catalogKey)) volgende.delete(rij.catalogKey);
+                              else volgende.add(rij.catalogKey);
+                              return volgende;
+                            })}
+                          />
+                        </td>
+                        <td data-label={w.folder}>
+                          <strong className="storage-number">No. {rij.storageNumber}</strong>
+                          <span>{rij.model}</span>
+                        </td>
+                        <td data-label={w.partNumber}>{nummerCel(rij, w)}</td>
+                        <td data-label={w.layout}>{rij.layout}</td>
+                        <td data-label={w.inStock}><b>{rij.stock}</b></td>
+                        <td data-label={w.perWeek}>{tempo(rij)}</td>
+                        <td data-label={w.orderBy}>{termijn(rij.orderWithinDays, w)}</td>
+                        <td data-label={w.send}><b className="plan-aantal">{rij.suggested}</b></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>

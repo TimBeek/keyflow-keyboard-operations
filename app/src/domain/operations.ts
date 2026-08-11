@@ -44,6 +44,12 @@ export type OperationsPolicy = {
   /** Hoe lang Noviply erover doet, en hoeveel reserve we willen. */
   resupplyLeadTimeDays: number;
   resupplySafetyWeeks: number;
+  /** Hoe vaak er bij Noviply besteld wordt, in dagen. De knop voor batchgrootte. */
+  orderCycleDays: number;
+  /** Hoe ver vooruit een regel mag meeliften op een bestelling, in werkdagen. */
+  canOrderDays: number;
+  /** Niet minder dan dit van één artikel bestellen. */
+  minLineQuantity: number;
   /** Wanneer Noviply de twee automatische printrondes draait, als "HH:MM". */
   printRunTimes: PrintRunTimes;
 };
@@ -64,6 +70,9 @@ export const defaultOperationsPolicy: OperationsPolicy = {
   layoutRules: [],
   resupplyLeadTimeDays: 11,
   resupplySafetyWeeks: 1,
+  orderCycleDays: 28,
+  canOrderDays: 10,
+  minLineQuantity: 10,
   printRunTimes: defaultPrintRunTimes,
 };
 

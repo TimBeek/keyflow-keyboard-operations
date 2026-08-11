@@ -36,22 +36,62 @@ export type StockPolicy = {
   /** Levertijd van Noviply in dagen. */
   leadTimeDays: number;
   /**
-   * Hoe vaak er wordt gekeken en besteld, in dagen.
+   * Hoe vaak er wordt besteld, in dagen. De knop voor de batchgrootte.
    *
    * Dit hoort in de dekking meegerekend: je moet het overbruggen tot de
    * levering ná de volgende bestelronde, niet alleen tot de eerstvolgende.
+   * Daardoor is dit tegelijk de enige knop die de bestelling echt groter maakt
+   * — verdubbel de ronde en je verdubbelt de order.
+   *
+   * Doorgerekend op ons eigen verbruik, met de vraag onveranderd: elke week
+   * bestellen geeft 52 orders per jaar van 95 vellen, elke vier weken 13 orders
+   * van 385 vellen, elke zes weken 9 orders van 577. Het aandeel vraag dat
+   * misgrijpt blijft in alle drie de gevallen rond een half procent; wat er
+   * verandert is de voorraad die je aanhoudt.
    */
-  reviewDays: number;
+  orderCycleDays: number;
   /** Extra marge bovenop, in dagen. */
   safetyDays: number;
+  /**
+   * Hoe ver vooruit een regel mag meeliften, in werkdagen.
+   *
+   * Er gaat toch een order uit; wat binnen deze termijn tóch aan de beurt komt
+   * kan er net zo goed bij. Kleiner dan de bestelronde houden, anders tel je
+   * dezelfde vooruitblik twee keer en bestel je fors te veel.
+   */
+  canOrderDays: number;
+  /**
+   * Niet minder dan dit van één artikel bestellen.
+   *
+   * Drie velletjes laten drukken is zonde van de opstelling. Alleen voor regels
+   * waar genoeg verbruik onder zit — een ondergrens op een hangmap waar één vel
+   * uit is gegaan maakt geen batch maar dode voorraad. Bewust een ondergrens en
+   * geen afronding op tientallen: dat laatste tilt ook de grote regels op die
+   * het niet nodig hebben, en kost bij hetzelfde effect het dubbele.
+   */
+  minLineQuantity: number;
 };
 
 export const defaultStockPolicy: StockPolicy = {
   // Noviply levert naar eigen zeggen in ongeveer anderhalve week.
   leadTimeDays: 11,
-  reviewDays: 7,
+  orderCycleDays: 28,
   safetyDays: 7,
+  canOrderDays: 10,
+  minLineQuantity: 10,
 };
+
+/**
+ * Waarboven een ondergrens per regel alleen maar voorraad wordt.
+ *
+ * Tien vellen op een hangmap die er twee per week gebruikt is vijf weken; op
+ * een hangmap die er een half per week gebruikt is het twintig weken. Die
+ * tweede hoort de ondergrens niet te krijgen.
+ */
+const maxDekkingWerkdagen = 60;
+
+/** Onder dit aantal geziene vellen valt geen tempo af te leiden. */
+const genoegGezien = 3;
 
 /** Werkdagen per week; de werkvloer draait niet in het weekend. */
 const werkdagenPerWeek = 5;
@@ -270,11 +310,14 @@ export function stockPlan(
         ? null
         : (() => {
           const verwacht = perDag
-            * (policy.leadTimeDays + policy.reviewDays + policy.safetyDays);
+            * (policy.leadTimeDays + policy.orderCycleDays + policy.safetyDays);
           return Math.ceil(verwacht + marge(verwacht));
         })();
 
-      const suggested = orderUpTo === null ? 0 : Math.max(0, orderUpTo - stock);
+      const kaal = orderUpTo === null ? 0 : Math.max(0, orderUpTo - stock);
+      const suggested = metOndergrens(kaal, {
+        used, perDag, stock, minimum: policy.minLineQuantity,
+      });
       const workingDaysLeft = perDag === null || perDag <= 0
         ? null
         : Math.floor(naarWerkdagen(stock / perDag));
@@ -316,6 +359,26 @@ export function stockPlan(
     });
 }
 
+/**
+ * De ondergrens per regel, met een rem erop.
+ *
+ * Alleen waar er genoeg verbruik onder zit, en alleen zolang het de hangmap
+ * niet boven een dekking van drie maanden tilt. Zonder die twee voorwaarden
+ * krijgt elke hangmap waar ooit één vel uit is gegaan er tien bij, en dat is
+ * geen batch maar dode voorraad.
+ */
+function metOndergrens(
+  kaal: number,
+  invoer: { used: number; perDag: number | null; stock: number; minimum: number },
+) {
+  if (kaal <= 0 || kaal >= invoer.minimum) return kaal;
+  if (invoer.used < genoegGezien || invoer.perDag === null || invoer.perDag <= 0) return kaal;
+  const naLevering = invoer.stock + invoer.minimum;
+  const dekking = naarWerkdagen(naLevering / invoer.perDag);
+  if (dekking > maxDekkingWerkdagen) return kaal;
+  return invoer.minimum;
+}
+
 function statusVoor(
   invoer: {
     stock: number;
@@ -338,7 +401,7 @@ function statusVoor(
   }
   if (invoer.reorderPoint !== null && invoer.stock <= invoer.reorderPoint) return "order";
 
-  const tot = naarWerkdagen(policy.leadTimeDays + policy.reviewDays + policy.safetyDays);
+  const tot = naarWerkdagen(policy.leadTimeDays + policy.orderCycleDays + policy.safetyDays);
   if (invoer.workingDaysLeft !== null && invoer.workingDaysLeft < tot) return "watch";
   return "ok";
 }
@@ -364,6 +427,26 @@ export function toOrder(rows: StockPlanRow[]) {
     .sort((links, rechts) =>
       haast[links.status] - haast[rechts.status]
       || (links.orderWithinDays ?? 9999) - (rechts.orderWithinDays ?? 9999)
+      || rechts.suggested - links.suggested);
+}
+
+/**
+ * Wat er niet móét, maar wel mee kan.
+ *
+ * Er gaat toch een order uit. Alles wat binnen de meelifttermijn tóch aan de
+ * beurt komt kan er net zo goed bij: dat scheelt een tweede drukgang voor een
+ * handjevol vellen. Drie dingen blijven eruit — wat stilstaat, wat te weinig
+ * gemeten is om op te plannen, en wat al genoeg heeft.
+ */
+export function canRideAlong(rows: StockPlanRow[], policy: StockPolicy) {
+  return rows
+    .filter((rij) => rij.status === "watch" || rij.status === "ok")
+    .filter((rij) => rij.used >= genoegGezien
+      && rij.suggested > 0
+      && rij.orderWithinDays !== null
+      && rij.orderWithinDays <= policy.canOrderDays)
+    .sort((links, rechts) =>
+      (links.orderWithinDays ?? 9999) - (rechts.orderWithinDays ?? 9999)
       || rechts.suggested - links.suggested);
 }
 

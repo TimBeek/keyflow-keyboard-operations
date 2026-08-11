@@ -93,6 +93,12 @@ type Props = {
   /** Dezelfde A/B/C-grenzen als management instelt; anders twee indelingen. */
   abcAThreshold: number;
   abcBThreshold: number;
+  /** Hoe vaak er besteld wordt; bepaalt hoe groot een order wordt. */
+  orderCycleDays: number;
+  /** Hoe ver vooruit een regel mag meeliften. */
+  canOrderDays: number;
+  /** Niet minder dan dit van één artikel. */
+  minLineQuantity: number;
   onAskPrinterCheck: () => void;
   onStartPrinting: (id: string) => void;
   onSettlePrintRequest: (
@@ -135,6 +141,9 @@ export function NoviplyWorkspace({
   resupplySafetyWeeks,
   abcAThreshold,
   abcBThreshold,
+  orderCycleDays,
+  canOrderDays,
+  minLineQuantity,
   onAskPrinterCheck,
   onStartPrinting,
   onSettlePrintRequest,
@@ -632,8 +641,10 @@ export function NoviplyWorkspace({
           quantities={quantities}
           policy={{
             leadTimeDays: resupplyLeadTimeDays,
-            reviewDays: 7,
+            orderCycleDays,
             safetyDays: resupplySafetyWeeks * 7,
+            canOrderDays,
+            minLineQuantity,
           }}
           abcA={abcAThreshold}
           abcB={abcBThreshold}

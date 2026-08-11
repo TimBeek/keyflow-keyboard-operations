@@ -37,6 +37,9 @@ const policySchema = z.object({
   })).max(60).default([]),
   resupplyLeadTimeDays: z.number().int().min(1).max(120),
   resupplySafetyWeeks: z.number().int().min(0).max(12),
+  orderCycleDays: z.number().int().min(1).max(180),
+  canOrderDays: z.number().int().min(0).max(90),
+  minLineQuantity: z.number().int().min(0).max(500),
   printRunTimes: z.object({
     morning: z.string().regex(runTimePattern, "Vul een tijd in als 09:00."),
     afternoon: z.string().regex(runTimePattern, "Vul een tijd in als 12:30."),
@@ -83,6 +86,9 @@ type PolicyRow = {
   }[];
   resupply_lead_time_days: number;
   resupply_safety_weeks: number;
+  order_cycle_days: number;
+  can_order_days: number;
+  min_line_quantity: number;
   morning_run_at: string;
   afternoon_run_at: string;
   version: number;
@@ -113,6 +119,9 @@ function toPolicy(row: PolicyRow): OperationsPolicy {
     })),
     resupplyLeadTimeDays: row.resupply_lead_time_days,
     resupplySafetyWeeks: row.resupply_safety_weeks,
+    orderCycleDays: row.order_cycle_days,
+    canOrderDays: row.can_order_days,
+    minLineQuantity: row.min_line_quantity,
     // Postgres geeft een tijd terug als "09:00:00"; de seconden zeggen niets.
     printRunTimes: {
       morning: String(row.morning_run_at).slice(0, 5),
@@ -127,6 +136,7 @@ export async function readOperationsPolicy() {
     select threshold_eur, workload, method_enabled, employee_permissions,
            abc_a_threshold, abc_b_threshold, direct_print_layouts,
            layout_rules, resupply_lead_time_days, resupply_safety_weeks,
+           order_cycle_days, can_order_days, min_line_quantity,
            morning_run_at, afternoon_run_at, version
     from operations_settings
     where setting_key = 'active'
@@ -149,6 +159,7 @@ export async function updateOperationsPolicy(rawInput: UpdateOperationsPolicyInp
       select threshold_eur, workload, method_enabled, employee_permissions,
              abc_a_threshold, abc_b_threshold, direct_print_layouts,
            layout_rules, resupply_lead_time_days, resupply_safety_weeks,
+           order_cycle_days, can_order_days, min_line_quantity,
            morning_run_at, afternoon_run_at, version
       from operations_settings
       where setting_key = 'active'
@@ -177,6 +188,9 @@ export async function updateOperationsPolicy(rawInput: UpdateOperationsPolicyInp
           direct_print_layouts = ${transaction.json([...new Set(input.directPrintLayouts)])},
           layout_rules = ${transaction.json(input.policy.layoutRules)},
           resupply_lead_time_days = ${input.policy.resupplyLeadTimeDays},
+          order_cycle_days = ${input.policy.orderCycleDays},
+          can_order_days = ${input.policy.canOrderDays},
+          min_line_quantity = ${input.policy.minLineQuantity},
           resupply_safety_weeks = ${input.policy.resupplySafetyWeeks},
           morning_run_at = ${input.policy.printRunTimes.morning},
           afternoon_run_at = ${input.policy.printRunTimes.afternoon},
@@ -187,6 +201,7 @@ export async function updateOperationsPolicy(rawInput: UpdateOperationsPolicyInp
       returning threshold_eur, workload, method_enabled, employee_permissions,
                 abc_a_threshold, abc_b_threshold, direct_print_layouts,
            layout_rules, resupply_lead_time_days, resupply_safety_weeks,
+           order_cycle_days, can_order_days, min_line_quantity,
            morning_run_at, afternoon_run_at, version
     `;
     return {

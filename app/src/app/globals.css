@@ -4295,3 +4295,23 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 .kolom-knop.is-actief { color: var(--signal); }
 .kolom-knop.is-actief span { color: var(--signal); font-size: 10px; }
 .kolom-knop:focus-visible { outline: 2px solid var(--signal); outline-offset: -2px; }
+
+/* Wat er nu in de order zit. Eén regel, want dit is het getal waar het gesprek
+   met de drukker over gaat. */
+.plan-mandje {
+  display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  margin: 0 0 12px; padding: 11px 15px;
+  border: 1px solid var(--line); border-left: 3px solid var(--signal);
+  border-radius: 12px; background: var(--surface-2);
+}
+.plan-mandje strong { color: var(--text); font-size: 22px; font-weight: 800; }
+.plan-mandje span { color: var(--text-2); font-size: 13px; font-weight: 650; }
+.plan-mandje small { color: var(--signal); font-size: 12px; font-weight: 700; }
+
+/* De regels die niet moeten maar wel mee kunnen. Rustiger dan de bestellijst
+   erboven: dit is een keuze, geen opdracht. */
+.plan-meelift { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--line-soft); }
+.plan-meelift .plan-inhoud-kop p strong { color: var(--text); }
+.plan-meelift input[type="checkbox"] { width: 17px; height: 17px; accent-color: var(--signal); cursor: pointer; }
+.plan-meelift tr.plan-mee { background: var(--signal-soft); }
+.plan-meelift tr.plan-mee td:first-child { box-shadow: inset 3px 0 0 var(--signal); }
