@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ConversionAdvisor } from "@/components/conversion-advisor";
 import { AttentionGroups } from "@/components/attention-groups";
+import { StockPlanner } from "@/components/stock-planner";
 import { downloadTekstbestand } from "@/lib/bestand-downloaden";
 import { AccessManagementDialog } from "@/components/access-management";
 import { EmployeeWorkspace } from "@/components/employee-workspace";
@@ -309,17 +310,12 @@ const noviplyHeadings: Record<NoviplyTab, { title: string; subtitle: string }> =
     subtitle: "Everything ticked off, with the time and who handled it.",
   },
   stock: {
-    title: "Stock",
-    subtitle: "Everything in the cabinet, emptiest first.",
+    title: "Stock & replenishment",
+    subtitle: "What is running out, what to send, and what is standing still.",
   },
 };
 
-function noviplyHeading(tab: NoviplyTab, resupplyStarted: boolean) {
-  // De voorraadkop is de enige die met de situatie meebeweegt: staat er iets
-  // onder het minimum, dan is dat het eerste wat je moet weten.
-  if (tab === "stock" && resupplyStarted) {
-    return { title: "Stock running low", subtitle: "Folders that need resupplying." };
-  }
+function noviplyHeading(tab: NoviplyTab) {
   return noviplyHeadings[tab];
 }
 
@@ -2341,12 +2337,12 @@ export function Dashboard({
             <h1>{role === "employee"
               ? "Uitvoering keyboardconversies"
               : role === "noviply"
-                ? noviplyHeading(noviplyTab, resupplyStarted).title
+                ? noviplyHeading(noviplyTab).title
                 : viewHeadings[activeView].title}</h1>
             <p>{role === "employee"
               ? "Eén duidelijke taak tegelijk, met automatisch methodeadvies."
               : role === "noviply"
-                ? noviplyHeading(noviplyTab, resupplyStarted).subtitle
+                ? noviplyHeading(noviplyTab).subtitle
                 : viewHeadings[activeView].subtitle}</p>
           </div>
           <div className="top-actions">
@@ -2797,6 +2793,23 @@ export function Dashboard({
         )}
 
         {role === "management" && activeView === "inventory" && (
+          <>
+            {/* Boven de kast: hetzelfde bestelbeeld dat Noviply ziet, in het
+                Nederlands. Zij en wij hoorden niet elk hun eigen som te maken —
+                dan gaat het gesprek over wiens cijfer klopt in plaats van over
+                wat er besteld moet worden. */}
+            <StockPlanner
+              taal="nl"
+              transactions={transactions}
+              quantities={catalogQuantities}
+              policy={{
+                leadTimeDays: operationsPolicy.resupplyLeadTimeDays,
+                reviewDays: 7,
+                safetyDays: operationsPolicy.resupplySafetyWeeks * 7,
+              }}
+              abcA={operationsPolicy.abcAThreshold}
+              abcB={operationsPolicy.abcBThreshold}
+            />
           <InventoryCatalog
             skuOverrides={skuOverrides}
             onSkuChange={changeCatalogSku}
@@ -2819,6 +2832,7 @@ export function Dashboard({
               });
             }}
           />
+          </>
         )}
         {role === "management" && activeView === "conversions" && <ConversionsWorkspace onNew={() => setAdvisorOpen(true)} conversionLog={conversionLog} />}
         {role === "management" && activeView === "orders" && <OrdersWorkspace />}

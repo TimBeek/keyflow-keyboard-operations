@@ -380,14 +380,26 @@ export function SettingsWorkspace({
         <div className="settings-grid">
           <label>
             <span>Levertijd van Noviply</span>
-            <select
+            {/* Een vrij veld en geen keuzelijst. Die lijst was 7, 10, 14, 21 of
+                30 dagen, en anderhalve week — wat Noviply zelf zegt — zat er
+                niet tussen. Dit getal verschuift elk bestelmoment, dus het
+                hoort precies te kunnen. */}
+            <input
+              type="number"
+              min={1}
+              max={90}
+              step={1}
               value={draft.resupplyLeadTimeDays}
-              onChange={(event) => setDraft({ ...draft, resupplyLeadTimeDays: Number(event.target.value) })}
-            >
-              {[7, 10, 14, 21, 30].map((days) => (
-                <option key={days} value={days}>{days} dagen</option>
-              ))}
-            </select>
+              onChange={(event) => setDraft({
+                ...draft,
+                resupplyLeadTimeDays: Math.min(90, Math.max(1, Number(event.target.value) || 1)),
+              })}
+            />
+            <small>
+              {(Math.round((draft.resupplyLeadTimeDays / 7) * 10) / 10)
+                .toLocaleString("nl-NL")} weken · geldt meteen voor het besteladvies
+              en voor het scherm van Noviply
+            </small>
           </label>
           <label>
             <span>Reserve bovenop de levertijd</span>

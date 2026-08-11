@@ -9,7 +9,6 @@ import { printRequestStatusLabel, type PrintRequestRecord } from "./print-reques
 import { displayStickerSku } from "./sticker-sku";
 import { unavailableReasonEnglish } from "./noviply-availability";
 import type { PrintVerdict } from "./print-verdict";
-import { signalLabel, type NoviplyStockRow } from "./noviply-stock";
 
 /** Wat Noviply in het bestand leest; hun kant is Engelstalig. */
 export function trackpointLabel(answer: PrintRequestRecord["trackpoint"]) {
@@ -19,66 +18,6 @@ export function trackpointLabel(answer: PrintRequestRecord["trackpoint"]) {
 }
 
 
-const orderHeaders = [
-  "Folder", "Part number", "Model", "Layout", "Per week", "In stock",
-  "Minimum", "Cover (weeks)", "Order", "Status",
-] as const;
-
-/**
- * De bestellijst mee naar Excel.
- *
- * De kolommen zeggen wat er moet gebeuren en waarom: hoe hard het loopt, wat
- * er nog ligt, hoe lang dat nog meegaat en hoeveel erbij moet. Een leeg vak
- * betekent "niet te zeggen" — een nul zou zeggen "niets nodig", en daar wordt
- * op besteld.
- */
-export function createNoviplyStockCsv(rows: NoviplyStockRow[]) {
-  return toCsv(orderHeaders, rows.map((row): CsvValue[] => [
-    row.storageNumber,
-    displayStickerSku(row.sku),
-    row.model,
-    row.layout,
-    row.weeklyDemand === null ? "" : Math.round(row.weeklyDemand * 10) / 10,
-    row.stock,
-    row.minimum ?? "",
-    row.coverWeeks === null ? "" : Math.round(row.coverWeeks * 10) / 10,
-    // Leeg als er niets te zeggen valt; een nul leest in Excel als "niets
-    // nodig", en daar wordt op besteld. Dat is precies waarom de oude export
-    // de bijbestelkolommen wegliet zolang er geen minimum was.
-    row.weeklyDemand === null ? "" : row.orderQuantity,
-    signalLabel(row.signal),
-  ]));
-}
-
-const partNumberHeaders = [
-  "Folder", "Part number", "Own number", "Shared", "Model", "Fits models",
-  "Layout", "Enter", "Used (30 d)", "Per week", "In stock", "Cover (weeks)", "Note",
-] as const;
-
-/**
- * Alle artikelnummers, met alles wat wij erover weten.
- *
- * Noviply houdt hier hun eigen voorraad op bij; dan moet er niets ontbreken —
- * ook niet de vellen die stilstaan, en ook niet dat een nummer van onszelf is
- * of in twee hangmappen ligt.
- */
-export function createPartNumberCsv(rows: NoviplyStockRow[]) {
-  return toCsv(partNumberHeaders, rows.map((row): CsvValue[] => [
-    row.storageNumber,
-    displayStickerSku(row.sku),
-    row.ownNumber ? "yes" : "",
-    row.sharedNumber ? "yes" : "",
-    row.model,
-    row.compatibleModels,
-    row.layout,
-    row.variant,
-    row.used,
-    row.weeklyDemand === null ? "" : Math.round(row.weeklyDemand * 10) / 10,
-    row.stock,
-    row.coverWeeks === null ? "" : Math.round(row.coverWeeks * 10) / 10,
-    row.note,
-  ]));
-}
 const printRequestHeaders = [
   "Requested",
   "Brand",
@@ -156,7 +95,7 @@ export function createPrintBatchCsv(rows: {
 
 /** Een bestandsnaam waarin de datum voorop staat, zodat sorteren op naam werkt. */
 export function noviplyExportFilename(
-  kind: "stock" | "print-requests" | "run" | "part-numbers" | "cannot-print",
+  kind: "print-requests" | "run" | "cannot-print",
   isoMoment: string,
 ) {
   return `noviply-${kind}-${isoMoment.slice(0, 10)}.csv`;

@@ -89,12 +89,13 @@ describe("calculateResupplyLevel", () => {
     const level = calculateResupplyLevel(transactions, item, 12, today, 28);
 
     expect(level?.weeklyDemand).toBeCloseTo(10);
-    // 10 per week × (14/7 + 1) = 30
+    // 10 per week × (11/7 + 1) = 26; de levertijd is een instelling, dus de
+    // verwachting leest hem uit in plaats van hem over te tikken.
     expect(level?.minimum).toBe(
       Math.ceil(10 * (resupplyLeadTimeDays / 7 + resupplySafetyStockWeeks)),
     );
-    expect(level?.minimum).toBe(30);
-    expect(level?.shortfall).toBe(18);
+    expect(level?.minimum).toBe(26);
+    expect(level?.shortfall).toBe(14);
     expect(level?.weeksOfStock).toBeCloseTo(1.2);
   });
 

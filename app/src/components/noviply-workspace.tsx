@@ -10,14 +10,7 @@ import { dayKey } from "@/domain/reporting";
 import { inventoryCatalog } from "@/data/inventory-catalog";
 import { downloadTekstbestand } from "@/lib/bestand-downloaden";
 import { printVerdicts } from "@/domain/print-verdict";
-import {
-  moverWindowDays,
-  noviplyStockRows,
-  rowsByMovement,
-  rowsNeedingAttention,
-  searchStockRows,
-  signalLabel,
-} from "@/domain/noviply-stock";
+import { StockPlanner } from "@/components/stock-planner";
 import { NoviplyLogo } from "@/components/noviply-logo";
 import { RemotePrinterButton } from "@/components/remote-printer-button";
 import { NewRunDialog } from "@/components/new-run-dialog";
@@ -42,9 +35,7 @@ import {
 import {
   createNoviplyPrintRequestCsv,
   createPrintBatchCsv,
-  createPartNumberCsv,
   createVerdictCsv,
-  createNoviplyStockCsv,
   noviplyExportFilename,
 } from "@/domain/noviply-export";
 import { displayStickerSku } from "@/domain/sticker-sku";
@@ -108,20 +99,6 @@ type Props = {
     unavailableReason: UnavailableReason,
   ) => Promise<void>;
 };
-
-/** "3,4/wk", of een streepje zolang er te weinig gemeten is. */
-function perWeek(weeklyDemand: number | null) {
-  if (weeklyDemand === null) return "—";
-  return `${weeklyDemand.toLocaleString("en-GB", { maximumFractionDigits: 1 })}/wk`;
-}
-
-/** Hoe lang dit nog meegaat, in gewone taal. */
-function dekking(coverWeeks: number | null) {
-  if (coverWeeks === null) return "—";
-  if (coverWeeks < 1) return <span className="mover-kort">under a week</span>;
-  const weken = Math.round(coverWeeks);
-  return <span className={coverWeeks < 4 ? "mover-kort" : ""}>{weken} weeks</span>;
-}
 
 function formatMoment(value: string) {
   const moment = new Date(value);
@@ -206,28 +183,6 @@ export function NoviplyWorkspace({
     [printBatches, printRequests, noviplyUnavailable],
   );
 
-  /**
-   * Alle hangmappen, één keer doorgerekend. Beide tabellen zijn een blik
-   * hierop, zodat ze elkaar niet kunnen tegenspreken.
-   */
-  const alleVellen = useMemo(
-    () => noviplyStockRows(inventoryCatalog, transactions, quantities, new Date(), {
-      leadTimeDays: resupplyLeadTimeDays,
-      safetyWeeks: resupplySafetyWeeks,
-    }),
-    [transactions, quantities, resupplyLeadTimeDays, resupplySafetyWeeks],
-  );
-  const bestellijst = useMemo(() => rowsNeedingAttention(alleVellen), [alleVellen]);
-  const meetTekort = useMemo(
-    () => alleVellen.filter((rij) => rij.signal === "unknown").length,
-    [alleVellen],
-  );
-  const [stockQuery, setStockQuery] = useState("");
-  const gezocht = useMemo(
-    () => searchStockRows(rowsByMovement(alleVellen), stockQuery),
-    [alleVellen, stockQuery],
-  );
-
   const runTotals = useMemo(() => {
     const lopend = activeBatches(printBatches);
     const regels = lopend.flatMap((batch) => batch.rows);
@@ -271,9 +226,6 @@ export function NoviplyWorkspace({
    * Er stond hier een tweede, eigen berekening; die kon precies zo uit de pas
    * gaan lopen als de twee panelen dat deden.
    */
-  const running = bestellijst.filter((rij) => rij.shortfall > 0);
-  const withKnownMinimum = alleVellen.filter((rij) => rij.minimum !== null).length;
-  const empty = alleVellen.filter((rij) => rij.stock === 0).length;
   const measuring = historyDays < minimumHistoryDays;
 
   function exportPrintRequests() {
@@ -375,18 +327,6 @@ export function NoviplyWorkspace({
           <small>with a stated reason</small>
         </article>
         </>
-        )}
-        {/* De kast hoort bij Stock, niet naast "wacht op printen". */}
-        {tab === "stock" && (
-        <article>
-          <span>{withKnownMinimum === 0 ? "EMPTY FOLDERS" : "RESUPPLY"}</span>
-          <strong className={(withKnownMinimum === 0 ? empty : running.length) > 0 ? "attention" : ""}>
-            {withKnownMinimum === 0 ? empty : running.length}
-          </strong>
-          <small>{withKnownMinimum === 0
-            ? "nothing left in these"
-            : "folders below their minimum"}</small>
-        </article>
         )}
       </div>
       )}
@@ -680,179 +620,17 @@ export function NoviplyWorkspace({
       </section>
       )}
 
-      {/* Twee tabellen uit één berekening.
-          Ze stonden er als twee losse panelen die dezelfde vraag verschillend
-          beantwoordden — de een over dertig dagen zonder ondergrens, de ander
-          over de gemeten periode mét een ondergrens van veertien dagen. Dezelfde
-          hangmap kon bovenin "nog geen week" melden en onderin "nog geen
-          minimum". Nu is dit één lijst, twee keer anders bekeken. */}
       {tab === "stock" && (
-      <section className="noviply-panel">
-        <div className="noviply-panel-head">
-          <div>
-            <h3>Order these</h3>
-            <p>
-              {measuring
-                ? `Everything that is empty. Minimum levels come later: they follow measured usage, and that takes ${historyDays} of ${minimumHistoryDays} days so far.`
-                : `What needs restocking, most urgent first. A minimum covers the ${resupplyLeadTimeDays}-day delivery time plus ${resupplySafetyWeeks} week spare. “Order now” means it is below that minimum and moving fast — those run out first.`}
-            </p>
-          </div>
-          <button
-            type="button"
-            className="secondary-button"
-            onClick={() => {
-              downloadTekstbestand(
-                createNoviplyStockCsv(bestellijst),
-                noviplyExportFilename("stock", new Date().toISOString()),
-              );
-              setMessage(`Downloaded ${bestellijst.length} lines.`);
-            }}
-            disabled={bestellijst.length === 0}
-          >
-            Download for Excel
-          </button>
-        </div>
-        {bestellijst.length === 0 ? (
-          <div className="empty">
-            Nothing to order. Every folder is above its minimum.
-          </div>
-        ) : (
-          <div className="table-wrap">
-            <table className="operations-table">
-              <thead>
-                <tr>
-                  <th>Folder</th>
-                  <th>Part number</th>
-                  <th>Layout</th>
-                  <th>Per week</th>
-                  <th>In stock</th>
-                  <th>Cover</th>
-                  <th>Order</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {bestellijst.map((rij) => (
-                  <tr key={rij.catalogKey} className={rij.shortfall > 0 ? "stock-low" : ""}>
-                    <td data-label="Folder">
-                      <strong className="storage-number">No. {rij.storageNumber}</strong>
-                      <span>{rij.model}</span>
-                    </td>
-                    <td data-label="Part number">
-                      {displayStickerSku(rij.sku)}
-                      {rij.ownNumber && <span className="sku-eigen">our own number</span>}
-                    </td>
-                    <td data-label="Layout">{rij.layout}</td>
-                    <td data-label="Per week">{perWeek(rij.weeklyDemand)}</td>
-                    <td data-label="In stock">
-                      <b className={rij.stock === 0 ? "zero" : ""}>{rij.stock}</b>
-                      <span>{rij.minimum === null ? "no minimum yet" : `min. ${rij.minimum}`}</span>
-                    </td>
-                    <td data-label="Cover">{dekking(rij.coverWeeks)}</td>
-                    <td data-label="Order">
-                      {rij.orderQuantity > 0 ? <b className="bestel-aantal">{rij.orderQuantity}</b> : "—"}
-                    </td>
-                    <td data-label="Status">
-                      <span className={`stock-signaal is-${rij.signal}`}>{signalLabel(rij.signal)}</span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        {alleVellen.length > bestellijst.length && (
-          /* Niet "the rest is fine": zolang er te weinig gemeten is weten wij
-             het simpelweg niet, en dat mag deze regel niet wegpoetsen. */
-          <p className="tabel-voet">
-            {alleVellen.length - bestellijst.length} other folders are not on this list
-            {meetTekort > 0 && `, ${meetTekort} of them because we cannot say yet — either they have not moved, or usage has not been measured long enough`}
-            . They are all in the full list below.
-          </p>
-        )}
-      </section>
-      )}
-
-      {tab === "stock" && (
-      <section className="noviply-panel">
-        <div className="noviply-panel-head">
-          <div>
-            <h3>All part numbers</h3>
-            <p>
-              Every sheet we hold, fastest moving first. <b>Used</b> is real usage over
-              the last {moverWindowDays} days, <b>cover</b> is how long the current stock
-              lasts at that pace.
-            </p>
-          </div>
-          <div className="noviply-panel-acties">
-            {/* Het zijn honderdachtenveertig regels. Zonder zoeken is dat geen
-                lijst maar een muur. */}
-            <input
-              className="zoekveld"
-              value={stockQuery}
-              placeholder="Part number, model or folder…"
-              onChange={(event) => setStockQuery(event.target.value)}
-            />
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={() => {
-                downloadTekstbestand(
-                  createPartNumberCsv(gezocht),
-                  noviplyExportFilename("part-numbers", new Date().toISOString()),
-                );
-                setMessage(`Downloaded ${gezocht.length} part numbers.`);
-              }}
-            >
-              Download for Excel
-            </button>
-          </div>
-        </div>
-        <div className="table-wrap">
-          <table className="operations-table">
-            <thead>
-              <tr>
-                <th>Folder</th>
-                <th>Part number</th>
-                <th>Layout</th>
-                <th>Enter</th>
-                <th>Fits</th>
-                <th>Used</th>
-                <th>Per week</th>
-                <th>In stock</th>
-                <th>Cover</th>
-              </tr>
-            </thead>
-            <tbody>
-              {gezocht.map((rij) => (
-                <tr key={rij.catalogKey}>
-                  <td data-label="Folder">
-                    <strong className="storage-number">No. {rij.storageNumber}</strong>
-                    <span>{rij.model}</span>
-                  </td>
-                  <td data-label="Part number">
-                    {displayStickerSku(rij.sku)}
-                    {rij.ownNumber && <span className="sku-eigen">our own number</span>}
-                    {rij.sharedNumber && <span>also in another folder</span>}
-                  </td>
-                  <td data-label="Layout">{rij.layout}</td>
-                  <td data-label="Enter">{rij.variant}</td>
-                  <td data-label="Fits" title={`${rij.compatibleModels} laptop models`}>
-                    {rij.compatibleModels}
-                  </td>
-                  <td data-label="Used"><b className="mover-used">{rij.used}×</b></td>
-                  <td data-label="Per week">{perWeek(rij.weeklyDemand)}</td>
-                  <td data-label="In stock"><b className={rij.stock === 0 ? "zero" : ""}>{rij.stock}</b></td>
-                  <td data-label="Cover">{dekking(rij.coverWeeks)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {gezocht.length === 0 && (
-            <div className="empty">Nothing matches “{stockQuery}”.</div>
-          )}
-        </div>
-      </section>
+        <StockPlanner
+          taal="en"
+          transactions={transactions}
+          quantities={quantities}
+          policy={{
+            leadTimeDays: resupplyLeadTimeDays,
+            reviewDays: 7,
+            safetyDays: resupplySafetyWeeks * 7,
+          }}
+        />
       )}
 
       {tab === "history" && (

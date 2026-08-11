@@ -62,7 +62,7 @@ export const defaultOperationsPolicy: OperationsPolicy = {
   abcAThreshold: 80,
   abcBThreshold: 95,
   layoutRules: [],
-  resupplyLeadTimeDays: 14,
+  resupplyLeadTimeDays: 11,
   resupplySafetyWeeks: 1,
   printRunTimes: defaultPrintRunTimes,
 };

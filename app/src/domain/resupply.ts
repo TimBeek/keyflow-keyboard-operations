@@ -12,11 +12,13 @@ import { isRealUsage } from "./real-usage";
 import { dayKey, daysBetween } from "./reporting";
 
 /**
- * Noviply levert in 7 tot 14 dagen; we rekenen met de langste, want te laat
- * bijbestellen kost een order. Dit is de beginwaarde — management kan hem in de
- * instellingen bijstellen zonder nieuwe versie van de app.
+ * Noviply levert naar eigen zeggen in ongeveer anderhalve week.
+ *
+ * Dit is een mededeling van de leverancier, geen meting: er zijn nog geen
+ * leveringen doorgemeten. Zodra die er zijn hoort dit getal daarop te volgen.
+ * Management kan hem in de instellingen bijstellen zonder nieuwe versie.
  */
-export const resupplyLeadTimeDays = 14;
+export const resupplyLeadTimeDays = 11;
 
 /** Een week extra, voor een drukke week of een levering die tegenzit. */
 export const resupplySafetyStockWeeks = 1;

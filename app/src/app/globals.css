@@ -2824,6 +2824,8 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 }
 
 .settings-grid label { display: grid; gap: 6px; }
+/* De uitleg onder een instelling: wat dit getal doet, in gewone taal. */
+.settings-grid label small { color: var(--muted); font-size: 11.5px; line-height: 1.45; }
 .settings-grid span {
   font-size: 11px;
   font-weight: 700;
@@ -4166,3 +4168,109 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
   min-width: 220px; padding: 8px 12px; border: 1px solid var(--line);
   border-radius: 10px; background: var(--surface-2); color: var(--text); font-size: 13px;
 }
+
+
+/* ---------- het voorraadscherm van Noviply en management ---------- */
+
+/* De kop met de vier tellers. Die zeggen in één blik wat er te doen is; de
+   tabellen eronder zeggen waarom. */
+.plan-paneel { padding-bottom: 4px; }
+.plan-kop { padding: 16px 20px 12px; border-bottom: 1px solid var(--line-soft); }
+.plan-kengetallen {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px; margin-bottom: 12px;
+}
+.plan-kengetal {
+  display: grid; gap: 1px; padding: 11px 14px;
+  border: 1px solid var(--line); border-left: 3px solid var(--line);
+  border-radius: 12px; background: var(--surface-2);
+}
+.plan-kengetal strong { color: var(--text); font-size: 25px; font-weight: 800; line-height: 1.1; }
+.plan-kengetal span { color: var(--text-2); font-size: 12.5px; font-weight: 650; }
+.plan-kengetal small { color: var(--muted); font-size: 11.5px; }
+.plan-kengetal.is-actie { border-left-color: var(--warn); }
+.plan-kengetal.is-actie strong { color: var(--warn); }
+.plan-kengetal.is-erg { border-left-color: var(--crit); }
+.plan-kengetal.is-erg strong { color: var(--crit); }
+/* Waar de cijfers op rusten. Zonder deze regel weet een lezer niet hoe zwaar
+   hij ze mag wegen, en dat is bij dertien dagen meten geen detail. */
+.plan-basis { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+
+.plan-tabs {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  padding: 12px 20px 0;
+}
+.plan-tabs button {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 14px; border: 1px solid var(--line); border-radius: 999px;
+  background: transparent; color: var(--text-2);
+  font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.plan-tabs button:hover { background: var(--surface-2); color: var(--text); }
+.plan-tabs button.active {
+  border-color: var(--signal); background: var(--signal); color: var(--signal-ink);
+}
+.plan-tabs button b {
+  min-width: 20px; padding: 1px 6px; border-radius: 999px;
+  background: var(--surface-2); color: var(--text-2);
+  font-size: 11.5px; text-align: center;
+}
+.plan-tabs button.active b { background: rgba(255,255,255,.22); color: inherit; }
+
+.plan-inhoud { padding: 14px 20px 18px; }
+.plan-inhoud-kop {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 16px; flex-wrap: wrap; margin-bottom: 12px;
+}
+.plan-inhoud-kop p { margin: 0; max-width: 74ch; color: var(--text-2); font-size: 12.5px; line-height: 1.55; }
+
+/* Het tempo met zijn band. Nooit een decimaal: van vijf geziene vellen loopt
+   het echte tempo ergens tussen twee en twaalf. */
+/* Het getal groot, de band eronder. Naast elkaar plakken ze aan elkaar in een
+   smalle kolom en lees je "43-16" in plaats van "4, ergens tussen 3 en 16". */
+.plan-tempo { display: block; line-height: 1.15; }
+.plan-tempo b { display: block; color: var(--text); font-size: 15px; font-weight: 800; }
+.plan-tempo small { display: block; color: var(--muted); font-size: 10.5px; white-space: nowrap; }
+.plan-leeg { color: var(--muted); }
+.plan-kort { color: var(--warn); font-weight: 700; }
+.plan-telaat { color: var(--crit); font-weight: 750; }
+.plan-aantal { color: var(--text); font-size: 16px; font-weight: 800; }
+
+.plan-stand {
+  display: inline-block; padding: 2px 9px; border-radius: 999px;
+  font-size: 11.5px; font-weight: 750; white-space: nowrap;
+}
+.plan-stand.is-out, .plan-stand.is-critical { background: var(--crit-soft); color: var(--crit); }
+.plan-stand.is-order { background: var(--warn-soft); color: var(--warn); }
+.plan-stand.is-watch { background: var(--signal-soft); color: var(--signal); }
+.plan-stand.is-ok { background: var(--surface-2); color: var(--muted); }
+.plan-stand.is-idle { background: var(--surface-2); color: var(--muted); }
+/* De linkerrand van een bestelregel herhaalt de urgentie, zodat je bij het
+   scannen van de kolom niet steeds naar rechts hoeft. */
+.plan-rij.is-out td:first-child, .plan-rij.is-critical td:first-child { box-shadow: inset 3px 0 0 var(--crit); }
+.plan-rij.is-order td:first-child { box-shadow: inset 3px 0 0 var(--warn); }
+
+.plan-klasse {
+  display: inline-block; min-width: 22px; padding: 2px 7px; border-radius: 7px;
+  font-size: 12px; font-weight: 800; text-align: center;
+}
+.plan-klasse.is-a { background: var(--crit-soft); color: var(--crit); }
+.plan-klasse.is-b { background: var(--warn-soft); color: var(--warn); }
+.plan-klasse.is-c { background: var(--surface-2); color: var(--muted); }
+
+/* De opbouw naar honderd procent. Een positie in die opbouw zegt iets; plek
+   zevenendertig op een ranglijst niet. */
+.plan-balk {
+  display: block; width: 68px; height: 5px; margin-bottom: 3px;
+  border-radius: 999px; background: var(--surface-2); overflow: hidden;
+}
+.plan-balk i { display: block; height: 100%; background: var(--signal); }
+
+.plan-zeker { display: block; font-size: 10.5px; font-weight: 650; }
+.plan-zeker.is-measured { color: var(--ok); }
+.plan-zeker.is-estimate { color: var(--text-2); }
+.plan-zeker.is-rough { color: var(--warn); }
+.plan-zeker.is-none { color: var(--muted); }
+
+.plan-eigen { display: block; color: var(--warn); font-size: 10.5px; font-weight: 700; }
+.plan-gedeeld { display: block; color: var(--muted); font-size: 10.5px; }
