@@ -13,7 +13,11 @@ import {
   stockPlan,
   stockSummary,
   toOrder,
+  nextSort,
+  sortRows,
   usageWindowDays,
+  type MoverRow,
+  type SortState,
   type StockPlanRow,
   type StockPolicy,
 } from "@/domain/stock-plan";
@@ -96,15 +100,56 @@ function nummerCel(rij: StockPlanRow, w: Woorden) {
   );
 }
 
+/**
+ * Een kolomkop waarop je kunt klikken.
+ *
+ * De pijl staat er alleen als er op deze kolom wordt gesorteerd; een tabel vol
+ * pijltjes zegt niets. Drie klikken brengt je terug bij de volgorde die het
+ * tabblad zelf bedoelt.
+ */
+function Kop({
+  label, sleutel, stand, opKlik, uitleg,
+}: {
+  label: string;
+  /** Leeg betekent: hier valt niet zinnig op te sorteren. */
+  sleutel?: string;
+  stand: SortState;
+  opKlik: (sleutel: string) => void;
+  uitleg: string;
+}) {
+  if (!sleutel) return <th>{label}</th>;
+  const actief = stand?.key === sleutel;
+  const richting = actief ? stand?.direction : undefined;
+  return (
+    <th
+      aria-sort={richting === "asc" ? "ascending" : richting === "desc" ? "descending" : "none"}
+    >
+      <button type="button" className={`kolom-knop${actief ? " is-actief" : ""}`}
+        onClick={() => opKlik(sleutel)} title={uitleg}>
+        {label}
+        <span aria-hidden="true">{richting === "asc" ? "▲" : richting === "desc" ? "▼" : "↕"}</span>
+      </button>
+    </th>
+  );
+}
+
 export function StockPlanner({
   taal, transactions, quantities, policy, abcA = 80, abcB = 95,
 }: Props) {
   const [tab, setTab] = useState<Tab>("order");
   const [query, setQuery] = useState("");
   const [bericht, setBericht] = useState("");
+  /*
+   * Zelf sorteren, per tabblad apart. Wie op "Bestellen" op voorraad heeft
+   * gesorteerd bedoelt daar niet mee dat de hardlopers ook zo moeten staan.
+   */
+  const [sortering, setSortering] = useState<Record<Tab, SortState>>({
+    order: null, fast: null, slow: null, all: null,
+  });
   const w = woorden[taal];
 
   const nu = useMemo(() => new Date(), []);
+
   const rijen = useMemo(
     () => stockPlan(inventoryCatalog, transactions, quantities, nu, policy),
     [transactions, quantities, nu, policy],
@@ -115,6 +160,47 @@ export function StockPlanner({
   const hardlopers = useMemo(() => fastMovers(rijen, abcA, abcB), [rijen, abcA, abcB]);
   const stilstaand = useMemo(() => idleRows(rijen), [rijen]);
   const alles = useMemo(() => searchRows(byMovement(rijen), query), [rijen, query]);
+
+  /*
+   * Waarop een kolom sorteert. Bewust op de onderliggende waarde en niet op wat
+   * er in de cel staat: "20 werkdagen te laat" hoort vóór "2 werkdagen over",
+   * en dat lukt alleen met het getal erachter.
+   */
+  const kolomwaarde = (rij: StockPlanRow, sleutel: string): string | number | null => {
+    switch (sleutel) {
+      case "folder": return rij.storageNumber;
+      case "sku": return rij.sku;
+      case "layout": return rij.layout;
+      case "variant": return rij.variant;
+      case "fits": return rij.compatibleModels;
+      case "stock": return rij.stock;
+      case "used": return rij.used;
+      case "perWeek": return rij.perWeek;
+      case "reorderPoint": return rij.reorderPoint;
+      case "daysLeft": return rij.workingDaysLeft;
+      case "orderBy": return rij.orderWithinDays;
+      case "suggested": return rij.suggested;
+      case "note": return rij.note;
+      case "status": return statusLabel[taal][rij.status];
+      case "klasse": return (rij as MoverRow).klasse ?? null;
+      case "share": return rij.used;
+      default: return null;
+    }
+  };
+
+  /** De lijst zoals het tabblad hem bedoelt, of zoals er geklikt is. */
+  function gesorteerd<T extends StockPlanRow>(lijst: T[], voor: Tab): T[] {
+    const stand = sortering[voor];
+    if (!stand) return lijst;
+    return sortRows(lijst, stand.direction, (rij) => kolomwaarde(rij, stand.key));
+  }
+
+  const sorteer = (voor: Tab) => (sleutel: string) =>
+    setSortering((vorige) => ({ ...vorige, [voor]: nextSort(vorige[voor], sleutel) }));
+
+  const sorteerUitleg = taal === "en"
+    ? "Sort by this column — click again to reverse, once more for the default order"
+    : "Sorteer op deze kolom — nog een klik draait om, en nog een zet hem terug";
 
   const levertijdWeken = Math.round((policy.leadTimeDays / 7) * 10) / 10;
   const venster = Math.min(usageWindowDays, Math.max(1, Math.round(gemeten)));
@@ -225,20 +311,19 @@ export function StockPlanner({
               <table className="operations-table">
                 <thead>
                   <tr>
-                    <th>{w.folder}</th>
-                    <th>{w.partNumber}</th>
-                    <th>{w.layout}</th>
-                    <th>{w.inStock}</th>
-                    <th>{w.perWeek}</th>
-                    <th>{w.reorderAt}</th>
-                    <th>{w.daysLeft}</th>
-                    <th>{w.orderBy}</th>
-                    <th>{w.send}</th>
-                    <th>{w.status}</th>
+                    {[
+                      ["folder", w.folder], ["sku", w.partNumber], ["layout", w.layout],
+                      ["stock", w.inStock], ["perWeek", w.perWeek], ["reorderPoint", w.reorderAt],
+                      ["daysLeft", w.daysLeft], ["orderBy", w.orderBy], ["suggested", w.send],
+                      ["status", w.status],
+                    ].map(([sleutel, label]) => (
+                      <Kop key={sleutel} label={label} sleutel={sleutel}
+                        stand={sortering.order} opKlik={sorteer("order")} uitleg={sorteerUitleg} />
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {bestellen.map((rij) => (
+                  {gesorteerd(bestellen, "order").map((rij) => (
                     <tr key={rij.catalogKey} className={`plan-rij is-${rij.status}`}>
                       <td data-label={w.folder}>
                         <strong className="storage-number">No. {rij.storageNumber}</strong>
@@ -313,21 +398,19 @@ export function StockPlanner({
               <table className="operations-table">
                 <thead>
                   <tr>
-                    <th>{w.klasse}</th>
-                    <th>{w.folder}</th>
-                    <th>{w.partNumber}</th>
-                    <th>{w.layout}</th>
-                    <th>{w.used}</th>
-                    <th>{w.share}</th>
-                    <th>{w.running}</th>
-                    <th>{w.perWeek}</th>
-                    <th>{w.inStock}</th>
-                    <th>{w.fits}</th>
-                    <th>{w.status}</th>
+                    {[
+                      ["klasse", w.klasse], ["folder", w.folder], ["sku", w.partNumber],
+                      ["layout", w.layout], ["used", w.used], ["share", w.share],
+                      ["", w.running], ["perWeek", w.perWeek], ["stock", w.inStock],
+                      ["fits", w.fits], ["status", w.status],
+                    ].map(([sleutel, label], index) => (
+                      <Kop key={sleutel || `kop-${index}`} label={label} sleutel={sleutel || undefined}
+                        stand={sortering.fast} opKlik={sorteer("fast")} uitleg={sorteerUitleg} />
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {hardlopers.map((rij) => (
+                  {gesorteerd(hardlopers, "fast").map((rij) => (
                     <tr key={rij.catalogKey}>
                       <td data-label={w.klasse}>
                         <span className={`plan-klasse is-${rij.klasse.toLowerCase()}`}>{rij.klasse}</span>
@@ -386,17 +469,17 @@ export function StockPlanner({
             <table className="operations-table">
               <thead>
                 <tr>
-                  <th>{w.folder}</th>
-                  <th>{w.partNumber}</th>
-                  <th>{w.layout}</th>
-                  <th>{w.enter}</th>
-                  <th>{w.inStock}</th>
-                  <th>{w.fits}</th>
-                  <th>{w.note}</th>
+                  {[
+                    ["folder", w.folder], ["sku", w.partNumber], ["layout", w.layout],
+                    ["variant", w.enter], ["stock", w.inStock], ["fits", w.fits], ["note", w.note],
+                  ].map(([sleutel, label]) => (
+                    <Kop key={sleutel} label={label} sleutel={sleutel}
+                      stand={sortering.slow} opKlik={sorteer("slow")} uitleg={sorteerUitleg} />
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {stilstaand.map((rij) => (
+                {gesorteerd(stilstaand, "slow").map((rij) => (
                   <tr key={rij.catalogKey}>
                     <td data-label={w.folder}>
                       <strong className="storage-number">No. {rij.storageNumber}</strong>
@@ -452,20 +535,19 @@ export function StockPlanner({
             <table className="operations-table">
               <thead>
                 <tr>
-                  <th>{w.folder}</th>
-                  <th>{w.partNumber}</th>
-                  <th>{w.layout}</th>
-                  <th>{w.enter}</th>
-                  <th>{w.fits}</th>
-                  <th>{w.used}</th>
-                  <th>{w.perWeek}</th>
-                  <th>{w.inStock}</th>
-                  <th>{w.daysLeft}</th>
-                  <th>{w.status}</th>
+                  {[
+                    ["folder", w.folder], ["sku", w.partNumber], ["layout", w.layout],
+                    ["variant", w.enter], ["fits", w.fits], ["used", w.used],
+                    ["perWeek", w.perWeek], ["stock", w.inStock], ["daysLeft", w.daysLeft],
+                    ["status", w.status],
+                  ].map(([sleutel, label]) => (
+                    <Kop key={sleutel} label={label} sleutel={sleutel}
+                      stand={sortering.all} opKlik={sorteer("all")} uitleg={sorteerUitleg} />
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {alles.map((rij) => (
+                {gesorteerd(alles, "all").map((rij) => (
                   <tr key={rij.catalogKey}>
                     <td data-label={w.folder}>
                       <strong className="storage-number">No. {rij.storageNumber}</strong>

@@ -500,3 +500,46 @@ export function measuredDays(transactions: InventoryTransactionEntry[], now: Dat
   if (momenten.length === 0) return 0;
   return dagVerschil(new Date(Math.min(...momenten)), now);
 }
+
+/* ---------- zelf sorteren ---------- */
+
+export type SortDirection = "asc" | "desc";
+/** Null betekent: de standaardvolgorde van dat tabblad. */
+export type SortState = { key: string; direction: SortDirection } | null;
+
+/**
+ * Klikken op een kolomkop.
+ *
+ * Drie standen en niet twee: oplopend, aflopend, en terug naar de volgorde die
+ * het tabblad zelf bedoelt. Zonder die derde stand kun je "meeste haast
+ * bovenaan" nooit meer terugkrijgen zonder de pagina te herladen.
+ */
+export function nextSort(huidig: SortState, key: string): SortState {
+  if (!huidig || huidig.key !== key) return { key, direction: "asc" };
+  if (huidig.direction === "asc") return { key, direction: "desc" };
+  return null;
+}
+
+/**
+ * Sorteren op één kolom, met lege waarden altijd onderaan.
+ *
+ * Een hangmap zonder verbruikscijfer heeft geen tempo. Die bovenaan zetten
+ * omdat "niets" lager is dan nul maakt van elke sortering een lijst met
+ * streepjes bovenin, en dan zie je juist niet waar het om gaat.
+ */
+export function sortRows<T>(
+  rows: T[],
+  direction: SortDirection,
+  waarde: (rij: T) => string | number | null,
+): T[] {
+  const teken = direction === "asc" ? 1 : -1;
+  return [...rows].sort((links, rechts) => {
+    const a = waarde(links);
+    const b = waarde(rechts);
+    if (a === null && b === null) return 0;
+    if (a === null) return 1;
+    if (b === null) return -1;
+    if (typeof a === "number" && typeof b === "number") return (a - b) * teken;
+    return String(a).localeCompare(String(b), "nl") * teken;
+  });
+}

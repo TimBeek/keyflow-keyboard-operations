@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   byMovement,
+  nextSort,
+  sortRows,
   confidenceFor,
   defaultStockPolicy,
   fastMovers,
@@ -311,5 +313,54 @@ describe("hoe lang er is gemeten", () => {
 
   it("is nul zolang er niets is geboekt", () => {
     expect(measuredDays([], nu)).toBe(0);
+  });
+});
+
+describe("zelf sorteren", () => {
+  const rijen = [
+    { sku: "b", stock: 5, perWeek: 2 },
+    { sku: "a", stock: 40, perWeek: null },
+    { sku: "c", stock: 0, perWeek: 9 },
+  ] as StockPlanRow[];
+
+  it("zet oplopend het laagste bovenaan", () => {
+    expect(sortRows(rijen, "asc", (r) => r.stock).map((r) => r.stock)).toEqual([0, 5, 40]);
+  });
+
+  it("draait om bij aflopend", () => {
+    expect(sortRows(rijen, "desc", (r) => r.stock).map((r) => r.stock)).toEqual([40, 5, 0]);
+  });
+
+  it("houdt lege waarden onderaan, welke kant je ook op sorteert", () => {
+    // Anders staat de lijst bij elke sortering vol streepjes bovenin en zie je
+    // juist niet waar het om gaat.
+    expect(sortRows(rijen, "asc", (r) => r.perWeek).map((r) => r.perWeek)).toEqual([2, 9, null]);
+    expect(sortRows(rijen, "desc", (r) => r.perWeek).map((r) => r.perWeek)).toEqual([9, 2, null]);
+  });
+
+  it("sorteert tekst op zijn Nederlands", () => {
+    expect(sortRows(rijen, "asc", (r) => r.sku).map((r) => r.sku)).toEqual(["a", "b", "c"]);
+  });
+
+  it("laat de meegegeven lijst met rust", () => {
+    const kopie = [...rijen];
+    sortRows(rijen, "desc", (r) => r.stock);
+    expect(rijen).toEqual(kopie);
+  });
+
+  it("gaat van oplopend naar aflopend naar de standaardvolgorde", () => {
+    // Zonder die derde stand kun je "meeste haast bovenaan" niet meer
+    // terugkrijgen zonder de pagina te herladen.
+    let stand = nextSort(null, "stock");
+    expect(stand).toEqual({ key: "stock", direction: "asc" });
+    stand = nextSort(stand, "stock");
+    expect(stand).toEqual({ key: "stock", direction: "desc" });
+    stand = nextSort(stand, "stock");
+    expect(stand).toBeNull();
+  });
+
+  it("begint opnieuw bij een andere kolom", () => {
+    expect(nextSort({ key: "stock", direction: "desc" }, "sku"))
+      .toEqual({ key: "sku", direction: "asc" });
   });
 });

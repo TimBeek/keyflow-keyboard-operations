@@ -4278,3 +4278,20 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 /* Een bestelaantal dat op een handvol vellen rust: wel bruikbaar, maar niet
    met de stelligheid van een gemeten getal. */
 .plan-aantal.is-zacht { color: var(--text-2); font-weight: 700; }
+
+/* Een kolomkop waarop je kunt klikken. Het pijltje staat er altijd, maar bleek
+   pas als er niet op gesorteerd wordt — anders zie je niet dat het kan, en met
+   tien felle pijltjes zie je niet waar hij wél op staat. */
+.operations-table th:has(.kolom-knop) { padding: 0; }
+.kolom-knop {
+  display: inline-flex; align-items: center; gap: 5px; width: 100%;
+  padding: 10px 12px; border: 0; background: transparent;
+  color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit;
+  text-align: left; cursor: pointer;
+}
+.kolom-knop:hover { color: var(--text); background: var(--surface-2); }
+.kolom-knop span { color: var(--line); font-size: 9px; }
+.kolom-knop:hover span { color: var(--text-2); }
+.kolom-knop.is-actief { color: var(--signal); }
+.kolom-knop.is-actief span { color: var(--signal); font-size: 10px; }
+.kolom-knop:focus-visible { outline: 2px solid var(--signal); outline-offset: -2px; }
