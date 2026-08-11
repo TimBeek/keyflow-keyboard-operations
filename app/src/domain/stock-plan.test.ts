@@ -130,6 +130,18 @@ describe("het verbruik omrekenen", () => {
     expect(uit.perWeek).toBeGreaterThan(9);
   });
 
+  it("legt de band om het getal heen, niet ernaast", () => {
+    // Hier ging het mis: de band werd door een andere noemer gedeeld dan het
+    // puntgetal, en dan staat er "12 per week" met een band van 16 tot 37.
+    for (const dagen of [5, 13, 30, 56]) {
+      for (const perDag of [1, 2, 5]) {
+        const uit = rij(50, reeks(dagen, perDag));
+        expect(uit.perWeekLow).toBeLessThanOrEqual(uit.perWeek ?? 0);
+        expect(uit.perWeekHigh).toBeGreaterThanOrEqual(uit.perWeek ?? 0);
+      }
+    }
+  });
+
   it("geeft geen verbruikscijfer als er niets is gebruikt", () => {
     const uit = rij(20, []);
     expect(uit.perWeek).toBeNull();
@@ -243,9 +255,18 @@ describe("de lijsten", () => {
     expect(movers[movers.length - 1].cumulative).toBeCloseTo(1, 6);
   });
 
-  it("laat de C-klasse achter de streep van 95 procent vallen", () => {
+  it("legt de streep op wat er vóór een vel al is opgeteld", () => {
+    // Dezelfde regel als calculateAbcAnalysis elders in de app. Met de andere
+    // lezing — kijken naar het totaal inclusief het vel zelf — kan hetzelfde
+    // vel op twee schermen in twee verschillende klassen vallen.
     const movers = fastMovers(rijen);
-    expect(movers.find((m) => m.catalogKey === "d")?.klasse).toBe("C");
+    expect(movers.map((m) => m.klasse)).toEqual(["A", "A", "B", "B"]);
+    // c staat op precies 80% cumulatief vóór zichzelf, en valt daarmee buiten A.
+    expect(movers.find((m) => m.catalogKey === "c")?.klasse).toBe("B");
+  });
+
+  it("zet alles in C zodra de grenzen op nul staan", () => {
+    expect(fastMovers(rijen, 0, 0).every((m) => m.klasse === "C")).toBe(true);
   });
 
   it("zet bij wat stilstaat het meest vastgehouden bovenaan", () => {

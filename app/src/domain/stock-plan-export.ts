@@ -35,9 +35,12 @@ function rijNaarCel(rij: StockPlanRow, taal: Taal): CsvValue[] {
     rij.stock,
     // Een leeg vak betekent "niet te zeggen"; een nul zou "niets nodig" zeggen,
     // en daar wordt op besteld.
-    rij.perWeekLow === null ? "" : Math.round(rij.perWeekLow),
+    // Eén decimaal op de grenzen. Afgerond op hele vellen wordt een ondergrens
+    // van 0,4 een nul, en dan staat er "nul per week" in een bestand waar leeg
+    // juist "niet te zeggen" betekent.
+    rij.perWeekLow === null ? "" : Math.round(rij.perWeekLow * 10) / 10,
     rij.perWeek === null ? "" : Math.round(rij.perWeek),
-    rij.perWeekHigh === null ? "" : Math.round(rij.perWeekHigh),
+    rij.perWeekHigh === null ? "" : Math.round(rij.perWeekHigh * 10) / 10,
     rij.reorderPoint ?? "",
     rij.orderUpTo ?? "",
     rij.suggested > 0 ? rij.suggested : "",
@@ -80,8 +83,8 @@ export function createSheetListCsv(rows: StockPlanRow[], taal: Taal) {
     rij.stock,
     rij.used,
     rij.perWeek === null ? "" : Math.round(rij.perWeek),
-    rij.perWeekLow === null ? "" : Math.round(rij.perWeekLow),
-    rij.perWeekHigh === null ? "" : Math.round(rij.perWeekHigh),
+    rij.perWeekLow === null ? "" : Math.round(rij.perWeekLow * 10) / 10,
+    rij.perWeekHigh === null ? "" : Math.round(rij.perWeekHigh * 10) / 10,
     rij.workingDaysLeft ?? "",
     statusLabel[taal][rij.status],
     rij.note,

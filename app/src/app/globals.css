@@ -2833,7 +2833,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
   text-transform: uppercase;
   color: var(--text-3);
 }
-.settings-grid select {
+.settings-grid select, .settings-grid input[type="number"] {
   min-height: 42px;
   padding: 0 11px;
   border: 1px solid var(--line);
@@ -4274,3 +4274,7 @@ input:focus, select:focus, textarea:focus { outline: none; border-color: var(--s
 
 .plan-eigen { display: block; color: var(--warn); font-size: 10.5px; font-weight: 700; }
 .plan-gedeeld { display: block; color: var(--muted); font-size: 10.5px; }
+
+/* Een bestelaantal dat op een handvol vellen rust: wel bruikbaar, maar niet
+   met de stelligheid van een gemeten getal. */
+.plan-aantal.is-zacht { color: var(--text-2); font-weight: 700; }

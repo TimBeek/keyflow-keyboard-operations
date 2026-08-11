@@ -167,8 +167,14 @@ export function StockPlanner({
             stelt het bij zodra de eerste leveringen zijn doorgemeten. */}
         <p className="plan-basis">
           {taal === "en"
-            ? `Measured over ${venster} days · ${samen.usedInWindow} sheets used · lead time ${levertijdWeken} weeks (${policy.leadTimeDays} days, as Noviply gives it). The last two weeks count double, because the share of work going through sheets is still rising.`
-            : `Gemeten over ${venster} dagen · ${samen.usedInWindow} vellen gebruikt · levertijd ${levertijdWeken} weken (${policy.leadTimeDays} dagen, zoals Noviply hem opgeeft — aan te passen bij Instellingen). De laatste twee weken tellen dubbel, omdat het aandeel werk dat via een vel gaat nog stijgt.`}
+            ? `Measured over ${venster} days · ${samen.usedInWindow} sheets used · lead time ${levertijdWeken} weeks (${policy.leadTimeDays} days, as Noviply gives it) · assumes ordering every ${policy.reviewDays} days.`
+            : `Gemeten over ${venster} dagen · ${samen.usedInWindow} vellen gebruikt · levertijd ${levertijdWeken} weken (${policy.leadTimeDays} dagen, zoals Noviply hem opgeeft — aan te passen bij Instellingen) · gaat uit van elke ${policy.reviewDays} dagen bestellen.`}
+          {/* Alleen zeggen dat de recente weging meetelt als hij dat ook doet.
+              Valt de hele meetperiode binnen die twee weken, dan krijgt elke
+              boeking hetzelfde gewicht en verandert er niets. */}
+          {samen.recencyWeightingApplies && (taal === "en"
+            ? " The last two weeks count double, because the share of work going through sheets is still rising."
+            : " De laatste twee weken tellen dubbel, omdat het aandeel werk dat via een vel gaat nog stijgt.")}
         </p>
       </div>
 
@@ -243,13 +249,32 @@ export function StockPlanner({
                       <td data-label={w.inStock}>
                         <b className={rij.stock === 0 ? "zero" : ""}>{rij.stock}</b>
                       </td>
-                      <td data-label={w.perWeek}>{tempo(rij)}</td>
+                      <td data-label={w.perWeek}>
+                        {tempo(rij)}
+                        {/* Hoe hard dit cijfer is, juist hier: op deze lijst
+                            worden aantallen besteld. Bij één of twee geziene
+                            vellen valt er geen tempo af te leiden, en dan hoort
+                            dat naast het getal te staan. */}
+                        <small className={`plan-zeker is-${rij.confidence}`}>
+                          {confidenceLabel[taal][rij.confidence]}
+                        </small>
+                      </td>
                       <td data-label={w.reorderAt}>{getal(rij.reorderPoint)}</td>
                       <td data-label={w.daysLeft}>{termijn(rij.workingDaysLeft, w)}</td>
                       <td data-label={w.orderBy}>{termijn(rij.orderWithinDays, w)}</td>
                       <td data-label={w.send}>
                         {rij.suggested > 0
-                          ? <b className="plan-aantal">{rij.suggested}</b>
+                          ? (
+                            <b className={`plan-aantal${rij.confidence === "none" ? " is-zacht" : ""}`}
+                              title={rij.confidence === "none"
+                                ? (taal === "en"
+                                  ? `Based on ${rij.used} sheet${rij.used === 1 ? "" : "s"} seen — treat as a starting point, not a figure.`
+                                  : `Gebaseerd op ${rij.used} gezien vel${rij.used === 1 ? "" : "len"} — een beginpunt, geen cijfer.`)
+                                : undefined}
+                            >
+                              {rij.confidence === "none" ? "±" : ""}{rij.suggested}
+                            </b>
+                          )
                           : <span className="plan-leeg" title={taal === "en"
                             ? "Empty, but never used in the measured period — tell us what you think is right."
                             : "Leeg, maar nooit gebruikt in de meetperiode — hier valt geen aantal op te baseren."}>?</span>}

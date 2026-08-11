@@ -90,6 +90,9 @@ type Props = {
   printerChecks: PrinterCheckRecord[];
   resupplyLeadTimeDays: number;
   resupplySafetyWeeks: number;
+  /** Dezelfde A/B/C-grenzen als management instelt; anders twee indelingen. */
+  abcAThreshold: number;
+  abcBThreshold: number;
   onAskPrinterCheck: () => void;
   onStartPrinting: (id: string) => void;
   onSettlePrintRequest: (
@@ -130,6 +133,8 @@ export function NoviplyWorkspace({
   printerChecks,
   resupplyLeadTimeDays,
   resupplySafetyWeeks,
+  abcAThreshold,
+  abcBThreshold,
   onAskPrinterCheck,
   onStartPrinting,
   onSettlePrintRequest,
@@ -630,6 +635,8 @@ export function NoviplyWorkspace({
             reviewDays: 7,
             safetyDays: resupplySafetyWeeks * 7,
           }}
+          abcA={abcAThreshold}
+          abcB={abcBThreshold}
         />
       )}
 

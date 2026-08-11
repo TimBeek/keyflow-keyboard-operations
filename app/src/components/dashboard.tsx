@@ -2244,7 +2244,7 @@ export function Dashboard({
             { id: "history" as const, label: "History", icon: "reports" as const },
             {
               id: "stock" as const,
-              label: resupplyStarted ? "Stock running low" : "Stock",
+              label: "Stock",
               icon: "stock" as const,
             },
           ]).map((item) => (
@@ -2425,6 +2425,8 @@ export function Dashboard({
             printerChecks={printerChecks}
             resupplyLeadTimeDays={operationsPolicy.resupplyLeadTimeDays}
             resupplySafetyWeeks={operationsPolicy.resupplySafetyWeeks}
+            abcAThreshold={operationsPolicy.abcAThreshold}
+            abcBThreshold={operationsPolicy.abcBThreshold}
             onAskPrinterCheck={() => void requestPrinterCheck()}
             onStartPrinting={(id: string) => void startPrinting(id)}
             onSettlePrintRequest={settlePrintRequestRecord}
@@ -2798,6 +2800,11 @@ export function Dashboard({
                 Nederlands. Zij en wij hoorden niet elk hun eigen som te maken —
                 dan gaat het gesprek over wiens cijfer klopt in plaats van over
                 wat er besteld moet worden. */}
+            {/* Bij een zoekterm wijkt dit paneel. De zoekbalk en de scanner
+                springen naar dit scherm om één artikelnummer te vinden, en dan
+                hoort de catalogus meteen in beeld te staan in plaats van achter
+                een lijst die de zoekterm negeert. */}
+            {query.trim() === "" && (
             <StockPlanner
               taal="nl"
               transactions={transactions}
@@ -2810,6 +2817,7 @@ export function Dashboard({
               abcA={operationsPolicy.abcAThreshold}
               abcB={operationsPolicy.abcBThreshold}
             />
+            )}
           <InventoryCatalog
             skuOverrides={skuOverrides}
             onSkuChange={changeCatalogSku}

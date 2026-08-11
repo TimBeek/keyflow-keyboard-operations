@@ -71,6 +71,9 @@ export function SettingsWorkspace({
   onAllowNoviplyAgain,
 }: Props) {
   const [draft, setDraft] = useState(policy);
+  /* Wat er in het levertijdveld staat terwijl je typt; pas bij verlaten wordt
+     het een getal binnen de grenzen. */
+  const [levertijdVeld, setLevertijdVeld] = useState(String(policy.resupplyLeadTimeDays));
   const [layouts, setLayouts] = useState(directPrintLayouts);
   const [saving, setSaving] = useState(false);
 
@@ -384,16 +387,36 @@ export function SettingsWorkspace({
                 30 dagen, en anderhalve week — wat Noviply zelf zegt — zat er
                 niet tussen. Dit getal verschuift elk bestelmoment, dus het
                 hoort precies te kunnen. */}
+            {/* Tijdens het typen blijft staan wat je intikt. Klemde het veld
+                bij elke aanslag, dan sprong een leeg vak meteen naar 1 en kon je
+                er geen nieuw getal meer in zetten. Pas als je het veld verlaat
+                wordt het teruggebracht binnen 1 en 90. */}
             <input
               type="number"
               min={1}
               max={90}
               step={1}
-              value={draft.resupplyLeadTimeDays}
-              onChange={(event) => setDraft({
-                ...draft,
-                resupplyLeadTimeDays: Math.min(90, Math.max(1, Number(event.target.value) || 1)),
-              })}
+              value={levertijdVeld}
+              onChange={(event) => {
+                const tekst = event.target.value;
+                setLevertijdVeld(tekst);
+                const dagen = Number(tekst);
+                if (Number.isFinite(dagen) && dagen >= 1 && dagen <= 90) {
+                  setDraft({ ...draft, resupplyLeadTimeDays: Math.round(dagen) });
+                }
+              }}
+              onBlur={() => {
+                // Nul is een getal, geen lege invoer: die hoort naar 1 en niet
+                // stilletjes terug naar de vorige waarde.
+                const ingevuld = Number(levertijdVeld);
+                const dagen = Math.min(90, Math.max(1, Math.round(
+                  levertijdVeld.trim() !== "" && Number.isFinite(ingevuld)
+                    ? ingevuld
+                    : draft.resupplyLeadTimeDays,
+                )));
+                setDraft({ ...draft, resupplyLeadTimeDays: dagen });
+                setLevertijdVeld(String(dagen));
+              }}
             />
             <small>
               {(Math.round((draft.resupplyLeadTimeDays / 7) * 10) / 10)

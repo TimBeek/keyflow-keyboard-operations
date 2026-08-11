@@ -229,10 +229,16 @@ export function stockPlan(
       const stock = inventoryQuantity(quantities, item);
       const perWeek = used > 0 ? (gewogen / gewogenDagen) * 7 : null;
       const band = poissonRange(used);
-      // De band schaalt mee met dezelfde noemer, zodat hij om het getal past.
-      const schaal = used > 0 && perWeek !== null ? perWeek / ((used / gewogenDagen) * 7) : 1;
-      const perWeekLow = used > 0 ? (band.low / vensterDagen) * 7 * schaal : null;
-      const perWeekHigh = used > 0 ? (band.high / vensterDagen) * 7 * schaal : null;
+      /*
+       * De band door precies dezelfde molen als het puntgetal: dezelfde noemer
+       * én dezelfde weging. Ging dat mis, dan lag de band naast het getal in
+       * plaats van eromheen — op het scherm stond "12 per week" met een band
+       * van 16 tot 37, en dan klopt er zichtbaar iets niet.
+       */
+      const opTempo = (aantal: number) => ((aantal * (used > 0 ? gewogen / used : 1))
+        / gewogenDagen) * 7;
+      const perWeekLow = used > 0 ? opTempo(band.low) : null;
+      const perWeekHigh = used > 0 ? opTempo(band.high) : null;
 
       const perDag = perWeek === null ? null : perWeek / 7;
       /*
@@ -386,13 +392,19 @@ export function fastMovers(rows: StockPlanRow[], aThreshold = 80, bThreshold = 9
   let opgeteld = 0;
   return bewegend.map((rij) => {
     const share = rij.used / totaal;
+    /*
+     * De grens ligt op wat er vóór dit vel al is opgeteld, niet op wat er ná
+     * dit vel staat. Dat is dezelfde regel als calculateAbcAnalysis elders in
+     * de app; met de andere lezing zou hetzelfde vel op twee schermen in twee
+     * klassen kunnen vallen.
+     */
+    const voor = opgeteld * 100;
     opgeteld += share;
-    const percentage = opgeteld * 100;
     return {
       ...rij,
       share,
       cumulative: opgeteld,
-      klasse: percentage <= aThreshold ? "A" : percentage <= bThreshold ? "B" : "C",
+      klasse: voor < aThreshold ? "A" : voor < bThreshold ? "B" : "C",
     };
   });
 }
@@ -442,6 +454,14 @@ export type StockSummary = {
   idleSheets: number;
   /** Hoeveel dagen er is gemeten. */
   measuredDays: number;
+  /**
+   * Telt de dubbele weging van de laatste twee weken nu echt mee?
+   *
+   * Zolang de hele meetperiode binnen die twee weken valt, krijgt élke boeking
+   * hetzelfde gewicht en verandert er niets. Dan hoort het scherm dat ook niet
+   * te beweren.
+   */
+  recencyWeightingApplies: boolean;
   /** Totaal verbruik in het venster. */
   usedInWindow: number;
 };
@@ -466,6 +486,7 @@ export function stockSummary(rows: StockPlanRow[], measuredDays: number): StockS
     soonestOrderWithinDays: eerst ?? null,
     idleSheets: rows.filter((rij) => rij.used === 0).reduce((som, rij) => som + rij.stock, 0),
     measuredDays: Math.round(measuredDays),
+    recencyWeightingApplies: measuredDays > recentDays,
     usedInWindow: rows.reduce((som, rij) => som + rij.used, 0),
   };
 }
